@@ -390,8 +390,7 @@
         async function fetchRacesFromSupabase() {
             const { data: races, error } = await window.dbClient
                 .from('races')
-                .select('*')
-                .order('opening_date', { ascending: true });
+                .select('*');
 
             if (error) {
                 console.error("Erreur d'importation Supabase :", error.message);
