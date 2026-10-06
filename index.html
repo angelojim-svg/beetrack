@@ -18,72 +18,10 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 
-    <!-- Supabase Client (Optionnel pour connexion backend) -->
+    <!-- Supabase Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
-const SUPABASE_URL = 'TA_PROJECT_URL_SUPABASE';
-const SUPABASE_ANON_KEY = 'TA_KEY_ANON_SUPABASE';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-/ Remplace la fonction loadLocalStorageData() par la récupération Supabase :
-async function fetchRacesFromSupabase() {
-    const { data: races, error } = await supabase
-        .from('races')
-        .select('*')
-        .order('opening_date', { ascending: true });
-
-    if (error) {
-        console.error("Erreur d'importation Supabase :", error.message);
-        // Fallback local en cas de problème de réseau
-        racesData = [...initialRaces];
-    } else if (races && races.length > 0) {
-        // Transformation du format Supabase vers le format de PacePulse
-        racesData = races.map(r => ({
-            id: r.id,
-            title: r.title,
-            category: r.category || 'Trail',
-            distance: r.distance || 0,
-            elevation: r.elevation || 0,
-            location: r.location || 'France',
-            region: r.region || 'France',
-            lat: parseFloat(r.lat || 46.6),
-            lng: parseFloat(r.lng || 1.8),
-            price: r.price || 0,
-            ddi: r.ddi || 3,
-            openingDate: r.opening_date,
-            raceDate: r.race_date,
-            status: r.status,
-            url: r.organizer_url
-        }));
-    }
-
-    applyFilters();
-    updateDashboardStats();
-}
-
-// Appeler cette fonction au chargement du DOM :
-document.addEventListener('DOMContentLoaded', () => {
-    initLeafletMap();
-    fetchRacesFromSupabase();
-    renderPpsWidget();
-    renderSeasonPlanner();
-});
-
-
-        
-// Remplace la fonction de sauvegarde de l'alerte
-async function saveAlertToBackend(raceId, userEmail) {
-    const { data, error } = await supabase
-        .from('alerts')
-        .insert([{ race_id: raceId, email: userEmail }]);
-
-    if (error) {
-        alert("Erreur lors de la réservation de l'alerte : " + error.message);
-    } else {
-        alert("Alerte enregistrée ! Tu recevras un e-mail dès l'ouverture des inscriptions.");
-    }
-}
         tailwind.config = {
             darkMode: 'class',
             theme: {
@@ -120,23 +58,11 @@ async function saveAlertToBackend(raceId, userEmail) {
             background-attachment: fixed;
         }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0b0f17;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #1f293d;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #10b981;
-        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0b0f17; }
+        ::-webkit-scrollbar-thumb { background: #1f293d; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #10b981; }
 
-        /* Leaflet Map Custom Styling */
         .leaflet-popup-content-wrapper {
             background-color: #131b2e !important;
             color: #f3f4f6 !important;
@@ -144,39 +70,21 @@ async function saveAlertToBackend(raceId, userEmail) {
             border-radius: 12px;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
         }
-        .leaflet-popup-tip {
-            background-color: #131b2e !important;
-        }
-        .leaflet-container {
-            background-color: #0b0f17 !important;
-            font-family: inherit;
-        }
+        .leaflet-popup-tip { background-color: #131b2e !important; }
+        .leaflet-container { background-color: #0b0f17 !important; font-family: inherit; }
 
-        /* Glassmorphism */
         .glass-panel {
             background: rgba(19, 27, 46, 0.75);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.07);
         }
-
-        .pulse-emerald {
-            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-            animation: pulse-emerald 2s infinite;
-        }
-        @keyframes pulse-emerald {
-            0% { transform: scale(0.98); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-            100% { transform: scale(0.98); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-        }
     </style>
 </head>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <body class="min-h-screen flex flex-col">
 
     <!-- HEADER / NAVIGATION -->
     <header class="sticky top-0 z-50 glass-panel border-b border-borderBg">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-            <!-- Logo -->
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-darkBg font-black text-xl shadow-lg shadow-emerald-500/20">
                     <i class="fa-solid font-bold fa-stopwatch"></i>
@@ -190,7 +98,6 @@ async function saveAlertToBackend(raceId, userEmail) {
                 </div>
             </div>
 
-            <!-- Header Quick Stats -->
             <div class="hidden lg:flex items-center space-x-6 text-sm">
                 <div class="flex items-center space-x-2 bg-darkBg/60 px-3 py-1.5 rounded-lg border border-borderBg">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
@@ -204,13 +111,12 @@ async function saveAlertToBackend(raceId, userEmail) {
                 </div>
             </div>
 
-            <!-- Actions -->
             <div class="flex items-center space-x-3">
                 <button onclick="toggleModal('addRaceModal')" class="bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold px-4 py-2.5 rounded-xl transition duration-200 flex items-center space-x-2 shadow-lg shadow-emerald-500/20 text-sm">
                     <i class="fa-solid fa-plus"></i>
                     <span class="hidden sm:inline">Ajouter une course</span>
                 </button>
-                <button onclick="toggleModal('ppsModal')" class="bg-cardBg hover:bg-borderBg text-gray-200 border border-borderBg px-3 py-2.5 rounded-xl transition duration-200 flex items-center space-x-2 text-sm" title="Statut PPS / Certificat">
+                <button onclick="toggleModal('ppsModal')" class="bg-cardBg hover:bg-borderBg text-gray-200 border border-borderBg px-3 py-2.5 rounded-xl transition duration-200 flex items-center space-x-2 text-sm">
                     <i class="fa-solid fa-file-medical text-emerald-400"></i>
                     <span class="hidden md:inline font-medium">PPS</span>
                 </button>
@@ -221,11 +127,11 @@ async function saveAlertToBackend(raceId, userEmail) {
     <!-- MAIN CONTAINER -->
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
-        <!-- DASHBOARD TOP ROW: STATS & SEASON SUMMARY -->
+        <!-- DASHBOARD TOP ROW -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             <!-- PPS Widget -->
-            <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden border border-borderBg">
+            <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between border border-borderBg">
                 <div class="flex items-start justify-between">
                     <div>
                         <span class="text-xs uppercase tracking-wider text-gray-400 font-semibold">Conformité Médicale</span>
@@ -250,7 +156,7 @@ async function saveAlertToBackend(raceId, userEmail) {
                 </div>
             </div>
 
-            <!-- Season Budget & Planner Widget -->
+            <!-- Season Budget Widget -->
             <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between border border-borderBg">
                 <div class="flex items-start justify-between">
                     <div>
@@ -271,8 +177,8 @@ async function saveAlertToBackend(raceId, userEmail) {
                 </div>
             </div>
 
-            <!-- DDI Index Explanation -->
-            <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between border border-borderBg bg-gradient-to-br from-cardBg to-darkBg">
+            <!-- DDI Explanation Widget -->
+            <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between border border-borderBg">
                 <div class="flex items-start justify-between">
                     <div>
                         <span class="text-xs uppercase tracking-wider text-gray-400 font-semibold">Indice Exclusif</span>
@@ -283,135 +189,352 @@ async function saveAlertToBackend(raceId, userEmail) {
                     </div>
                 </div>
                 <p class="text-xs text-gray-400 my-2 leading-relaxed">
-                    Évalue la rapidité de saturation d'une course de <strong>1</strong> (inscription sereine sur plusieurs mois) à <strong>5</strong> (sold-out en moins de 10 min ou tirage au sort).
+                    Évalue la rapidité de saturation d'une course de <strong>1</strong> (inscription sereine) à <strong>5</strong> (sold-out en minutes ou tirage au sort).
                 </p>
                 <div class="flex items-center space-x-2 pt-2 border-t border-borderBg">
                     <span class="text-xs text-gray-400">Échelle :</span>
                     <div class="flex space-x-1">
-                        <span class="w-3 h-3 rounded-full bg-emerald-500" title="DDI 1 - Serein"></span>
-                        <span class="w-3 h-3 rounded-full bg-blue-500" title="DDI 2 - Modéré"></span>
-                        <span class="w-3 h-3 rounded-full bg-amber-500" title="DDI 3 - Rapide"></span>
-                        <span class="w-3 h-3 rounded-full bg-orange-500" title="DDI 4 - Très rapide"></span>
-                        <span class="w-3 h-3 rounded-full bg-red-500" title="DDI 5 - Instantané / Tirage"></span>
+                        <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                        <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+                        <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                        <span class="w-3 h-3 rounded-full bg-orange-500"></span>
+                        <span class="w-3 h-3 rounded-full bg-red-500"></span>
                     </div>
                 </div>
             </div>
 
         </div>
 
-        <!-- SEARCH & MULTI-CRITERIA FILTER PANEL -->
+        <!-- SEARCH & FILTER PANEL -->
         <section class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-borderBg pb-4">
                 <div>
                     <h2 class="text-xl font-extrabold text-white flex items-center gap-2">
                         <i class="fa-solid fa-filter text-emerald-400"></i>
-                        Moteur de Recherche & Radar Multicritères
+                        Moteur de Recherche & Radar
                     </h2>
-                    <p class="text-xs text-gray-400 mt-1">Affinez vos critères pour trouver le dossard idéal et programmer vos alertes.</p>
                 </div>
                 <div class="flex items-center space-x-3">
-                    <button onclick="resetFilters()" class="text-xs text-gray-400 hover:text-white underline transition">
-                        Réinitialiser les filtres
-                    </button>
+                    <button onclick="resetFilters()" class="text-xs text-gray-400 hover:text-white underline">Réinitialiser</button>
                     <span class="text-xs bg-darkBg px-3 py-1.5 rounded-lg border border-borderBg text-gray-300 font-mono">
                         <span id="filtered-count" class="text-emerald-400 font-bold">0</span> épreuve(s)
                     </span>
                 </div>
             </div>
 
-            <!-- Grid Controls -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                
-                <!-- Keyword / Title Search -->
                 <div>
-                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Recherche globale</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-search absolute left-3.5 top-3 text-gray-500 text-sm"></i>
-                        <input type="text" id="filter-keyword" oninput="applyFilters()" placeholder="Nom de course, ville, organisateur..." class="w-full pl-10 pr-4 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition">
-                    </div>
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Recherche</label>
+                    <input type="text" id="filter-keyword" oninput="applyFilters()" placeholder="Nom, ville..." class="w-full px-4 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none">
                 </div>
-
-                <!-- Event Category -->
                 <div>
                     <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Type d'épreuve</label>
-                    <select id="filter-category" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition">
+                    <select id="filter-category" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white">
                         <option value="ALL">Toutes les épreuves</option>
-                        <option value="Trail">Trail Court (< 42 km)</option>
-                        <option value="Ultra Trail">Ultra Trail (> 80 km)</option>
+                        <option value="Trail">Trail Court</option>
+                        <option value="Ultra Trail">Ultra Trail</option>
                         <option value="Marathon">Marathon & Route</option>
-                        <option value="10k">10 km & Semi-Marathon</option>
-                        <option value="Backyard">Backyard & Format Spécial</option>
+                        <option value="10k">10 km / Semi</option>
                     </select>
                 </div>
-
-                <!-- Status Filter -->
                 <div>
-                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Statut d'ouverture</label>
-                    <select id="filter-status" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition">
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Statut</label>
+                    <select id="filter-status" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white">
                         <option value="ALL">Tous les statuts</option>
                         <option value="Open">Ouvertures Actives</option>
                         <option value="Upcoming">Ouvertures Prochaines</option>
-                        <option value="SoldOut">Sold Out / Fermé</option>
+                        <option value="SoldOut">Sold Out</option>
                     </select>
                 </div>
-
-                <!-- Region Filter -->
                 <div>
-                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Région / Zone</label>
-                    <select id="filter-region" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition">
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Région</label>
+                    <select id="filter-region" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white">
                         <option value="ALL">Toutes les régions</option>
                         <option value="Auvergne-Rhône-Alpes">Auvergne-Rhône-Alpes</option>
-                        <option value="PAC">Provence-Alpes-Côte d'Azur</option>
+                        <option value="PAC">PAC</option>
                         <option value="Occitanie">Occitanie</option>
                         <option value="Île-de-France">Île-de-France</option>
-                        <option value="Grand Est">Grand Est</option>
-                        <option value="International">International</option>
                     </select>
                 </div>
-
             </div>
 
-            <!-- Sliders Row: Distance & Elevation & DDI -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2 border-t border-borderBg/50">
-                
-                <!-- Distance Slider -->
                 <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="text-xs font-semibold uppercase text-gray-400">Distance Max :</label>
-                        <span class="text-xs font-mono font-bold text-emerald-400" id="slider-dist-val">200 km</span>
-                    </div>
+                    <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">Distance Max :</span><span id="slider-dist-val" class="text-emerald-400 font-bold">200 km</span></div>
                     <input type="range" id="filter-distance" min="5" max="200" step="5" value="200" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
                 </div>
-
-                <!-- D+ Elevation Slider -->
                 <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="text-xs font-semibold uppercase text-gray-400">Dénivelé D+ Max :</label>
-                        <span class="text-xs font-mono font-bold text-emerald-400" id="slider-elev-val">10 000 m</span>
-                    </div>
+                    <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">D+ Max :</span><span id="slider-elev-val" class="text-emerald-400 font-bold">10 000 m</span></div>
                     <input type="range" id="filter-elevation" min="0" max="10000" step="250" value="10000" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
                 </div>
-
-                <!-- Maximum DDI Score -->
                 <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="text-xs font-semibold uppercase text-gray-400">Tension Max (DDI) :</label>
-                        <span class="text-xs font-mono font-bold text-amber-400" id="slider-ddi-val">Score 5</span>
-                    </div>
+                    <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">Tension Max (DDI) :</span><span id="slider-ddi-val" class="text-amber-400 font-bold">Score 5</span></div>
                     <input type="range" id="filter-ddi" min="1" max="5" step="1" value="5" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-amber-500 bg-darkBg h-2 rounded-lg cursor-pointer">
                 </div>
-
             </div>
         </section>
 
-        <!-- VIEW TOGGLE & INTERACTIVE MAP / LIST SECTION -->
+        <!-- MAP & LIST SECTION -->
         <section class="space-y-6">
-            
-            <!-- Controls bar -->
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div class="flex items-center space-x-2 bg-darkBg p-1.5 rounded-xl border border-borderBg">
-                    <button id="btn-view-map" onclick="switchMainView('map')" class="px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center space-x-2 bg-emerald-500 text-darkBg shadow">
-                        <i class="fa-solid fa-map-location-dot"></i>
-                        <span>Carte Interactive</span>
+                    <button id="btn-view-map" onclick="switchMainView('map')" class="px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-500 text-darkBg shadow">
+                        <i class="fa-solid fa-map-location-dot mr-1"></i> Carte Interactive
                     </button>
-                    <butt
+                    <button id="btn-view-list" onclick="switchMainView('list')" class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-400 hover:text-white">
+                        <i class="fa-solid fa-list-ul mr-1"></i> Liste des Courses
+                    </button>
+                </div>
+
+                <div class="flex items-center space-x-3 text-sm">
+                    <span class="text-gray-400 text-xs uppercase font-semibold">Trier par :</span>
+                    <select id="sort-by" onchange="applyFilters()" class="bg-cardBg border border-borderBg rounded-xl px-3 py-2 text-xs text-white">
+                        <option value="openingDate">Date d'ouverture</option>
+                        <option value="raceDate">Date d'événement</option>
+                        <option value="ddiDesc">Tension DDI Fort</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- MAP CONTAINER -->
+            <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden">
+                <div id="map" class="w-full h-[500px] rounded-xl z-10"></div>
+            </div>
+
+            <!-- CARDS GRID LIST -->
+            <div id="container-list-view" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden"></div>
+        </section>
+
+        <!-- SEASON PLANNER SECTION -->
+        <section id="season-section" class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6">
+            <div class="flex justify-between items-center border-b border-borderBg pb-4">
+                <h2 class="text-xl font-extrabold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-calendar-check text-amber-400"></i>
+                    Mon Calendrier de Saison
+                </h2>
+                <div>
+                    <span class="text-xs text-gray-400">Budget Total :</span>
+                    <span class="text-lg font-bold font-mono text-amber-400 ml-2" id="planner-budget-display">0 €</span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-gray-300">
+                    <thead class="text-xs uppercase bg-darkBg/80 text-gray-400 border-b border-borderBg">
+                        <tr>
+                            <th class="px-4 py-3">Épreuve</th>
+                            <th class="px-4 py-3">Date Course</th>
+                            <th class="px-4 py-3">Distance / D+</th>
+                            <th class="px-4 py-3">Tarif</th>
+                            <th class="px-4 py-3">Statut</th>
+                            <th class="px-4 py-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="season-table-body" class="divide-y divide-borderBg"></tbody>
+                </table>
+            </div>
+            <div id="season-empty-msg" class="text-center py-6 text-gray-500 text-sm">
+                Aucune course ajoutée à votre saison.
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL ALERT -->
+    <div id="alertModal" class="fixed inset-0 bg-darkBg/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="glass-panel max-w-md w-full p-6 rounded-2xl border border-borderBg relative">
+            <button onclick="toggleModal('alertModal')" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <h3 class="text-lg font-bold text-white mb-2">Programmer une alerte</h3>
+            <p class="text-xs text-gray-400 mb-4" id="modal-race-title"></p>
+
+            <form onsubmit="handleAlertSubmit(event)" class="space-y-4">
+                <input type="hidden" id="modal-race-id">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Votre Email</label>
+                    <input type="email" id="alert-email" required placeholder="runner@domaine.fr" class="w-full px-4 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white">
+                </div>
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button type="button" onclick="toggleModal('alertModal')" class="px-4 py-2 rounded-xl text-sm text-gray-400">Annuler</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl text-sm font-bold bg-emerald-500 text-darkBg">Valider l'alerte</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT JAVASCRIPT PRINCIPAL -->
+    <script>
+        // 1. CONFIGURATION SUPABASE (REMPLACE AVEC TES IDENTIFIANTS)
+        const SUPABASE_URL = 'TON_URL_SUPABASE'; 
+        const SUPABASE_ANON_KEY = 'TA_CLE_ANON_SUPABASE';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Variables d'état
+        let racesData = [];
+        let filteredRaces = [];
+        let mySeasonRaces = JSON.parse(localStorage.getItem('pacepulse_season') || '[]');
+        let leafletMap = null;
+        let mapMarkers = [];
+
+        // Initialisation de la carte Leaflet
+        function initLeafletMap() {
+            leafletMap = L.map('map').setView([46.603354, 1.888334], 6);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO'
+            }).addTo(leafletMap);
+        }
+
+        // Récupération dynamique depuis Supabase
+        async function fetchRacesFromSupabase() {
+            const { data: races, error } = await supabase
+                .from('races')
+                .select('*')
+                .order('opening_date', { ascending: true });
+
+            if (error) {
+                console.error("Erreur d'importation Supabase :", error.message);
+            } else if (races) {
+                racesData = races.map(r => ({
+                    id: r.id,
+                    title: r.title,
+                    category: r.category || 'Trail',
+                    distance: r.distance || 0,
+                    elevation: r.elevation || 0,
+                    location: r.location || 'France',
+                    region: r.region || 'France',
+                    lat: parseFloat(r.lat || 46.6),
+                    lng: parseFloat(r.lng || 1.8),
+                    price: r.price || 0,
+                    ddi: r.ddi || 3,
+                    openingDate: r.opening_date,
+                    raceDate: r.race_date,
+                    status: r.status,
+                    url: r.organizer_url
+                }));
+            }
+
+            applyFilters();
+            updateDashboardStats();
+        }
+
+        // Moteur de filtrage
+        function applyFilters() {
+            const keyword = document.getElementById('filter-keyword').value.toLowerCase();
+            const category = document.getElementById('filter-category').value;
+            const status = document.getElementById('filter-status').value;
+            const region = document.getElementById('filter-region').value;
+            const maxDist = parseInt(document.getElementById('filter-distance').value);
+            const maxElev = parseInt(document.getElementById('filter-elevation').value);
+            const maxDdi = parseInt(document.getElementById('filter-ddi').value);
+
+            filteredRaces = racesData.filter(r => {
+                const matchKw = !keyword || r.title.toLowerCase().includes(keyword) || r.location.toLowerCase().includes(keyword);
+                const matchCat = category === 'ALL' || r.category === category;
+                const matchStat = status === 'ALL' || r.status === status;
+                const matchReg = region === 'ALL' || r.region === region;
+                return matchKw && matchCat && matchStat && matchReg && r.distance <= maxDist && r.elevation <= maxElev && r.ddi <= maxDdi;
+            });
+
+            document.getElementById('filtered-count').innerText = filteredRaces.length;
+            renderListView();
+            updateMapMarkers();
+        }
+
+        function updateMapMarkers() {
+            if (!leafletMap) return;
+            mapMarkers.forEach(m => leafletMap.removeLayer(m));
+            mapMarkers = [];
+
+            filteredRaces.forEach(race => {
+                let color = race.status === 'Open' ? '#10b981' : (race.status === 'Upcoming' ? '#f59e0b' : '#ef4444');
+                const customIcon = L.divIcon({
+                    className: 'custom-pin',
+                    html: `<div style="background:${color}; width:16px; height:16px; border-radius:50%; border:3px solid #0b0f17;"></div>`,
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                });
+
+                const marker = L.marker([race.lat, race.lng], { icon: customIcon }).addTo(leafletMap);
+                marker.bindPopup(`
+                    <div class="p-1 space-y-2">
+                        <h4 class="font-bold text-sm text-white">${race.title}</h4>
+                        <p class="text-xs text-gray-400">${race.distance} km | +${race.elevation}m</p>
+                        <button onclick="openAlertModal('${race.id}')" class="w-full text-xs font-bold bg-emerald-500 text-darkBg py-1 rounded">Alerte</button>
+                    </div>
+                `);
+                mapMarkers.push(marker);
+            });
+        }
+
+        function renderListView() {
+            const container = document.getElementById('container-list-view');
+            container.innerHTML = '';
+
+            filteredRaces.forEach(race => {
+                const card = `
+                    <div class="glass-panel p-5 rounded-2xl border border-borderBg flex flex-col justify-between">
+                        <div>
+                            <span class="text-[10px] font-mono text-gray-400">${race.category} • ${race.region}</span>
+                            <h3 class="text-lg font-bold text-white mt-1">${race.title}</h3>
+                            <div class="grid grid-cols-3 gap-2 py-3 my-3 border-y border-borderBg text-center text-xs">
+                                <div><span class="block text-gray-500">Dist.</span><span class="font-bold text-white">${race.distance} km</span></div>
+                                <div><span class="block text-gray-500">D+</span><span class="font-bold text-emerald-400">+${race.elevation}m</span></div>
+                                <div><span class="block text-gray-500">DDI</span><span class="font-bold text-amber-400">${race.ddi}/5</span></div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center pt-2">
+                            <span class="text-xs px-2.5 py-1 rounded-full font-bold ${race.status === 'Open' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}">${race.status}</span>
+                            <button onclick="openAlertModal('${race.id}')" class="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-xs">Alerte</button>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', card);
+            });
+        }
+
+        async function handleAlertSubmit(e) {
+            e.preventDefault();
+            const raceId = document.getElementById('modal-race-id').value;
+            const email = document.getElementById('alert-email').value;
+
+            const { error } = await supabase.from('alerts').insert([{ race_id: raceId, email: email }]);
+
+            if (error) {
+                alert("Erreur lors de l'enregistrement : " + error.message);
+            } else {
+                alert("✅ Alerte enregistrée ! Vous recevrez un mail dès l'ouverture.");
+                toggleModal('alertModal');
+            }
+        }
+
+        function openAlertModal(raceId) {
+            const race = racesData.find(r => r.id === raceId);
+            if (!race) return;
+            document.getElementById('modal-race-id').value = race.id;
+            document.getElementById('modal-race-title').innerText = race.title;
+            toggleModal('alertModal');
+        }
+
+        function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
+        function updateSliderLabels() {
+            document.getElementById('slider-dist-val').innerText = `${document.getElementById('filter-distance').value} km`;
+            document.getElementById('slider-elev-val').innerText = `${document.getElementById('filter-elevation').value} m`;
+            document.getElementById('slider-ddi-val').innerText = `Score ${document.getElementById('filter-ddi').value}`;
+        }
+        function resetFilters() { applyFilters(); }
+        function switchMainView(v) {
+            document.getElementById('container-map-view').classList.toggle('hidden', v !== 'map');
+            document.getElementById('container-list-view').classList.toggle('hidden', v !== 'list');
+            if (v === 'map') setTimeout(() => leafletMap.invalidateSize(), 200);
+        }
+        function updateDashboardStats() {
+            document.getElementById('stat-opening-month').innerText = racesData.filter(r => r.status === 'Open' || r.status === 'Upcoming').length;
+            document.getElementById('stat-high-ddi').innerText = racesData.filter(r => r.ddi === 5).length;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initLeafletMap();
+            fetchRacesFromSupabase();
+        });
+    </script>
+</body>
+</html>
