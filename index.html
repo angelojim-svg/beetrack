@@ -363,10 +363,12 @@
 
  <!-- SCRIPT JAVASCRIPT PRINCIPAL -->
     <script>
-        // 1. CONFIGURATION SUPABASE (Mettez bien les guillemets autour des valeurs !)
-        const SUPABASE_URL = 'https://votre-projet.supabase.co'; 
-        const SUPABASE_ANON_KEY = 'votre_cle_anon_publique';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Configuration Supabase
+        const SUPABASE_URL = 'https://rjfykmedcxgasduebvbn.supabase.co/rest/v1/'; // Ton URL
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqZnlrbWVkY3hnYXNkdWVidmJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNDI3NjEsImV4cCI6MjEwNjgxODc2MX0.4N9LkjjLno-z_o7NEGQjGdJDFXpzvBzRfzs-vRwv1GA'; // Ta clé anon
+
+        // On affecte à une variable globale unique pour éviter tout conflit
+        window.dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // Variables d'état
         let racesData = [];
@@ -386,7 +388,7 @@
 
         // Récupération dynamique depuis Supabase
         async function fetchRacesFromSupabase() {
-            const { data: races, error } = await supabase
+            const { data: races, error } = await window.dbClient
                 .from('races')
                 .select('*')
                 .order('opening_date', { ascending: true });
@@ -500,7 +502,7 @@
             const raceId = document.getElementById('modal-race-id').value;
             const email = document.getElementById('alert-email').value;
 
-            const { error } = await supabase.from('alerts').insert([{ race_id: raceId, email: email }]);
+            const { error } = await window.dbClient.from('alerts').insert([{ race_id: raceId, email: email }]);
 
             if (error) {
                 alert("Erreur lors de l'enregistrement : " + error.message);
