@@ -1,42 +1,47 @@
-import axios from 'axios';
+import puppeteer from 'puppeteer';
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error("❌ ERREUR : Variables d'environnement Supabase manquantes.");
+  console.error("❌ ERREUR : Identifiants Supabase manquants.");
   process.exit(1);
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-async function scrapeBetrailApi() {
-  console.log("🚀 Lancement du scraping via l'API Betrail...");
+async function scrapeWithPuppeteer() {
+  console.log("🚀 Lancement du navigateur Headless...");
+
+  const browser = await puppeteer.launch({
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
 
   try {
-    // Colle ici l'URL exacte copiée depuis DevTools
-    const API_URL = 'https://www.betrail.run/api/events-drizzle?after=2026-10-05&before=2027-10-06&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false';
+    const page = await browser.newPage();
 
-    const response = await axios.get(API_URL, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Origin': 'https://www.betrail.run',
-        'Referer': 'https://www.betrail.run/calendar',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-origin',
-        'Sec-Ch-Ua': '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"Windows"'
-      }
-    });
+    // Définition d'un User-Agent réaliste
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
 
-    const events = Array.isArray(response.data) ? response.data : (response.data.data || response.data.events || []);
+    // ⚠️ Remplace par l'URL exacte copiée depuis la console (events-drizzle)
+    const API_URL = 'VOTRE_URL_EVENTS_DRIZZLE';
 
-    console.log(`📊 ${events.length} épreuves brutes récupérées.`);
+    console.log("📡 Envoi de la requête via Puppeteer...");
+    
+    // Visite initiale de Betrail pour valider le cookie Cloudflare
+    await page.goto('https://www.betrail.run/calendar', { waitUntil: 'domcontentloaded' });
+
+    // Exécution du fetch directement dans le contexte du navigateur
+    const responseData = await page.evaluate(async (url) => {
+      const res = await fetch(url);
+      return await res.json();
+    }, API_URL);
+
+    const events = Array.isArray(responseData) ? responseData : (responseData.data || responseData.events || []);
+
+    console.log(`📊 ${events.length} épreuves brutes récupérées !`);
 
     const races = events.map(event => ({
       title: event.name || event.title || 'Course sans nom',
@@ -66,13 +71,15 @@ async function scrapeBetrailApi() {
       }
       console.log("✅ Base de données mise à jour avec succès !");
     } else {
-      console.log("⚠️ Aucun événement trouvé dans la réponse API.");
+      console.log("⚠️ Aucun événement trouvé dans le JSON.");
     }
 
   } catch (err) {
-    console.error("❌ Erreur lors de la requête API :", err.message);
+    console.error("❌ Erreur de scraping :", err.message);
     process.exit(1);
+  } finally {
+    await browser.close();
   }
 }
 
-scrapeBetrailApi();
+scrapeWithPuppeteer();
