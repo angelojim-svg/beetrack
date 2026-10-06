@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PacePulse - Veille & Dossards Trail / Course à pied</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Leaflet CSS & JS for Interactive Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <!-- Supabase Client (Optionnel pour connexion backend) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+const SUPABASE_URL = 'TA_PROJECT_URL_SUPABASE';
+const SUPABASE_ANON_KEY = 'TA_KEY_ANON_SUPABASE';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Remplace la fonction de sauvegarde de l'alerte
+async function saveAlertToBackend(raceId, userEmail) {
+    const { data, error } = await supabase
+        .from('alerts')
+        .insert([{ race_id: raceId, email: userEmail }]);
+
+    if (error) {
+        alert("Erreur lors de la réservation de l'alerte : " + error.message);
+    } else {
+        alert("Alerte enregistrée ! Tu recevras un e-mail dès l'ouverture des inscriptions.");
+    }
+}
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        emerald: {
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                            900: '#064e3b',
+                        },
+                        darkBg: '#0b0f17',
+                        cardBg: '#131b2e',
+                        borderBg: '#1f293d',
+                        neonYellow: '#eab308'
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0b0f17;
+            color: #f3f4f6;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(16, 185, 129, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(234, 179, 8, 0.03) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f17;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f293d;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #10b981;
+        }
+
+        /* Leaflet Map Custom Styling */
+        .leaflet-popup-content-wrapper {
+            background-color: #131b2e !important;
+            color: #f3f4f6 !important;
+            border: 1px solid #1f293d;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+        .leaflet-popup-tip {
+            background-color: #131b2e !important;
+        }
+        .leaflet-container {
+            background-color: #0b0f17 !important;
+            font-family: inherit;
+        }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(19, 27, 46, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .pulse-emerald {
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse-emerald 2s infinite;
+        }
+        @keyframes pulse-emerald {
+            0% { transform: scale(0.98); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.98); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+    </style>
+</head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<body class="min-h-screen flex flex-col">
+
+    <!-- HEADER / NAVIGATION -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-borderBg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <!-- Logo -->
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-darkBg font-black text-xl shadow-lg shadow-emerald-500/20">
+                    <i class="fa-solid font-bold fa-stopwatch"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-gray-200 to-emerald-400 bg-clip-text text-transparent">PacePulse</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">PRO v2.4</span>
+                    </div>
+                    <p class="text-xs text-gray-400 hidden sm:block">Radar d'ouvertures & Gestion de saison Trail</p>
+                </div>
+            </div>
+
+            <!-- Header Quick Stats -->
+            <div class="hidden lg:flex items-center space-x-6 text-sm">
+                <div class="flex items-center space-x-2 bg-darkBg/60 px-3 py-1.5 rounded-lg border border-borderBg">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span class="text-gray-400">Ouvertures ce mois :</span>
+                    <span class="font-bold text-emerald-400" id="stat-opening-month">--</span>
+                </div>
+                <div class="flex items-center space-x-2 bg-darkBg/60 px-3 py-1.5 rounded-lg border border-borderBg">
+                    <i class="fa-solid fa-fire text-amber-500"></i>
+                    <span class="text-gray-400">Tension Haute (DDI 5) :</span>
+                    <span class="font-bold text-amber-400" id="stat-high-ddi">--</span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center space-x-3">
+                <button onclick="toggleModal('addRaceModal')" class="bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold px-4 py-2.5 rounded-xl transition duration-200 flex items-center space-x-2 shadow-lg shadow-emerald-500/20 text-sm">
+                    <i class="fa-solid fa-plus"></i>
+                    <span class="hidden sm:inline">Ajouter une course</span>
+                </button>
+                <button onclick="toggleModal('ppsModal')" class="bg-cardBg hover:bg-borderBg text-gray-200 border border-borderBg px-3 py-2.5 rounded-xl transition duration-200 flex items-center space-x-2 text-sm" title="Statut PPS / Certificat">
+                    <i class="fa-solid fa-file-medical text-emerald-400"></i>
+                    <span class="hidden md:inline font-medium">PPS</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+        <!-- DASHBOARD TOP ROW: STATS & SEASON SUMMARY -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- PPS Widget -->
+            <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden border border-borderBg">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <span class="text-xs uppercase tracking-wider text-gray-400 font-semibold">Conformité Médicale</span>
+                        <h3 class="text-lg font-bold text-white mt-1">Pass Prévention Santé (PPS)</h3>
+                    </div>
+                    <div class="p-2 bg-emerald-500/10 rounded-xl text-emerald-400 border border-emerald-500/20">
+                        <i class="fa-solid fa-shield-heart text-xl"></i>
+                    </div>
+                </div>
+                <div class="my-4">
+                    <div class="flex justify-between items-end mb-1">
+                        <span class="text-sm text-gray-400" id="pps-status-text">Attestation non enregistrée</span>
+                        <span class="text-xs font-mono font-bold text-emerald-400" id="pps-days-left">0 jour</span>
+                    </div>
+                    <div class="w-full bg-darkBg rounded-full h-2 border border-borderBg overflow-hidden">
+                        <div id="pps-progress-bar" class="bg-emerald-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between text-xs text-gray-400 pt-2 border-t border-borderBg">
+                    <span>Validité : 3 mois (90 jours)</span>
+                    <button onclick="toggleModal('ppsModal')" class="text-emerald-400 hover:underline font-semibold">Mettre à jour</button>
+                </div>
+            </div>
+
+            <!-- Season Budget & Planner Widget -->
+            <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between border border-borderBg">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <span class="text-xs uppercase tracking-wider text-gray-400 font-semibold">Ma Saison 2026/2027</span>
+                        <h3 class="text-lg font-bold text-white mt-1">Budget Dossards Estimé</h3>
+                    </div>
+                    <div class="p-2 bg-amber-500/10 rounded-xl text-amber-400 border border-amber-500/20">
+                        <i class="fa-solid fa-wallet text-xl"></i>
+                    </div>
+                </div>
+                <div class="my-3 flex items-baseline space-x-3">
+                    <span class="text-3xl font-extrabold text-white font-mono" id="season-total-budget">0 €</span>
+                    <span class="text-sm text-gray-400"><span id="season-race-count" class="text-amber-400 font-bold">0</span> course(s) retenue(s)</span>
+                </div>
+                <div class="flex items-center justify-between text-xs text-gray-400 pt-2 border-t border-borderBg">
+                    <span id="season-km-total">0 km cumulés</span>
+                    <button onclick="scrollToSection('season-section')" class="text-amber-400 hover:underline font-semibold">Voir ma saison <i class="fa-solid fa-arrow-right ml-1"></i></button>
+                </div>
+            </div>
+
+            <!-- DDI Index Explanation -->
+            <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between border border-borderBg bg-gradient-to-br from-cardBg to-darkBg">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <span class="text-xs uppercase tracking-wider text-gray-400 font-semibold">Indice Exclusif</span>
+                        <h3 class="text-lg font-bold text-white mt-1">Score DDI (Dossard Difficulty)</h3>
+                    </div>
+                    <div class="p-2 bg-purple-500/10 rounded-xl text-purple-400 border border-purple-500/20">
+                        <i class="fa-solid fa-gauge-high text-xl"></i>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400 my-2 leading-relaxed">
+                    Évalue la rapidité de saturation d'une course de <strong>1</strong> (inscription sereine sur plusieurs mois) à <strong>5</strong> (sold-out en moins de 10 min ou tirage au sort).
+                </p>
+                <div class="flex items-center space-x-2 pt-2 border-t border-borderBg">
+                    <span class="text-xs text-gray-400">Échelle :</span>
+                    <div class="flex space-x-1">
+                        <span class="w-3 h-3 rounded-full bg-emerald-500" title="DDI 1 - Serein"></span>
+                        <span class="w-3 h-3 rounded-full bg-blue-500" title="DDI 2 - Modéré"></span>
+                        <span class="w-3 h-3 rounded-full bg-amber-500" title="DDI 3 - Rapide"></span>
+                        <span class="w-3 h-3 rounded-full bg-orange-500" title="DDI 4 - Très rapide"></span>
+                        <span class="w-3 h-3 rounded-full bg-red-500" title="DDI 5 - Instantané / Tirage"></span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- SEARCH & MULTI-CRITERIA FILTER PANEL -->
+        <section class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-borderBg pb-4">
+                <div>
+                    <h2 class="text-xl font-extrabold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-filter text-emerald-400"></i>
+                        Moteur de Recherche & Radar Multicritères
+                    </h2>
+                    <p class="text-xs text-gray-400 mt-1">Affinez vos critères pour trouver le dossard idéal et programmer vos alertes.</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="resetFilters()" class="text-xs text-gray-400 hover:text-white underline transition">
+                        Réinitialiser les filtres
+                    </button>
+                    <span class="text-xs bg-darkBg px-3 py-1.5 rounded-lg border border-borderBg text-gray-300 font-mono">
+                        <span id="filtered-count" class="text-emerald-400 font-bold">0</span> épreuve(s)
+                    </span>
+                </div>
+            </div>
+
+            <!-- Grid Controls -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                
+                <!-- Keyword / Title Search -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Recherche globale</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-search absolute left-3.5 top-3 text-gray-500 text-sm"></i>
+                        <input type="text" id="filter-keyword" oninput="applyFilters()" placeholder="Nom de course, ville, organisateur..." class="w-full pl-10 pr-4 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition">
+                    </div>
+                </div>
+
+                <!-- Event Category -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Type d'épreuve</label>
+                    <select id="filter-category" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition">
+                        <option value="ALL">Toutes les épreuves</option>
+                        <option value="Trail">Trail Court (< 42 km)</option>
+                        <option value="Ultra Trail">Ultra Trail (> 80 km)</option>
+                        <option value="Marathon">Marathon & Route</option>
+                        <option value="10k">10 km & Semi-Marathon</option>
+                        <option value="Backyard">Backyard & Format Spécial</option>
+                    </select>
+                </div>
+
+                <!-- Status Filter -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Statut d'ouverture</label>
+                    <select id="filter-status" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition">
+                        <option value="ALL">Tous les statuts</option>
+                        <option value="Open">Ouvertures Actives</option>
+                        <option value="Upcoming">Ouvertures Prochaines</option>
+                        <option value="SoldOut">Sold Out / Fermé</option>
+                    </select>
+                </div>
+
+                <!-- Region Filter -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Région / Zone</label>
+                    <select id="filter-region" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition">
+                        <option value="ALL">Toutes les régions</option>
+                        <option value="Auvergne-Rhône-Alpes">Auvergne-Rhône-Alpes</option>
+                        <option value="PAC">Provence-Alpes-Côte d'Azur</option>
+                        <option value="Occitanie">Occitanie</option>
+                        <option value="Île-de-France">Île-de-France</option>
+                        <option value="Grand Est">Grand Est</option>
+                        <option value="International">International</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <!-- Sliders Row: Distance & Elevation & DDI -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2 border-t border-borderBg/50">
+                
+                <!-- Distance Slider -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-xs font-semibold uppercase text-gray-400">Distance Max :</label>
+                        <span class="text-xs font-mono font-bold text-emerald-400" id="slider-dist-val">200 km</span>
+                    </div>
+                    <input type="range" id="filter-distance" min="5" max="200" step="5" value="200" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
+                </div>
+
+                <!-- D+ Elevation Slider -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-xs font-semibold uppercase text-gray-400">Dénivelé D+ Max :</label>
+                        <span class="text-xs font-mono font-bold text-emerald-400" id="slider-elev-val">10 000 m</span>
+                    </div>
+                    <input type="range" id="filter-elevation" min="0" max="10000" step="250" value="10000" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
+                </div>
+
+                <!-- Maximum DDI Score -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-xs font-semibold uppercase text-gray-400">Tension Max (DDI) :</label>
+                        <span class="text-xs font-mono font-bold text-amber-400" id="slider-ddi-val">Score 5</span>
+                    </div>
+                    <input type="range" id="filter-ddi" min="1" max="5" step="1" value="5" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-amber-500 bg-darkBg h-2 rounded-lg cursor-pointer">
+                </div>
+
+            </div>
+        </section>
+
+        <!-- VIEW TOGGLE & INTERACTIVE MAP / LIST SECTION -->
+        <section class="space-y-6">
+            
+            <!-- Controls bar -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div class="flex items-center space-x-2 bg-darkBg p-1.5 rounded-xl border border-borderBg">
+                    <button id="btn-view-map" onclick="switchMainView('map')" class="px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center space-x-2 bg-emerald-500 text-darkBg shadow">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                        <span>Carte Interactive</span>
+                    </button>
+                    <butt
