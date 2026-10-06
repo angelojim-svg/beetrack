@@ -79,3 +79,34 @@ async function scrapeWithPuppeteer() {
 }
 
 scrapeWithPuppeteer();
+
+name: Scraper Races
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # C'est cette ligne qu'il faut corriger :
+      - name: Install dependencies
+        run: npm install puppeteer @supabase/supabase-js
+
+      - name: Run Scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scraper.js
+
+
