@@ -15,14 +15,22 @@ async function scrapeBetrailApi() {
   console.log("🚀 Lancement du scraping via l'API Betrail...");
 
   try {
-    // ⚠️ Remplace 'VOTRE_URL_EVENTS_DRIZZLE' par l'URL copiée depuis la console DevTools (Network/Réseau)
+    // Colle ici l'URL exacte copiée depuis DevTools
     const API_URL = 'https://www.betrail.run/api/events-drizzle?after=2026-10-05&before=2027-10-06&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false';
 
     const response = await axios.get(API_URL, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'application/json',
-        'Referer': 'https://www.betrail.run/'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Origin': 'https://www.betrail.run',
+        'Referer': 'https://www.betrail.run/calendar',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin',
+        'Sec-Ch-Ua': '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"'
       }
     });
 
@@ -67,7 +75,4 @@ async function scrapeBetrailApi() {
   }
 }
 
-// On n'exécute QUE cette fonction
 scrapeBetrailApi();
-
-
