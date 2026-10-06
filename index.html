@@ -26,6 +26,52 @@ const SUPABASE_URL = 'TA_PROJECT_URL_SUPABASE';
 const SUPABASE_ANON_KEY = 'TA_KEY_ANON_SUPABASE';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+/ Remplace la fonction loadLocalStorageData() par la récupération Supabase :
+async function fetchRacesFromSupabase() {
+    const { data: races, error } = await supabase
+        .from('races')
+        .select('*')
+        .order('opening_date', { ascending: true });
+
+    if (error) {
+        console.error("Erreur d'importation Supabase :", error.message);
+        // Fallback local en cas de problème de réseau
+        racesData = [...initialRaces];
+    } else if (races && races.length > 0) {
+        // Transformation du format Supabase vers le format de PacePulse
+        racesData = races.map(r => ({
+            id: r.id,
+            title: r.title,
+            category: r.category || 'Trail',
+            distance: r.distance || 0,
+            elevation: r.elevation || 0,
+            location: r.location || 'France',
+            region: r.region || 'France',
+            lat: parseFloat(r.lat || 46.6),
+            lng: parseFloat(r.lng || 1.8),
+            price: r.price || 0,
+            ddi: r.ddi || 3,
+            openingDate: r.opening_date,
+            raceDate: r.race_date,
+            status: r.status,
+            url: r.organizer_url
+        }));
+    }
+
+    applyFilters();
+    updateDashboardStats();
+}
+
+// Appeler cette fonction au chargement du DOM :
+document.addEventListener('DOMContentLoaded', () => {
+    initLeafletMap();
+    fetchRacesFromSupabase();
+    renderPpsWidget();
+    renderSeasonPlanner();
+});
+
+
+        
 // Remplace la fonction de sauvegarde de l'alerte
 async function saveAlertToBackend(raceId, userEmail) {
     const { data, error } = await supabase
