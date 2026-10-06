@@ -26,7 +26,7 @@ async function scrapeWithPuppeteer() {
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
 
     // ⚠️ Remplace par l'URL exacte copiée depuis la console (events-drizzle)
-    const API_URL = 'VOTRE_URL_EVENTS_DRIZZLE';
+    const API_URL = 'https://www.betrail.run/api/events-drizzle?after=2026-10-05&before=2027-10-06&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false';
 
     console.log("📡 Envoi de la requête via Puppeteer...");
     
