@@ -105,3 +105,32 @@ async function scrapeWithNetworkInterception() {
 }
 
 scrapeWithNetworkInterception();
+
+import axios from 'axios';
+import { createClient } from '@supabase/supabase-js';
+
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY; // Clé d'un service type ScraperAPI
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+async function runScraper() {
+  try {
+    const TARGET_URL = encodeURIComponent('VOTRE_URL_EVENTS_DRIZZLE');
+    
+    // Passer la requête par un proxy de scraping contournant Cloudflare
+    const response = await axios.get(`http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${TARGET_URL}&render=true`);
+    
+    const events = response.data;
+    console.log(`📊 ${events.length} épreuves récupérées !`);
+
+    // Traitement et envoi vers Supabase...
+    // ...
+  } catch (err) {
+    console.error("❌ Erreur :", err.message);
+  }
+}
+
+runScraper();
+
