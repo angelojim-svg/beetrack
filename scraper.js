@@ -32,8 +32,7 @@ function formatDate(rawDate) {
 async function runScraper() {
   console.log("🚀 Extraction des données...");
 
-  const REAL_API_URL = 'https://www.betrail.run/api/events-drizzle?after=2026-10-06&before=2027-10-07&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false
-';
+  const REAL_API_URL = 'https://www.betrail.run/api/events-drizzle?after=2026-10-06&before=2027-10-07&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false';
 
   try {
     const TARGET_URL = encodeURIComponent(REAL_API_URL);
