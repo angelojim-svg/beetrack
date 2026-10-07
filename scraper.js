@@ -58,26 +58,40 @@ async function runScraper() {
       return;
     }
 
-    const races = events.map(event => ({
-      title: event.name || event.title || event.race_name || 'Course sans nom',
-      category: (event.distance || 0) > 42 ? 'Ultra Trail' : 'Trail',
-      distance: parseFloat(event.distance) || 0,
-      elevation: parseInt(event.elevation || event.positive_elevation || 0, 10),
-      location: event.city || event.location || 'France',
-      region: event.region || 'France',
-      lat: parseFloat(event.latitude || event.lat || 46.6),
-      lng: parseFloat(event.longitude || event.lng || 1.8),
-      price: parseFloat(event.price) || 0,
-      ddi: (event.distance || 0) > 80 ? 5 : 3,
-      opening_date: formatDate(event.opening_date),
-      race_date: formatDate(event.date || event.start_date || event.race_date),
-      status: 'Open',
-      organizer_url: event.url || 'https://www.betrail.run'
-    }));
+  / 1. Filtrer les objets invalides ou sans nom/distance
+    const validEvents = events.filter(event => {
+      const name = event.name || event.title || event.race_name || event.event_name;
+      const distance = parseFloat(event.distance || event.distance_km || event.length || 0);
+      return name && name.trim() !== '' && distance > 0;
+    });
 
-    const { error } = await supabase
-      .from('races')
-      .upsert(races);
+    console.log(`📊 ${validEvents.length} épreuves valides conservées sur ${events.length}.`);
+
+    // 2. Transformer uniquement les épreuves valides
+    const races = validEvents.map(event => {
+      const title = event.name || event.title || event.race_name || event.event_name || 'Course sans nom';
+      const distance = parseFloat(event.distance || event.distance_km || event.length || 0);
+      const elevation = parseInt(event.elevation || event.positive_elevation || event.denivele || event.ascent || 0, 10);
+
+      return {
+        title: title,
+        category: distance > 42 ? 'Ultra Trail' : 'Trail',
+        distance: distance,
+        elevation: elevation,
+        location: event.city || event.location || event.town || 'France',
+        region: event.region || event.department_name || 'France',
+        lat: parseFloat(event.latitude || event.lat || 46.6),
+        lng: parseFloat(event.longitude || event.lng || 1.8),
+        price: parseFloat(event.price || event.entry_fee || 0),
+        ddi: distance > 80 ? 5 : 3,
+        opening_date: formatDate(event.opening_date || event.registration_open_date),
+        race_date: formatDate(event.date || event.start_date || event.race_date),
+        status: 'Open',
+        organizer_url: event.url || event.link || 'https://www.betrail.run'
+      };
+    });
+
+
 
     if (error) {
       console.error("❌ Erreur Supabase :", error.message);
