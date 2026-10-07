@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PacePulse - Veille & Dossards Trail / Course à pied</title>
@@ -12,12 +11,14 @@
     <!-- Leaflet CSS & JS for Interactive Maps -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- CSS de MarkerCluster -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
 
-<!-- JS de MarkerCluster (à placer JUSTE APRÈS la balise <script src="...leaflet.js"></script>) -->
-<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <!-- CSS de MarkerCluster -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+
+    <!-- JS de MarkerCluster (placé directement après leaflet.js) -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -58,7 +59,7 @@
             background-color: #0b0f17;
             color: #f3f4f6;
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-image: 
+            background-image:
                 radial-gradient(circle at 15% 15%, rgba(16, 185, 129, 0.05) 0%, transparent 40%),
                 radial-gradient(circle at 85% 85%, rgba(234, 179, 8, 0.03) 0%, transparent 40%);
             background-attachment: fixed;
@@ -135,7 +136,7 @@
 
         <!-- DASHBOARD TOP ROW -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
+           
             <!-- PPS Widget -->
             <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between border border-borderBg">
                 <div class="flex items-start justify-between">
@@ -367,31 +368,29 @@
         </div>
     </div>
 
- <!-- SCRIPT JAVASCRIPT PRINCIPAL -->
+    <!-- SCRIPT JAVASCRIPT PRINCIPAL -->
     <script>
         // Configuration Supabase
-        const SUPABASE_URL = 'https://rjfykmedcxgasduebvbn.supabase.co'; // Ton URL
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqZnlrbWVkY3hnYXNkdWVidmJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNDI3NjEsImV4cCI6MjEwNjgxODc2MX0.4N9LkjjLno-z_o7NEGQjGdJDFXpzvBzRfzs-vRwv1GA'; // Ta clé anon
+        const SUPABASE_URL = 'https://rjfykmedcxgasduebvbn.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqZnlrbWVkY3hnYXNkdWVidmJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNDI3NjEsImV4cCI6MjEwNjgxODc2MX0.4N9LkjjLno-z_o7NEGQjGdJDFXpzvBzRfzs-vRwv1GA';
 
-        // On affecte à une variable globale unique pour éviter tout conflit
         window.dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // Variables d'état
         let racesData = [];
         let filteredRaces = [];
         let leafletMap = null;
-        let mapMarkers = [];
+        let markerClusterGroup = null;
 
         // Initialisation de la carte Leaflet
-       function initLeafletMap() {
-    const mapContainer = document.getElementById('map');
-    if (!mapContainer) return;
-    leafletMap = L.map('map').setView([46.603354, 1.888334], 6);
-    
-    // Fond de carte OpenStreetMap gratuit et sans clé API
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(leafletMap);
+        function initLeafletMap() {
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer) return;
+            leafletMap = L.map('map').setView([46.603354, 1.888334], 6);
+           
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(leafletMap);
         }
 
         // Récupération dynamique depuis Supabase
@@ -446,41 +445,66 @@
 
             const countElem = document.getElementById('filtered-count');
             if (countElem) countElem.innerText = filteredRaces.length;
-            
+           
             renderListView();
             updateMapMarkers();
         }
 
-       // 1. Crée le groupe de clusters au lieu d'ajouter directement à map
-const markersGroup = L.markerClusterGroup({
-  chunkedLoading: true // Empêche le navigateur de freezer
-});
+        // Mise à jour optimisée des marqueurs avec MarkerCluster
+        function updateMapMarkers() {
+            if (!leafletMap) return;
 
-// 2. Dans ta boucle qui parcourt les courses :
-races.forEach(race => {
-  if (race.lat && race.lng) {
-    const marker = L.marker([race.lat, race.lng])
-      .bindPopup(`<b>${race.title}</b><br>${race.distance} km | +${race.elevation}m`);
-    
-    // Ajoute au groupe au lieu de map.addLayer()
-    markersGroup.addLayer(marker);
-  }
-});
+            if (markerClusterGroup) {
+                leafletMap.removeLayer(markerClusterGroup);
+            }
 
-// 3. Ajoute le groupe à la carte
-map.addLayer(markersGroup);
-
-
-                const marker = L.marker([race.lat, race.lng], { icon: customIcon }).addTo(leafletMap);
-                marker.bindPopup(`
-                    <div class="p-1 space-y-2">
-                        <h4 class="font-bold text-sm text-white">${race.title}</h4>
-                        <p class="text-xs text-gray-400">${race.distance} km | +${race.elevation}m</p>
-                        <button onclick="openAlertModal('${race.id}')" class="w-full text-xs font-bold bg-emerald-500 text-darkBg py-1 rounded">Alerte</button>
-                    </div>
-                `);
-                mapMarkers.push(marker);
+            markerClusterGroup = L.markerClusterGroup({
+                chunkedLoading: true,
+                maxClusterRadius: 35
             });
+
+            const groupedRaces = {};
+
+            filteredRaces.forEach(race => {
+                if (!race.lat || !race.lng) return;
+                const geoKey = `${race.lat.toFixed(4)}_${race.lng.toFixed(4)}`;
+                if (!groupedRaces[geoKey]) {
+                    groupedRaces[geoKey] = [];
+                }
+                groupedRaces[geoKey].push(race);
+            });
+
+            Object.values(groupedRaces).forEach(racesAtLocation => {
+                const mainRace = racesAtLocation[0];
+                let color = mainRace.status === 'Open' ? '#10b981' : (mainRace.status === 'Upcoming' ? '#f59e0b' : '#ef4444');
+                
+                const customIcon = L.divIcon({
+                    className: 'custom-pin',
+                    html: `<div style="background:${color}; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow:0 0 4px rgba(0,0,0,0.4);"></div>`,
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                });
+
+                const marker = L.marker([mainRace.lat, mainRace.lng], { icon: customIcon });
+
+                let popupHtml = `<div style="max-height: 220px; overflow-y: auto; color: #f3f4f6; padding: 4px;">`;
+                racesAtLocation.forEach((r, idx) => {
+                    popupHtml += `
+                        <div style="padding-bottom: 6px; margin-bottom: 6px; ${idx < racesAtLocation.length - 1 ? 'border-b: 1px solid #1f293d;' : ''}">
+                            <strong style="color: #fff; font-size: 13px;">${r.title}</strong><br>
+                            <span style="color: #34d399; font-size: 12px; font-weight: 600;">${r.distance} km</span> | 
+                            <span style="color: #9ca3af; font-size: 12px;">+${r.elevation}m</span>
+                            <button onclick="openAlertModal('${r.id}')" style="display: block; width: 100%; margin-top: 6px; padding: 3px; font-size: 11px; font-weight: bold; background-color: #10b981; color: #0b0f17; border-radius: 6px;">Alerte</button>
+                        </div>
+                    `;
+                });
+                popupHtml += `</div>`;
+
+                marker.bindPopup(popupHtml);
+                markerClusterGroup.addLayer(marker);
+            });
+
+            leafletMap.addLayer(markerClusterGroup);
         }
 
         function renderListView() {
