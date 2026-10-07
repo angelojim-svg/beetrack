@@ -396,7 +396,7 @@
        async function fetchRacesFromSupabase() {
     const { data: races, error } = await window.dbClient
         .from('races')
-        .select('id, title, category, distance, elevation, location, region, lat, lng, price, ddi, opening_date, race_date, status, organizer_url')
+        .select('*')
         .limit(15000);
 
     if (error) {
