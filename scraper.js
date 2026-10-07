@@ -11,37 +11,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SCRAPER_API_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
 const geoCache = new Map();
-
-// Dictionnaire étendu de massifs, régions et lieux célèbres du trail
-const KNOWN_PLACES = {
-  'calanques': { lat: 43.2111, lng: 5.4333, city: 'Marseille' },
-  'marseille': { lat: 43.2965, lng: 5.3698, city: 'Marseille' },
-  'saint-jacques': { lat: 45.0428, lng: 3.8829, city: 'Le Puy-en-Velay' },
-  'ventoux': { lat: 44.1736, lng: 5.2788, city: 'Bedoin' },
-  'verdon': { lat: 43.7497, lng: 6.2415, city: 'Moustiers-Sainte-Marie' },
-  'chamonix': { lat: 45.9237, lng: 6.8694, city: 'Chamonix' },
-  'utmb': { lat: 45.9237, lng: 6.8694, city: 'Chamonix' },
-  'mont-blanc': { lat: 45.9237, lng: 6.8694, city: 'Chamonix' },
-  'paris': { lat: 48.8566, lng: 2.3522, city: 'Paris' },
-  'ecotrail': { lat: 48.8566, lng: 2.3522, city: 'Paris' },
-  'lyon': { lat: 45.7640, lng: 4.8357, city: 'Lyon' },
-  'nice': { lat: 43.7102, lng: 7.2620, city: 'Nice' },
-  'toulouse': { lat: 43.6047, lng: 1.4442, city: 'Toulouse' },
-  'bordeaux': { lat: 44.8378, lng: -0.5792, city: 'Bordeaux' },
-  'grenoble': { lat: 45.1885, lng: 5.7245, city: 'Grenoble' },
-  'annecy': { lat: 45.8992, lng: 6.1294, city: 'Annecy' },
-  'waterloo': { lat: 50.7147, lng: 4.3991, city: 'Waterloo' },
-  'ellezelles': { lat: 50.7333, lng: 3.6833, city: 'Ellezelles' },
-  'forcalquier': { lat: 43.9592, lng: 5.7888, city: 'Forcalquier' },
-  'plourhan': { lat: 48.6314, lng: -2.8711, city: 'Plourhan' },
-  'glazig': { lat: 48.6314, lng: -2.8711, city: 'Plourhan' },
-  'sainte-baume': { lat: 43.3333, lng: 5.7333, city: 'Aubagne' },
-  'luberon': { lat: 43.8333, lng: 5.2500, city: 'Apt' },
-  'sainte-victoire': { lat: 43.5323, lng: 5.5786, city: 'Aix-en-Provence' },
-  'aix': { lat: 43.5297, lng: 5.4474, city: 'Aix-en-Provence' }
-};
 
 function formatDate(rawDate) {
   if (!rawDate) return new Date().toISOString().split('T')[0];
@@ -54,64 +24,47 @@ function formatDate(rawDate) {
   return !isNaN(parsed.getTime()) ? parsed.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
 }
 
-function parseCoordinate(val) {
-  if (val === undefined || val === null || val === '') return null;
+function parseCoord(val) {
+  if (!val) return null;
   const num = parseFloat(String(val).replace(',', '.'));
   return isNaN(num) || num === 0 ? null : num;
 }
 
-async function getRealCoordinates(title, city, region, country) {
-  const fullText = `${title || ''} ${city || ''} ${region || ''} ${country || ''}`.toLowerCase();
-
-  // 1. Détection via le dictionnaire de lieux connus
-  for (const [place, data] of Object.entries(KNOWN_PLACES)) {
-    if (fullText.includes(place)) {
-      // Légère variation pour éviter la superposition exacte
-      return {
-        lat: data.lat + (Math.random() - 0.5) * 0.02,
-        lng: data.lng + (Math.random() - 0.5) * 0.02,
-        detectedCity: data.city
-      };
-    }
+function cleanCityName(title, city, region) {
+  if (city && city.length > 2 && city !== 'France') return city;
+  const match = title.match(/(?:trail|course|foulées|ultra)\s+(?:du|des|de|d')?\s*([A-Za-zÀ-ÖØ-öø-ÿ\s-]+)/i);
+  if (match && match[1] && match[1].length > 3) {
+    return match[1].split('-')[0].trim();
   }
+  return region || city || 'France';
+}
 
-  const query = `${city || ''} ${country || region || ''}`.trim() || title;
-  if (!query || query === 'France') {
-    return { lat: 46.6, lng: 1.8, detectedCity: city || 'France' };
-  }
+async function fetchCoordsForCity(cityName) {
+  if (!cityName || cityName === 'France') return null;
+  const key = cityName.toLowerCase().trim();
 
-  if (geoCache.has(query.toLowerCase())) {
-    return geoCache.get(query.toLowerCase());
-  }
+  if (geoCache.has(key)) return geoCache.get(key);
 
-  // 2. Appel API Nominatim
   try {
-    const nomUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
-    const res = await axios.get(nomUrl, { 
-      headers: { 'User-Agent': 'PacePulse-App/1.0' },
-      timeout: 2000 
-    });
-
-    if (res.data && res.data.length > 0) {
-      const result = { 
-        lat: parseFloat(res.data[0].lat), 
-        lng: parseFloat(res.data[0].lon),
-        detectedCity: city || query
-      };
-      geoCache.set(query.toLowerCase(), result);
-      return result;
+    const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(cityName)}&type=municipality&limit=1`;
+    const res = await axios.get(url, { timeout: 2000 });
+    
+    if (res.data?.features?.length > 0) {
+      const [lng, lat] = res.data.features[0].geometry.coordinates;
+      const coords = { lat, lng };
+      geoCache.set(key, coords);
+      return coords;
     }
   } catch (e) {
-    // Ignorer les erreurs réseau/timeout
+    // Erreur de temporisation ou réseau
   }
-
-  return { lat: 46.6, lng: 1.8, detectedCity: city || 'France' };
+  return null;
 }
 
 async function runScraper() {
-  console.log("🚀 Extraction des données...");
+  console.log("🚀 Extraction des données des épreuves...");
 
-  const REAL_API_URL = 'https://www.betrail.run/api/events-drizzle?after=2026-10-06&before=2027-10-07&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false';
+  const REAL_API_URL = 'VOTRE_URL_EXACTE_COPIEE_DEPUIS_DEVTOOLS';
 
   try {
     const TARGET_URL = encodeURIComponent(REAL_API_URL);
@@ -132,10 +85,7 @@ async function runScraper() {
 
     console.log(`📊 ${rawEvents.length} événements bruts récupérés !`);
 
-    if (rawEvents.length === 0) {
-      console.log("⚠️ Aucun événement trouvé.");
-      return;
-    }
+    if (rawEvents.length === 0) return;
 
     const racesMap = new Map();
 
@@ -144,74 +94,64 @@ async function runScraper() {
       if (!eventName || eventName === 'Course sans nom') continue;
 
       const subRaces = item.races || item.distances || item.courses || item.sub_events || item.epreuves || [];
-      const city = item.city || item.location || item.town || item.place || '';
-      const region = item.region || item.department_name || '';
-      const country = item.country || item.country_name || '';
+      const city = cleanCityName(eventName, item.city || item.location || item.town || '', item.region);
+      const region = item.region || item.department_name || 'France';
 
-      let directLat = parseCoordinate(item.lat || item.latitude || item.geo_lat || (item.coordinates && item.coordinates[1]));
-      let directLng = parseCoordinate(item.lng || item.longitude || item.lon || item.geo_lng || (item.coordinates && item.coordinates[0]));
+      let baseLat = parseCoord(item.lat || item.latitude || (item.coordinates && item.coordinates[1]));
+      let baseLng = parseCoord(item.lng || item.longitude || (item.coordinates && item.coordinates[0]));
 
-      let geoInfo = { lat: directLat, lng: directLng, detectedCity: city };
-
-      if (!geoInfo.lat || !geoInfo.lng) {
-        geoInfo = await getRealCoordinates(eventName, city, region, country);
+      if (!baseLat || !baseLng) {
+        const geo = await fetchCoordsForCity(city);
+        if (geo) {
+          baseLat = geo.lat;
+          baseLng = geo.lng;
+        }
       }
 
-      const finalLocation = geoInfo.detectedCity || city || country || 'France';
+      if (!baseLat || !baseLng) {
+        baseLat = 43.5 + Math.random() * 6.5;
+        baseLng = -1.0 + Math.random() * 8.5;
+      }
+
+      const processRace = (title, distVal, elevVal, dateVal, subObj = {}) => {
+        const dist = parseFloat(String(distVal || 0).replace(',', '.'));
+        const elev = parseInt(String(elevVal || 0), 10);
+        const raceDate = formatDate(dateVal);
+        
+        // Clé unique incluant la distance pour différencier les formats (SaintéLyon 79, 44, etc.)
+        const key = `${title.trim().toLowerCase()}_${dist}km_${raceDate}`;
+
+        // Petit décalage aléatoire pour éviter la superposition stricte
+        const jitterLat = (Math.random() - 0.5) * 0.003;
+        const jitterLng = (Math.random() - 0.5) * 0.003;
+
+        if (!racesMap.has(key)) {
+          racesMap.set(key, {
+            title: title,
+            category: dist > 42 ? 'Ultra Trail' : 'Trail',
+            distance: dist,
+            elevation: elev,
+            location: city,
+            region: region,
+            lat: baseLat + jitterLat,
+            lng: baseLng + jitterLng,
+            price: parseFloat(subObj.price || item.price || 0),
+            ddi: dist > 80 ? 5 : 3,
+            opening_date: formatDate(subObj.opening_date || item.opening_date),
+            race_date: raceDate,
+            status: 'Open',
+            organizer_url: subObj.url || item.url || 'https://www.betrail.run'
+          });
+        }
+      };
 
       if (Array.isArray(subRaces) && subRaces.length > 0) {
         for (const sub of subRaces) {
           const subTitle = sub.name || sub.title || `${eventName} - ${sub.distance || sub.length || ''}km`;
-          const dist = parseFloat(String(sub.distance || sub.distance_km || sub.length || sub.dist || 0).replace(',', '.'));
-          const elev = parseInt(String(sub.elevation || sub.positive_elevation || sub.denivele || sub.ascent || sub.dplus || 0), 10);
-          const raceDate = formatDate(sub.date || sub.start_date || item.date || item.start_date);
-
-          const key = `${subTitle.trim().toLowerCase()}_${raceDate}`;
-
-          if (!racesMap.has(key)) {
-            racesMap.set(key, {
-              title: subTitle,
-              category: dist > 42 ? 'Ultra Trail' : 'Trail',
-              distance: dist,
-              elevation: elev,
-              location: finalLocation,
-              region: region || country || 'France',
-              lat: geoInfo.lat,
-              lng: geoInfo.lng,
-              price: parseFloat(sub.price || sub.entry_fee || item.price || 0),
-              ddi: dist > 80 ? 5 : 3,
-              opening_date: formatDate(sub.opening_date || item.opening_date),
-              race_date: raceDate,
-              status: 'Open',
-              organizer_url: sub.url || item.url || 'https://www.betrail.run'
-            });
-          }
+          processRace(subTitle, sub.distance || sub.length || sub.dist, sub.elevation || sub.positive_elevation, sub.date || sub.start_date || item.date, sub);
         }
       } else {
-        const dist = parseFloat(String(item.distance || item.distance_km || item.length || item.dist || 0).replace(',', '.'));
-        const elev = parseInt(String(item.elevation || item.positive_elevation || item.denivele || item.ascent || item.dplus || 0), 10);
-        const raceDate = formatDate(item.date || item.start_date);
-
-        const key = `${eventName.trim().toLowerCase()}_${raceDate}`;
-
-        if (!racesMap.has(key)) {
-          racesMap.set(key, {
-            title: eventName,
-            category: dist > 42 ? 'Ultra Trail' : 'Trail',
-            distance: dist,
-            elevation: elev,
-            location: finalLocation,
-            region: region || country || 'France',
-            lat: geoInfo.lat,
-            lng: geoInfo.lng,
-            price: parseFloat(item.price || item.entry_fee || 0),
-            ddi: dist > 80 ? 5 : 3,
-            opening_date: formatDate(item.opening_date),
-            race_date: raceDate,
-            status: 'Open',
-            organizer_url: item.url || 'https://www.betrail.run'
-          });
-        }
+        processRace(eventName, item.distance || item.length || item.dist, item.elevation || item.positive_elevation, item.date || item.start_date, item);
       }
     }
 
@@ -219,16 +159,14 @@ async function runScraper() {
 
     await supabase.from('races').delete().neq('id', '00000000-0000-0000-0000-000000000000');
 
-    const { error } = await supabase
-      .from('races')
-      .upsert(uniqueRaces);
+    const { error } = await supabase.from('races').upsert(uniqueRaces);
 
     if (error) {
       console.error("❌ Erreur Supabase :", error.message);
       process.exit(1);
     }
 
-    console.log(`✅ ${uniqueRaces.length} épreuves insérées aux bons emplacements !`);
+    console.log(`✅ ${uniqueRaces.length} épreuves insérées !`);
 
   } catch (err) {
     console.error("❌ Erreur :", err.message);
@@ -237,4 +175,5 @@ async function runScraper() {
 }
 
 runScraper();
+
 
