@@ -32,6 +32,7 @@ function formatDate(rawDate) {
 async function runScraper() {
   console.log("🚀 Extraction des données...");
 
+  // Met ici l'URL exacte copiée depuis DevTools
   const REAL_API_URL = 'https://www.betrail.run/api/events-drizzle?after=2026-10-06&before=2027-10-07&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false';
 
   try {
@@ -58,18 +59,23 @@ async function runScraper() {
       return;
     }
 
+    // 1. Filtrage sur le nom uniquement
     const validEvents = events.filter(event => {
       const name = event.name || event.title || event.race_name || event.event_name;
-      const distance = parseFloat(event.distance || event.distance_km || event.length || 0);
-      return name && name.trim() !== '' && name !== 'Course sans nom' && distance > 0;
+      return name && name.toString().trim() !== '' && name !== 'Course sans nom';
     });
 
     console.log(`📊 ${validEvents.length} épreuves valides conservées sur ${events.length}.`);
 
+    // 2. Mapping avec conversion souple des valeurs numériques
     const races = validEvents.map(event => {
       const title = event.name || event.title || event.race_name || event.event_name;
-      const distance = parseFloat(event.distance || event.distance_km || event.length || 0);
-      const elevation = parseInt(event.elevation || event.positive_elevation || event.denivele || event.ascent || 0, 10);
+      
+      const rawDist = event.distance || event.distance_km || event.length || event.dist || 0;
+      const distance = parseFloat(String(rawDist).replace(',', '.')) || 0;
+
+      const rawElev = event.elevation || event.positive_elevation || event.denivele || event.ascent || event.dplus || 0;
+      const elevation = parseInt(String(rawElev), 10) || 0;
 
       return {
         title: title,
@@ -98,7 +104,7 @@ async function runScraper() {
       process.exit(1);
     }
 
-    console.log("✅ Toutes les épreuves valides ont été insérées dans Supabase avec succès !");
+    console.log("✅ Toutes les épreuves ont été insérées dans Supabase avec succès !");
 
   } catch (err) {
     console.error("❌ Erreur :", err.message);
