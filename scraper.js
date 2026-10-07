@@ -110,37 +110,31 @@ async function runScraper() {
       const region = item.region || item.department_name || 'France';
 
 // Verification stricte des coordonnées avant d'appliquer le jitter
-// Extraction sécurisée des coordonnées GPS brutes depuis l'item ou ses sous-objets
-let baseLat = parseCoord(
-  item.lat || 
-  item.latitude || 
-  item.gps_lat || 
-  (item.coordinates && item.coordinates[1]) || 
-  (item.location && item.location.lat)
-);
+// Détermination des coordonnées géographiques
+let baseLat = parseCoord(item.lat || item.latitude || item.gps_lat);
+let baseLng = parseCoord(item.lng || item.longitude || item.gps_lng);
 
-let baseLng = parseCoord(
-  item.lng || 
-  item.longitude || 
-  item.gps_lng || 
-  (item.coordinates && item.coordinates[0]) || 
-  (item.location && item.location.lng)
-);
-
-// Si aucune coordonnée n'est présente directement, on essaie de géocoder via la ville ou le nom
-if ((!baseLat || !baseLng) && city && city !== 'France') {
-  const cached = geoCache.get(city.toLowerCase());
-  if (cached) {
-    baseLat = cached.lat;
-    baseLng = cached.lng;
+// Secours : Si les coordonnées sont nulles, on essaie de géocoder via la ville ou la région
+if ((!baseLat || !baseLng) && (city || region)) {
+  const queryGeo = city && city !== 'France' ? city : region;
+  // Si tu utilises déjà une fonction de fetch vers l'API adresse.data.gouv.fr :
+  try {
+    const geoRes = await axios.get(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(queryGeo)}&limit=1`);
+    if (geoRes.data && geoRes.data.features && geoRes.data.features.length > 0) {
+      const coords = geoRes.data.features[0].geometry.coordinates; // [lng, lat]
+      baseLng = coords[0];
+      baseLat = coords[1];
+    }
+  } catch (e) {
+    // En cas d'échec de l'API, on applique une position centrale par défaut en France (ex: Lyon/Clermont) pour éviter les NULL
+    baseLat = 45.7640;
+    baseLng = 4.8357;
   }
 }
 
-// On applique le mini décalage seulement si les vraies coordonnées existent
-if (baseLat && baseLng) {
-  baseLat += (Math.random() - 0.5) * 0.003;
-  baseLng += (Math.random() - 0.5) * 0.003;
-}
+// Application du jitter pour éviter que tous les points se superposent exactement
+const jitterLat = baseLat ? baseLat + ((Math.random() - 0.5) * 0.01) : 46.2276;
+const jitterLng = baseLng ? baseLng + ((Math.random() - 0.5) * 0.01) : 2.2137;
 
 
      const processRace = (title, distVal, elevVal, dateVal, subObj = {}) => {
