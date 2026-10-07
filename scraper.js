@@ -109,22 +109,29 @@ async function runScraper() {
       const city = cleanCityName(eventName, item.city || item.location || item.town || '', item.region);
       const region = item.region || item.department_name || 'France';
 
-      let baseLat = parseCoord(item.lat || item.latitude || (item.coordinates && item.coordinates[1]));
-      let baseLng = parseCoord(item.lng || item.longitude || (item.coordinates && item.coordinates[0]));
+// Verification stricte des coordonnées avant d'appliquer le jitter
+let baseLat = parseCoord(item.lat || item.latitude || (item.coordinates && item.coordinates[1]));
+let baseLng = parseCoord(item.lng || item.longitude || (item.coordinates && item.coordinates[0]));
 
-      if (!baseLat || !baseLng) {
-        const cached = geoCache.get(city.toLowerCase());
-        if (cached) {
-          baseLat = cached.lat;
-          baseLng = cached.lng;
-        }
-      }
-
-     // ✅ Si pas de coordonnées, on laisse à null (la course sera visible en liste mais pas sur la carte)
-if (!baseLat || !baseLng) {
-  baseLat = null;
-  baseLng = null;
+// Si les coordonnées récupérées sont proches de 0 ou absentes
+if (!baseLat || !baseLng || Math.abs(baseLat) < 1) {
+  const cached = geoCache.get(city.toLowerCase());
+  if (cached) {
+    baseLat = cached.lat;
+    baseLng = cached.lng;
+  } else {
+    // Si la ville n'est pas trouvée, ne pas mettre 0
+    baseLat = null;
+    baseLng = null;
+  }
 }
+
+// On applique le mini décalage seulement si les vraies coordonnées existent
+if (baseLat && baseLng) {
+  baseLat += (Math.random() - 0.5) * 0.003;
+  baseLng += (Math.random() - 0.5) * 0.003;
+}
+
 
       const processRace = (title, distVal, elevVal, dateVal, subObj = {}) => {
         const dist = parseFloat(String(distVal || 0).replace(',', '.'));
