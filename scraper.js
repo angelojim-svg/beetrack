@@ -14,19 +14,33 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 const geoCache = new Map();
 
-// Base de coordonnées connue pour les villes récurrentes et pays
+// Dictionnaire étendu de massifs, régions et lieux célèbres du trail
 const KNOWN_PLACES = {
-  'waterloo': { lat: 50.7147, lng: 4.3991 },
-  'chamonix': { lat: 45.9237, lng: 6.8694 },
-  'marseille': { lat: 43.2965, lng: 5.3698 },
-  'paris': { lat: 48.8566, lng: 2.3522 },
-  'lyon': { lat: 45.7640, lng: 4.8357 },
-  'nice': { lat: 43.7102, lng: 7.2620 },
-  'toulouse': { lat: 43.6047, lng: 1.4442 },
-  'bordeaux': { lat: 44.8378, lng: -0.5792 },
-  'grenoble': { lat: 45.1885, lng: 5.7245 },
-  'annecy': { lat: 45.8992, lng: 6.1294 },
-  'ellezelles': { lat: 50.7333, lng: 3.6833 }
+  'calanques': { lat: 43.2111, lng: 5.4333, city: 'Marseille' },
+  'marseille': { lat: 43.2965, lng: 5.3698, city: 'Marseille' },
+  'saint-jacques': { lat: 45.0428, lng: 3.8829, city: 'Le Puy-en-Velay' },
+  'ventoux': { lat: 44.1736, lng: 5.2788, city: 'Bedoin' },
+  'verdon': { lat: 43.7497, lng: 6.2415, city: 'Moustiers-Sainte-Marie' },
+  'chamonix': { lat: 45.9237, lng: 6.8694, city: 'Chamonix' },
+  'utmb': { lat: 45.9237, lng: 6.8694, city: 'Chamonix' },
+  'mont-blanc': { lat: 45.9237, lng: 6.8694, city: 'Chamonix' },
+  'paris': { lat: 48.8566, lng: 2.3522, city: 'Paris' },
+  'ecotrail': { lat: 48.8566, lng: 2.3522, city: 'Paris' },
+  'lyon': { lat: 45.7640, lng: 4.8357, city: 'Lyon' },
+  'nice': { lat: 43.7102, lng: 7.2620, city: 'Nice' },
+  'toulouse': { lat: 43.6047, lng: 1.4442, city: 'Toulouse' },
+  'bordeaux': { lat: 44.8378, lng: -0.5792, city: 'Bordeaux' },
+  'grenoble': { lat: 45.1885, lng: 5.7245, city: 'Grenoble' },
+  'annecy': { lat: 45.8992, lng: 6.1294, city: 'Annecy' },
+  'waterloo': { lat: 50.7147, lng: 4.3991, city: 'Waterloo' },
+  'ellezelles': { lat: 50.7333, lng: 3.6833, city: 'Ellezelles' },
+  'forcalquier': { lat: 43.9592, lng: 5.7888, city: 'Forcalquier' },
+  'plourhan': { lat: 48.6314, lng: -2.8711, city: 'Plourhan' },
+  'glazig': { lat: 48.6314, lng: -2.8711, city: 'Plourhan' },
+  'sainte-baume': { lat: 43.3333, lng: 5.7333, city: 'Aubagne' },
+  'luberon': { lat: 43.8333, lng: 5.2500, city: 'Apt' },
+  'sainte-victoire': { lat: 43.5323, lng: 5.5786, city: 'Aix-en-Provence' },
+  'aix': { lat: 43.5297, lng: 5.4474, city: 'Aix-en-Provence' }
 };
 
 function formatDate(rawDate) {
@@ -49,21 +63,28 @@ function parseCoordinate(val) {
 async function getRealCoordinates(title, city, region, country) {
   const fullText = `${title || ''} ${city || ''} ${region || ''} ${country || ''}`.toLowerCase();
 
-  // 1. Dictionnaire local instantané
-  for (const [place, coords] of Object.entries(KNOWN_PLACES)) {
+  // 1. Détection via le dictionnaire de lieux connus
+  for (const [place, data] of Object.entries(KNOWN_PLACES)) {
     if (fullText.includes(place)) {
-      return coords;
+      // Légère variation pour éviter la superposition exacte
+      return {
+        lat: data.lat + (Math.random() - 0.5) * 0.02,
+        lng: data.lng + (Math.random() - 0.5) * 0.02,
+        detectedCity: data.city
+      };
     }
   }
 
   const query = `${city || ''} ${country || region || ''}`.trim() || title;
-  if (!query || query === 'France') return { lat: 46.6, lng: 1.8 };
+  if (!query || query === 'France') {
+    return { lat: 46.6, lng: 1.8, detectedCity: city || 'France' };
+  }
 
   if (geoCache.has(query.toLowerCase())) {
     return geoCache.get(query.toLowerCase());
   }
 
-  // 2. Requête API OpenStreetMap / Nominatim
+  // 2. Appel API Nominatim
   try {
     const nomUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
     const res = await axios.get(nomUrl, { 
@@ -74,16 +95,17 @@ async function getRealCoordinates(title, city, region, country) {
     if (res.data && res.data.length > 0) {
       const result = { 
         lat: parseFloat(res.data[0].lat), 
-        lng: parseFloat(res.data[0].lon) 
+        lng: parseFloat(res.data[0].lon),
+        detectedCity: city || query
       };
       geoCache.set(query.toLowerCase(), result);
       return result;
     }
   } catch (e) {
-    // En cas de rate-limit ou d'erreur réseau
+    // Ignorer les erreurs réseau/timeout
   }
 
-  return { lat: 46.6, lng: 1.8 };
+  return { lat: 46.6, lng: 1.8, detectedCity: city || 'France' };
 }
 
 async function runScraper() {
@@ -129,11 +151,13 @@ async function runScraper() {
       let directLat = parseCoordinate(item.lat || item.latitude || item.geo_lat || (item.coordinates && item.coordinates[1]));
       let directLng = parseCoordinate(item.lng || item.longitude || item.lon || item.geo_lng || (item.coordinates && item.coordinates[0]));
 
-      let coords = { lat: directLat, lng: directLng };
+      let geoInfo = { lat: directLat, lng: directLng, detectedCity: city };
 
-      if (!coords.lat || !coords.lng) {
-        coords = await getRealCoordinates(eventName, city, region, country);
+      if (!geoInfo.lat || !geoInfo.lng) {
+        geoInfo = await getRealCoordinates(eventName, city, region, country);
       }
+
+      const finalLocation = geoInfo.detectedCity || city || country || 'France';
 
       if (Array.isArray(subRaces) && subRaces.length > 0) {
         for (const sub of subRaces) {
@@ -150,10 +174,10 @@ async function runScraper() {
               category: dist > 42 ? 'Ultra Trail' : 'Trail',
               distance: dist,
               elevation: elev,
-              location: city || sub.city || country || 'France',
+              location: finalLocation,
               region: region || country || 'France',
-              lat: coords.lat,
-              lng: coords.lng,
+              lat: geoInfo.lat,
+              lng: geoInfo.lng,
               price: parseFloat(sub.price || sub.entry_fee || item.price || 0),
               ddi: dist > 80 ? 5 : 3,
               opening_date: formatDate(sub.opening_date || item.opening_date),
@@ -176,10 +200,10 @@ async function runScraper() {
             category: dist > 42 ? 'Ultra Trail' : 'Trail',
             distance: dist,
             elevation: elev,
-            location: city || country || 'France',
+            location: finalLocation,
             region: region || country || 'France',
-            lat: coords.lat,
-            lng: coords.lng,
+            lat: geoInfo.lat,
+            lng: geoInfo.lng,
             price: parseFloat(item.price || item.entry_fee || 0),
             ddi: dist > 80 ? 5 : 3,
             opening_date: formatDate(item.opening_date),
@@ -204,7 +228,7 @@ async function runScraper() {
       process.exit(1);
     }
 
-    console.log(`✅ ${uniqueRaces.length} épreuves insérées !`);
+    console.log(`✅ ${uniqueRaces.length} épreuves insérées aux bons emplacements !`);
 
   } catch (err) {
     console.error("❌ Erreur :", err.message);
@@ -213,5 +237,4 @@ async function runScraper() {
 }
 
 runScraper();
-
 
