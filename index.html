@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PacePulse - Veille & Dossards Trail / Course à pied</title>
@@ -11,7 +12,12 @@
     <!-- Leaflet CSS & JS for Interactive Maps -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- CSS de MarkerCluster -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
 
+<!-- JS de MarkerCluster (à placer JUSTE APRÈS la balise <script src="...leaflet.js"></script>) -->
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -445,19 +451,25 @@
             updateMapMarkers();
         }
 
-        function updateMapMarkers() {
-            if (!leafletMap) return;
-            mapMarkers.forEach(m => leafletMap.removeLayer(m));
-            mapMarkers = [];
+       // 1. Crée le groupe de clusters au lieu d'ajouter directement à map
+const markersGroup = L.markerClusterGroup({
+  chunkedLoading: true // Empêche le navigateur de freezer
+});
 
-            filteredRaces.forEach(race => {
-                let color = race.status === 'Open' ? '#10b981' : (race.status === 'Upcoming' ? '#f59e0b' : '#ef4444');
-                const customIcon = L.divIcon({
-                    className: 'custom-pin',
-                    html: `<div style="background:${color}; width:16px; height:16px; border-radius:50%; border:3px solid #0b0f17;"></div>`,
-                    iconSize: [16, 16],
-                    iconAnchor: [8, 8]
-                });
+// 2. Dans ta boucle qui parcourt les courses :
+races.forEach(race => {
+  if (race.lat && race.lng) {
+    const marker = L.marker([race.lat, race.lng])
+      .bindPopup(`<b>${race.title}</b><br>${race.distance} km | +${race.elevation}m`);
+    
+    // Ajoute au groupe au lieu de map.addLayer()
+    markersGroup.addLayer(marker);
+  }
+});
+
+// 3. Ajoute le groupe à la carte
+map.addLayer(markersGroup);
+
 
                 const marker = L.marker([race.lat, race.lng], { icon: customIcon }).addTo(leafletMap);
                 marker.bindPopup(`
