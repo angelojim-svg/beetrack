@@ -65,7 +65,7 @@ async function preloadCities(cities) {
 async function runScraper() {
   console.log("🚀 Extraction ultra-rapide des données...");
 
-  const REAL_API_URL = process.env.BETRAIL_API_URL || 'https://www.finishers.com/_next/data/KhrBi51N0j7HExSC19tCW/fr/course/ayni-andean-race.json?slug=ayni-andean-race';
+  const REAL_API_URL = process.env.BETRAIL_API_URL || 'https://www.finishers.com/courses';
 
   try {
     const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${encodeURIComponent(REAL_API_URL)}`;
