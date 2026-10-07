@@ -1,5 +1,9 @@
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { createClient } from '@supabase/supabase-js';
+
+// Activation du plugin Stealth anti-bot
+puppeteer.use(StealthPlugin());
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -12,41 +16,55 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 async function scrapeWithPuppeteer() {
-  console.log("🚀 Lancement du navigateur Headless...");
+  console.log("🚀 Lancement du navigateur Stealth...");
 
   const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-blink-features=AutomationControlled'
+    ]
   });
 
   try {
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
 
-    // ⚠️ Vérifie que cette URL est bien celle qui renvoie du JSON dans l'onglet Network (Réseau)
+    // 1. Visiter d'abord le calendrier pour déclencher le cookie de session Cloudflare
+    console.log("📡 Passage du challenge Cloudflare...");
+    await page.goto('https://www.betrail.run/calendar', { 
+      waitUntil: 'networkidle2',
+      timeout: 60000 
+    });
+
+    // Pause de 5 secondes pour laisser Cloudflare valider la session
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    // 2. Récupérer l'API Drizzle
     const API_URL = 'https://www.betrail.run/api/events-drizzle?after=2026-10-05&before=2027-10-06&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false';
+    console.log("📊 Récupération des données API...");
 
-    console.log("📡 Navigation vers l'API via Puppeteer...");
-    
-    // Aller directement sur l'URL avec Puppeteer
-    const response = await page.goto(API_URL, { waitUntil: 'networkidle0' });
+    const responseText = await page.evaluate(async (url) => {
+      const res = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      return await res.text();
+    }, API_URL);
 
-    // Récupérer le contenu textuel renvoyé
-    const responseText = await response.text();
-
-    // Parser le JSON
     let responseData;
     try {
       responseData = JSON.parse(responseText);
     } catch (e) {
-      console.error("❌ La réponse n'est pas au format JSON. Début de la réponse reçue :");
+      console.error("❌ Échec Cloudflare. Extrait de la réponse :");
       console.error(responseText.substring(0, 300));
       process.exit(1);
     }
 
     const events = Array.isArray(responseData) ? responseData : (responseData.data || responseData.events || []);
-
-    console.log(`📊 ${events.length} épreuves brutes récupérées !`);
+    console.log(`✅ ${events.length} épreuves récupérées !`);
 
     const races = events.map(event => ({
       title: event.name || event.title || 'Course sans nom',
@@ -74,13 +92,11 @@ async function scrapeWithPuppeteer() {
         console.error("❌ Erreur Supabase :", error.message);
         process.exit(1);
       }
-      console.log("✅ Base de données mise à jour avec succès !");
-    } else {
-      console.log("⚠️ Aucun événement trouvé dans le JSON.");
+      console.log("✅ Base de données mise à jour !");
     }
 
   } catch (err) {
-    console.error("❌ Erreur de scraping :", err.message);
+    console.error("❌ Erreur :", err.message);
     process.exit(1);
   } finally {
     await browser.close();
