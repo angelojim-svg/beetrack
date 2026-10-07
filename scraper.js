@@ -63,7 +63,7 @@ async function runScraper() {
 
     const { error } = await supabase
       .from('races')
-      .upsert(races, { onConflict: 'title, race_date' });
+      .upsert(batch);
 
     if (error) {
       console.error("❌ Erreur Supabase :", error.message);
