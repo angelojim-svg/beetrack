@@ -13,42 +13,45 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SCRAPER_API_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 async function runScraper() {
-  console.log("🚀 Lancement du scraper via ScraperAPI (avec rendu JS)...");
+  console.log("🚀 Démarrage du test d'extraction...");
+
+  // Colle ici l'URL exacte copiée depuis l'onglet Réseau (Network) de ton navigateur
+  const REAL_API_URL = 'https://www.betrail.run/api/events-drizzle?after=2026-10-06&before=2027-10-07&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false';
 
   try {
-    // URL exacte récupérée depuis l'onglet Réseau/Network de ton navigateur
-    const TARGET_URL = encodeURIComponent('https://www.betrail.run/api/events-drizzle?after=2026-10-06&before=2027-10-07&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false');
-    
-    // Ajout de render=true pour forcer l'exécution du JavaScript
-    const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${TARGET_URL}&render=true`;
+    const TARGET_URL = encodeURIComponent(REAL_API_URL);
+    const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${TARGET_URL}`;
 
     const response = await axios.get(proxyUrl);
 
-    // Inspection du contenu reçu dans les logs GitHub
-    console.log("Type de données reçues :", typeof response.data);
-    
+    console.log("📌 Statut HTTP :", response.status);
+    console.log("📌 Content-Type :", response.headers['content-type']);
+
     let rawData = response.data;
+
+    // Si les données sont renvoyées sous forme de texte, on tente le parse JSON
     if (typeof rawData === 'string') {
+      console.log("📝 Extrait du texte reçu :", rawData.substring(0, 300));
       try {
         rawData = JSON.parse(rawData);
       } catch (e) {
-        console.error("⚠️ La réponse reçue n'est pas du JSON brut. Aperçu :");
-        console.error(rawData.substring(0, 300));
+        console.error("❌ Impossible de convertir la réponse en JSON.");
         process.exit(1);
       }
     }
 
-    const events = Array.isArray(rawData) ? rawData : (rawData.data || rawData.events || []);
+    // Récupération du tableau d'événements
+    const events = Array.isArray(rawData) ? rawData : (rawData.data || rawData.events || rawData.races || []);
 
-    console.log(`📊 ${events.length} épreuves récupérées !`);
+    console.log(`📊 Nombre d'éléments trouvés : ${events.length}`);
 
     if (events.length === 0) {
-      console.log("⚠️ Le tableau d'événements est vide.");
+      console.log("⚠️ Structure d'objet reçue :", Object.keys(rawData));
       return;
     }
 
     const races = events.map(event => ({
-      title: event.name || event.title || 'Course sans nom',
+      title: event.name || event.title || event.race_name || 'Course sans nom',
       category: (event.distance || 0) > 42 ? 'Ultra Trail' : 'Trail',
       distance: parseFloat(event.distance) || 0,
       elevation: parseInt(event.elevation || event.positive_elevation || 0, 10),
@@ -76,11 +79,13 @@ async function runScraper() {
     console.log("✅ Base de données mise à jour avec succès !");
 
   } catch (err) {
-    console.error("❌ Erreur de requête :", err.message);
+    console.error("❌ Erreur lors de la requête :", err.message);
+    if (err.response) {
+      console.error("Détails réponse :", err.response.status, err.response.data);
+    }
     process.exit(1);
   }
 }
 
 runScraper();
-
 
