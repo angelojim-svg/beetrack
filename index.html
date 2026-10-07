@@ -403,6 +403,8 @@
         console.error("Erreur Supabase :", error.message);
         return;
     }
+// Remplace ou ajoute ceci après avoir récupéré tes données depuis Supabase :
+window.racesData = data; // 'data' étant ton tableau de courses
 
     if (races) {
         racesData = races.map(r => ({
