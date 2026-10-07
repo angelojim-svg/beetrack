@@ -133,34 +133,43 @@ if (baseLat && baseLng) {
 }
 
 
-      const processRace = (title, distVal, elevVal, dateVal, subObj = {}) => {
-        const dist = parseFloat(String(distVal || 0).replace(',', '.'));
-        const elev = parseInt(String(elevVal || 0), 10);
-        const raceDate = formatDate(dateVal);
-        const key = `${title.trim().toLowerCase()}_${dist}km_${raceDate}`;
+     const processRace = (title, distVal, elevVal, dateVal, subObj = {}) => {
+  const dist = parseFloat(String(distVal || 0).replace(',', '.'));
+  const elev = parseInt(String(elevVal || 0), 10);
+  const raceDate = formatDate(dateVal);
+  const key = `${title.trim().toLowerCase()}_${dist}km_${raceDate}`;
 
-        const jitterLat = (Math.random() - 0.5) * 0.003;
-        const jitterLng = (Math.random() - 0.5) * 0.003;
+  // Vérification stricte : les coordonnées doivent appartenir à la France (lat entre 41 et 52, lng entre -5 et 10)
+  let finalLat = null;
+  let finalLng = null;
 
-        if (!racesMap.has(key)) {
-          racesMap.set(key, {
-            title: title,
-            category: dist > 42 ? 'Ultra Trail' : 'Trail',
-            distance: dist,
-            elevation: elev,
-            location: city,
-            region: region,
-            lat: baseLat + jitterLat,
-            lng: baseLng + jitterLng,
-            price: parseFloat(subObj.price || item.price || 0),
-            ddi: dist > 80 ? 5 : 3,
-            opening_date: formatDate(subObj.opening_date || item.opening_date),
-            race_date: raceDate,
-            status: 'Open',
-            organizer_url: subObj.url || item.url || 'https://www.betrail.run'
-          });
-        }
-      };
+  if (baseLat && baseLng && baseLat > 40 && baseLat < 53) {
+    const jitterLat = (Math.random() - 0.5) * 0.003;
+    const jitterLng = (Math.random() - 0.5) * 0.003;
+    finalLat = baseLat + jitterLat;
+    finalLng = baseLng + jitterLng;
+  }
+
+  if (!racesMap.has(key)) {
+    racesMap.set(key, {
+      title: title,
+      category: dist > 42 ? 'Ultra Trail' : 'Trail',
+      distance: dist,
+      elevation: elev,
+      location: city,
+      region: region,
+      lat: finalLat,
+      lng: finalLng,
+      price: parseFloat(subObj.price || item.price || 0),
+      ddi: dist > 80 ? 5 : 3,
+      opening_date: formatDate(subObj.opening_date || item.opening_date),
+      race_date: raceDate,
+      status: 'Open',
+      organizer_url: subObj.url || item.url || 'https://www.betrail.run'
+    });
+  }
+};
+
 
       if (Array.isArray(subRaces) && subRaces.length > 0) {
         for (const sub of subRaces) {
