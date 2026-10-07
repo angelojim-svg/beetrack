@@ -110,19 +110,29 @@ async function runScraper() {
       const region = item.region || item.department_name || 'France';
 
 // Verification stricte des coordonnées avant d'appliquer le jitter
-let baseLat = parseCoord(item.lat || item.latitude || (item.coordinates && item.coordinates[1]));
-let baseLng = parseCoord(item.lng || item.longitude || (item.coordinates && item.coordinates[0]));
+// Extraction sécurisée des coordonnées GPS brutes depuis l'item ou ses sous-objets
+let baseLat = parseCoord(
+  item.lat || 
+  item.latitude || 
+  item.gps_lat || 
+  (item.coordinates && item.coordinates[1]) || 
+  (item.location && item.location.lat)
+);
 
-// Si les coordonnées récupérées sont proches de 0 ou absentes
-if (!baseLat || !baseLng || Math.abs(baseLat) < 1) {
+let baseLng = parseCoord(
+  item.lng || 
+  item.longitude || 
+  item.gps_lng || 
+  (item.coordinates && item.coordinates[0]) || 
+  (item.location && item.location.lng)
+);
+
+// Si aucune coordonnée n'est présente directement, on essaie de géocoder via la ville ou le nom
+if ((!baseLat || !baseLng) && city && city !== 'France') {
   const cached = geoCache.get(city.toLowerCase());
   if (cached) {
     baseLat = cached.lat;
     baseLng = cached.lng;
-  } else {
-    // Si la ville n'est pas trouvée, ne pas mettre 0
-    baseLat = null;
-    baseLng = null;
   }
 }
 
