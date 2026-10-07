@@ -492,16 +492,20 @@
 
         const marker = L.marker([mainRace.lat, mainRace.lng], { icon: customIcon });
 
-        let popupHtml = `<div style="max-height: 220px; overflow-y: auto; padding: 2px;">`;
+        let popupHtml = `<div style="max-height: 220px; overflow-y: auto; padding: 2px; color: #f3f4f6;">`;
         racesAtLocation.forEach((r, idx) => {
-            const formattedDate = formatDateFR(r.raceDate);
-            const displayPrice = r.price > 0 ? `${r.price} €` : 'N/C';
+            // On récupère la date et le prix en vérifiant plusieurs formats possibles
+            const rawDate = r.raceDate || r.race_date || r.date;
+            const formattedDate = formatDateFR(rawDate);
+            
+            const rawPrice = r.price !== undefined ? r.price : (r.entry_fee || 0);
+            const displayPrice = rawPrice > 0 ? `${rawPrice} €` : 'Gratuit / N/C';
 
             popupHtml += `
                 <div style="padding-bottom: 6px; margin-bottom: 6px; ${idx < racesAtLocation.length - 1 ? 'border-b: 1px solid #1f293d;' : ''}">
                     <strong style="color: #fff; font-size: 13px;">${r.title}</strong>
                     <div style="color: #9ca3af; font-size: 11px; margin-top: 2px;">
-                        📅 ${formattedDate}
+                        📅 Date : <span style="color: #e2e8f0; font-weight: 600;">${formattedDate}</span>
                     </div>
                     <div style="font-size: 12px; margin-top: 2px;">
                         <span style="color: #34d399; font-weight: 600;">${r.distance} km</span> | 
@@ -513,6 +517,7 @@
             `;
         });
         popupHtml += `</div>`;
+
 
         marker.bindPopup(popupHtml);
         markerClusterGroup.addLayer(marker);
