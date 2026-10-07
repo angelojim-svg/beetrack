@@ -394,36 +394,41 @@
         }
 
         // Récupération dynamique depuis Supabase
-        async function fetchRacesFromSupabase() {
-            const { data: races, error } = await window.dbClient
-                .from('races')
-                .select('*');
+       async function fetchRacesFromSupabase() {
+    const { data: races, error } = await window.dbClient
+        .from('races')
+        .select('id, title, category, distance, elevation, location, region, lat, lng, price, ddi, opening_date, race_date, status, organizer_url')
+        .limit(15000);
 
-            if (error) {
-                console.error("Erreur d'importation Supabase :", error.message);
-            } else if (races) {
-                racesData = races.map(r => ({
-                    id: r.id,
-                    title: r.title,
-                    category: r.category || 'Trail',
-                    distance: r.distance || 0,
-                    elevation: r.elevation || 0,
-                    location: r.location || 'France',
-                    region: r.region || 'France',
-                    lat: parseFloat(r.lat || 46.6),
-                    lng: parseFloat(r.lng || 1.8),
-                    price: r.price || 0,
-                    ddi: r.ddi || 3,
-                    openingDate: r.opening_date,
-                    raceDate: r.race_date,
-                    status: r.status,
-                    url: r.organizer_url
-                }));
-            }
+    if (error) {
+        console.error("Erreur Supabase :", error.message);
+        return;
+    }
 
-            applyFilters();
-            updateDashboardStats();
-        }
+    if (races) {
+        racesData = races.map(r => ({
+            id: r.id,
+            title: r.title,
+            category: r.category || 'Trail',
+            distance: Number(r.distance) || 0,
+            elevation: Number(r.elevation) || 0,
+            location: r.location || 'France',
+            region: r.region || 'France',
+            lat: r.lat !== null ? parseFloat(r.lat) : null,
+            lng: r.lng !== null ? parseFloat(r.lng) : null,
+            price: parseFloat(r.price) || 0,
+            ddi: r.ddi || 3,
+            openingDate: r.opening_date,
+            raceDate: r.race_date,
+            status: r.status,
+            url: r.organizer_url
+        }));
+
+        applyFilters();
+        updateDashboardStats();
+    }
+}
+
 
         // Moteur de filtrage
         function applyFilters() {
