@@ -3,27 +3,31 @@ import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error("❌ ERREUR : Identifiants Supabase manquants.");
   process.exit(1);
 }
 
+if (!SCRAPER_API_KEY) {
+  console.error("❌ ERREUR : Clé SCRAPER_API_KEY manquante dans les Secrets GitHub.");
+  process.exit(1);
+}
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 async function runScraper() {
-  console.log("🚀 Lancement du scraper...");
+  console.log("🚀 Lancement du scraper via ScraperAPI...");
 
   try {
-    // Si tu utilises ScraperAPI pour passer Cloudflare :
-    // const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
-    // const TARGET_URL = encodeURIComponent('VOTRE_URL_EVENTS_DRIZZLE');
-    // const response = await axios.get(`http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${TARGET_URL}`);
+    // ⚠️ Remplace 'VOTRE_URL_EVENTS_DRIZZLE' par ton URL API Betrail réelle
+    const TARGET_URL = encodeURIComponent('https://www.betrail.run/api/events-drizzle?after=2026-10-05&before=2027-10-06&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false');
+    
+    // Requête routée à travers ScraperAPI
+    const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${TARGET_URL}`;
 
-    // Si tu appelles ton API directement :
-    const API_URL = 'https://www.betrail.run/api/events-drizzle?after=2026-10-05&before=2027-10-06&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false';
-    const response = await axios.get(API_URL);
-
+    const response = await axios.get(proxyUrl);
     const events = Array.isArray(response.data) ? response.data : (response.data.data || response.data.events || []);
 
     console.log(`📊 ${events.length} épreuves récupérées !`);
@@ -55,6 +59,8 @@ async function runScraper() {
         process.exit(1);
       }
       console.log("✅ Base de données mise à jour !");
+    } else {
+      console.log("⚠️ Aucun événement trouvé dans le JSON.");
     }
 
   } catch (err) {
@@ -64,3 +70,5 @@ async function runScraper() {
 }
 
 runScraper();
+
+
