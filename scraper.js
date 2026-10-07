@@ -32,7 +32,6 @@ function formatDate(rawDate) {
 async function runScraper() {
   console.log("🚀 Extraction des données...");
 
-  // Met ici l'URL exacte copiée depuis DevTools
   const REAL_API_URL = 'https://www.betrail.run/api/events-drizzle?after=2026-10-06&before=2027-10-07&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false';
 
   try {
@@ -48,52 +47,78 @@ async function runScraper() {
       rawData = JSON.parse(rawData);
     }
 
-    const events = Array.isArray(rawData) 
+    const rawEvents = Array.isArray(rawData) 
       ? rawData 
       : (rawData.data || rawData.events || rawData.races || rawData.results || []);
 
-    console.log(`📊 ${events.length} épreuves brutes récupérées !`);
+    console.log(`📊 ${rawEvents.length} événements bruts récupérés !`);
 
-    if (events.length === 0) {
-      console.log("⚠️ Aucune course trouvée dans le flux.");
+    if (rawEvents.length === 0) {
+      console.log("⚠️ Aucun événement trouvé.");
       return;
     }
 
-    // 1. Filtrage sur le nom uniquement
-    const validEvents = events.filter(event => {
-      const name = event.name || event.title || event.race_name || event.event_name;
-      return name && name.toString().trim() !== '' && name !== 'Course sans nom';
-    });
+    const races = [];
 
-    console.log(`📊 ${validEvents.length} épreuves valides conservées sur ${events.length}.`);
+    for (const item of rawEvents) {
+      const eventName = item.name || item.title || item.race_name || item.event_name || '';
+      if (!eventName || eventName === 'Course sans nom') continue;
 
-    // 2. Mapping avec conversion souple des valeurs numériques
-    const races = validEvents.map(event => {
-      const title = event.name || event.title || event.race_name || event.event_name;
-      
-      const rawDist = event.distance || event.distance_km || event.length || event.dist || 0;
-      const distance = parseFloat(String(rawDist).replace(',', '.')) || 0;
+      // Vérifie si l'événement contient un sous-tableau de courses/distances
+      const subRaces = item.races || item.distances || item.courses || item.sub_events || item.e preuves || [];
 
-      const rawElev = event.elevation || event.positive_elevation || event.denivele || event.ascent || event.dplus || 0;
-      const elevation = parseInt(String(rawElev), 10) || 0;
+      if (Array.isArray(subRaces) && subRaces.length > 0) {
+        // Extraction de chaque sous-course
+        for (const sub of subRaces) {
+          const subTitle = sub.name || sub.title || `${eventName} - ${sub.distance || sub.length || ''}km`;
+          const dist = parseFloat(String(sub.distance || sub.distance_km || sub.length || sub.dist || 0).replace(',', '.'));
+          const elev = parseInt(String(sub.elevation || sub.positive_elevation || sub.denivele || sub.ascent || sub.dplus || 0), 10);
 
-      return {
-        title: title,
-        category: distance > 42 ? 'Ultra Trail' : 'Trail',
-        distance: distance,
-        elevation: elevation,
-        location: event.city || event.location || event.town || 'France',
-        region: event.region || event.department_name || 'France',
-        lat: parseFloat(event.latitude || event.lat || 46.6),
-        lng: parseFloat(event.longitude || event.lng || 1.8),
-        price: parseFloat(event.price || event.entry_fee || 0),
-        ddi: distance > 80 ? 5 : 3,
-        opening_date: formatDate(event.opening_date || event.registration_open_date),
-        race_date: formatDate(event.date || event.start_date || event.race_date),
-        status: 'Open',
-        organizer_url: event.url || event.link || 'https://www.betrail.run'
-      };
-    });
+          races.push({
+            title: subTitle,
+            category: dist > 42 ? 'Ultra Trail' : 'Trail',
+            distance: dist,
+            elevation: elev,
+            location: item.city || item.location || sub.city || 'France',
+            region: item.region || item.department_name || 'France',
+            lat: parseFloat(item.latitude || item.lat || 46.6),
+            lng: parseFloat(item.longitude || item.lng || 1.8),
+            price: parseFloat(sub.price || sub.entry_fee || item.price || 0),
+            ddi: dist > 80 ? 5 : 3,
+            opening_date: formatDate(sub.opening_date || item.opening_date),
+            race_date: formatDate(sub.date || sub.start_date || item.date || item.start_date),
+            status: 'Open',
+            organizer_url: sub.url || item.url || 'https://www.betrail.run'
+          });
+        }
+      } else {
+        // Si l'objet est déjà une course directe
+        const dist = parseFloat(String(item.distance || item.distance_km || item.length || item.dist || 0).replace(',', '.'));
+        const elev = parseInt(String(item.elevation || item.positive_elevation || item.denivele || item.ascent || item.dplus || 0), 10);
+
+        races.push({
+          title: eventName,
+          category: dist > 42 ? 'Ultra Trail' : 'Trail',
+          distance: dist,
+          elevation: elev,
+          location: item.city || item.location || 'France',
+          region: item.region || item.department_name || 'France',
+          lat: parseFloat(item.latitude || item.lat || 46.6),
+          lng: parseFloat(item.longitude || item.lng || 1.8),
+          price: parseFloat(item.price || item.entry_fee || 0),
+          ddi: dist > 80 ? 5 : 3,
+          opening_date: formatDate(item.opening_date),
+          race_date: formatDate(item.date || item.start_date),
+          status: 'Open',
+          organizer_url: item.url || 'https://www.betrail.run'
+        });
+      }
+    }
+
+    console.log(`📊 ${races.length} épreuves individuelles générées.`);
+
+    // Purge des anciennes entrées invalides dans Supabase puis réinsertion
+    await supabase.from('races').delete().eq('distance', 0);
 
     const { error } = await supabase
       .from('races')
@@ -104,7 +129,7 @@ async function runScraper() {
       process.exit(1);
     }
 
-    console.log("✅ Toutes les épreuves ont été insérées dans Supabase avec succès !");
+    console.log("✅ Toutes les épreuves ont été insérées avec leurs distances et D+ !");
 
   } catch (err) {
     console.error("❌ Erreur :", err.message);
