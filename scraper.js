@@ -17,7 +17,7 @@ async function runScraper() {
 
   try {
     // URL exacte récupérée depuis l'onglet Réseau/Network de ton navigateur
-    const TARGET_URL = encodeURIComponent('https://www.betrail.run/api/events-drizzle?after=2026-10-05&before=2027-10-06&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false');
+    const TARGET_URL = encodeURIComponent('https://www.betrail.run/api/events-drizzle?after=2026-10-06&before=2027-10-07&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false');
     
     // Ajout de render=true pour forcer l'exécution du JavaScript
     const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${TARGET_URL}&render=true`;
