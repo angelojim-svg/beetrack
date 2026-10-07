@@ -23,7 +23,7 @@ async function scrapeWithPuppeteer() {
     const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
 
-    // ⚠️ Remplace par ton URL exacte events-drizzle copiée depuis DevTools
+    // Remplace par ton URL exacte events-drizzle copiée depuis DevTools
     const API_URL = 'https://www.betrail.run/api/events-drizzle?after=2026-10-05&before=2027-10-06&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false';
 
     console.log("📡 Envoi de la requête via Puppeteer...");
@@ -79,34 +79,3 @@ async function scrapeWithPuppeteer() {
 }
 
 scrapeWithPuppeteer();
-
-name: Scraper Races
-
-on:
-  workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * *'
-
-jobs:
-  scrape:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      # C'est cette ligne qu'il faut corriger :
-      - name: Install dependencies
-        run: npm install puppeteer @supabase/supabase-js
-
-      - name: Run Scraper
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: node scraper.js
-
-
