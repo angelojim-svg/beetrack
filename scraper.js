@@ -1,8 +1,5 @@
-import puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import axios from 'axios';
 import { createClient } from '@supabase/supabase-js';
-
-puppeteer.use(StealthPlugin());
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -14,60 +11,24 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-async function scrapeWithNetworkInterception() {
-  console.log("🚀 Lancement du navigateur Stealth...");
-
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-blink-features=AutomationControlled'
-    ]
-  });
+async function runScraper() {
+  console.log("🚀 Lancement du scraper...");
 
   try {
-    const page = await browser.newPage();
-    let capturedEvents = null;
+    // Si tu utilises ScraperAPI pour passer Cloudflare :
+    // const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
+    // const TARGET_URL = encodeURIComponent('VOTRE_URL_EVENTS_DRIZZLE');
+    // const response = await axios.get(`http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${TARGET_URL}`);
 
-    // Écoute de toutes les réponses réseau du navigateur
-    page.on('response', async (response) => {
-      const url = response.url();
-      // On vérifie si la réponse provient de l'API des événements / Drizzle / Betrail API
-      if (url.includes('events') || url.includes('drizzle') || url.includes('api')) {
-        try {
-          const contentType = response.headers()['content-type'] || '';
-          if (contentType.includes('application/json')) {
-            const data = await response.json();
-            const events = Array.isArray(data) ? data : (data.data || data.events || []);
-            if (events.length > 0) {
-              capturedEvents = events;
-              console.log(`🎯 Flux JSON intercepté depuis : ${url}`);
-            }
-          }
-        } catch (e) {
-          // Ignorer les réponses non JSON
-        }
-      }
-    });
+    // Si tu appelles ton API directement :
+    const API_URL = 'https://www.betrail.run/api/events-drizzle?after=2026-10-05&before=2027-10-06&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false';
+    const response = await axios.get(API_URL);
 
-    console.log("📡 Navigation vers la page calendrier de Betrail...");
-    await page.goto('https://www.betrail.run/calendar', {
-      waitUntil: 'networkidle2',
-      timeout: 90000
-    });
+    const events = Array.isArray(response.data) ? response.data : (response.data.data || response.data.events || []);
 
-    // Attendre 10 secondes pour laisser charger tous les appels réseau
-    await new Promise(resolve => setTimeout(resolve, 10000));
+    console.log(`📊 ${events.length} épreuves récupérées !`);
 
-    if (!capturedEvents) {
-      console.error("❌ Impossible d'intercepter le flux JSON. Cloudflare bloque toujours le chargement de la page.");
-      process.exit(1);
-    }
-
-    console.log(`📊 ${capturedEvents.length} épreuves brutes récupérées !`);
-
-    const races = capturedEvents.map(event => ({
+    const races = events.map(event => ({
       title: event.name || event.title || 'Course sans nom',
       category: (event.distance || 0) > 42 ? 'Ultra Trail' : 'Trail',
       distance: parseFloat(event.distance) || 0,
@@ -93,44 +54,13 @@ async function scrapeWithNetworkInterception() {
         console.error("❌ Erreur Supabase :", error.message);
         process.exit(1);
       }
-      console.log("✅ Base de données mise à jour avec succès !");
+      console.log("✅ Base de données mise à jour !");
     }
 
   } catch (err) {
     console.error("❌ Erreur :", err.message);
     process.exit(1);
-  } finally {
-    await browser.close();
-  }
-}
-
-scrapeWithNetworkInterception();
-
-import axios from 'axios';
-import { createClient } from '@supabase/supabase-js';
-
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY; // Clé d'un service type ScraperAPI
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-async function runScraper() {
-  try {
-    const TARGET_URL = encodeURIComponent('VOTRE_URL_EVENTS_DRIZZLE');
-    
-    // Passer la requête par un proxy de scraping contournant Cloudflare
-    const response = await axios.get(`http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${TARGET_URL}&render=true`);
-    
-    const events = response.data;
-    console.log(`📊 ${events.length} épreuves récupérées !`);
-
-    // Traitement et envoi vers Supabase...
-    // ...
-  } catch (err) {
-    console.error("❌ Erreur :", err.message);
   }
 }
 
 runScraper();
-
