@@ -39,37 +39,36 @@ function cleanCityName(title, city, region) {
   return region || city || 'France';
 }
 
-async function fetchCoordsForCity(cityName) {
-  if (!cityName || cityName === 'France') return null;
-  const key = cityName.toLowerCase().trim();
-
-  if (geoCache.has(key)) return geoCache.get(key);
-
-  try {
-    const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(cityName)}&type=municipality&limit=1`;
-    const res = await axios.get(url, { timeout: 2000 });
-    
-    if (res.data?.features?.length > 0) {
-      const [lng, lat] = res.data.features[0].geometry.coordinates;
-      const coords = { lat, lng };
-      geoCache.set(key, coords);
-      return coords;
-    }
-  } catch (e) {
-    // Erreur de temporisation ou réseau
+// Batch de géocodage rapide
+async function preloadCities(cities) {
+  const uniqueCities = [...new Set(cities)].filter(c => c && c !== 'France' && !geoCache.has(c.toLowerCase()));
+  
+  // Exécution par paquets de 10 requêtes simultanées
+  const chunkSize = 10;
+  for (let i = 0; i < uniqueCities.length; i += chunkSize) {
+    const chunk = uniqueCities.slice(i, i + chunkSize);
+    await Promise.all(chunk.map(async (cityName) => {
+      try {
+        const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(cityName)}&type=municipality&limit=1`;
+        const res = await axios.get(url, { timeout: 1500 });
+        if (res.data?.features?.length > 0) {
+          const [lng, lat] = res.data.features[0].geometry.coordinates;
+          geoCache.set(cityName.toLowerCase(), { lat, lng });
+        }
+      } catch (e) {
+        // Ignorer en cas de timeout
+      }
+    }));
   }
-  return null;
 }
 
 async function runScraper() {
-  console.log("🚀 Extraction des données des épreuves...");
+  console.log("🚀 Extraction ultra-rapide des données...");
 
-  const REAL_API_URL = 'https://www.betrail.run/api/events-drizzle?after=2026-10-06&before=2027-10-07&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false';
+  const REAL_API_URL = process.env.BETRAIL_API_URL || 'https://www.betrail.run/api/events-drizzle?after=2026-10-06&before=2027-10-07&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false';
 
   try {
-    const TARGET_URL = encodeURIComponent(REAL_API_URL);
-    const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${TARGET_URL}`;
-
+    const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${encodeURIComponent(REAL_API_URL)}`;
     const response = await axios.get(proxyUrl);
     let rawData = response.data;
 
@@ -84,9 +83,22 @@ async function runScraper() {
       : (rawData.data || rawData.events || rawData.races || rawData.results || []);
 
     console.log(`📊 ${rawEvents.length} événements bruts récupérés !`);
-
     if (rawEvents.length === 0) return;
 
+    // 1. Pré-extraction des villes à géocoder
+    const citiesToFetch = rawEvents.map(item => {
+      const lat = parseCoord(item.lat || item.latitude || (item.coordinates && item.coordinates[1]));
+      if (!lat) {
+        const eventName = item.name || item.title || item.race_name || '';
+        return cleanCityName(eventName, item.city || item.location || item.town || '', item.region);
+      }
+      return null;
+    }).filter(Boolean);
+
+    console.log(`🌍 Géocodage accéléré de ${citiesToFetch.length} communes...`);
+    await preloadCities(citiesToFetch);
+
+    // 2. Traitement direct en mémoire
     const racesMap = new Map();
 
     for (const item of rawEvents) {
@@ -101,10 +113,10 @@ async function runScraper() {
       let baseLng = parseCoord(item.lng || item.longitude || (item.coordinates && item.coordinates[0]));
 
       if (!baseLat || !baseLng) {
-        const geo = await fetchCoordsForCity(city);
-        if (geo) {
-          baseLat = geo.lat;
-          baseLng = geo.lng;
+        const cached = geoCache.get(city.toLowerCase());
+        if (cached) {
+          baseLat = cached.lat;
+          baseLng = cached.lng;
         }
       }
 
@@ -117,11 +129,8 @@ async function runScraper() {
         const dist = parseFloat(String(distVal || 0).replace(',', '.'));
         const elev = parseInt(String(elevVal || 0), 10);
         const raceDate = formatDate(dateVal);
-        
-        // Clé unique incluant la distance pour différencier les formats (SaintéLyon 79, 44, etc.)
         const key = `${title.trim().toLowerCase()}_${dist}km_${raceDate}`;
 
-        // Petit décalage aléatoire pour éviter la superposition stricte
         const jitterLat = (Math.random() - 0.5) * 0.003;
         const jitterLng = (Math.random() - 0.5) * 0.003;
 
@@ -166,7 +175,7 @@ async function runScraper() {
       process.exit(1);
     }
 
-    console.log(`✅ ${uniqueRaces.length} épreuves insérées !`);
+    console.log(`✅ ${uniqueRaces.length} épreuves insérées en un temps record !`);
 
   } catch (err) {
     console.error("❌ Erreur :", err.message);
@@ -175,5 +184,4 @@ async function runScraper() {
 }
 
 runScraper();
-
 
