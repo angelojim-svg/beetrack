@@ -120,10 +120,11 @@ async function runScraper() {
         }
       }
 
-      if (!baseLat || !baseLng) {
-        baseLat = 43.5 + Math.random() * 6.5;
-        baseLng = -1.0 + Math.random() * 8.5;
-      }
+     // ✅ Si pas de coordonnées, on laisse à null (la course sera visible en liste mais pas sur la carte)
+if (!baseLat || !baseLng) {
+  baseLat = null;
+  baseLng = null;
+}
 
       const processRace = (title, distVal, elevVal, dateVal, subObj = {}) => {
         const dist = parseFloat(String(distVal || 0).replace(',', '.'));
