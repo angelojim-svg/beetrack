@@ -2,7 +2,6 @@ import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { createClient } from '@supabase/supabase-js';
 
-// Activation du plugin Stealth anti-bot
 puppeteer.use(StealthPlugin());
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -15,11 +14,11 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-async function scrapeWithPuppeteer() {
+async function scrapeWithNetworkInterception() {
   console.log("🚀 Lancement du navigateur Stealth...");
 
   const browser = await puppeteer.launch({
-    headless: true,
+    headless: 'new',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -29,44 +28,46 @@ async function scrapeWithPuppeteer() {
 
   try {
     const page = await browser.newPage();
+    let capturedEvents = null;
 
-    // 1. Visiter d'abord le calendrier pour déclencher le cookie de session Cloudflare
-    console.log("📡 Passage du challenge Cloudflare...");
-    await page.goto('https://www.betrail.run/calendar', { 
-      waitUntil: 'networkidle2',
-      timeout: 60000 
+    // Écoute de toutes les réponses réseau du navigateur
+    page.on('response', async (response) => {
+      const url = response.url();
+      // On vérifie si la réponse provient de l'API des événements / Drizzle / Betrail API
+      if (url.includes('events') || url.includes('drizzle') || url.includes('api')) {
+        try {
+          const contentType = response.headers()['content-type'] || '';
+          if (contentType.includes('application/json')) {
+            const data = await response.json();
+            const events = Array.isArray(data) ? data : (data.data || data.events || []);
+            if (events.length > 0) {
+              capturedEvents = events;
+              console.log(`🎯 Flux JSON intercepté depuis : ${url}`);
+            }
+          }
+        } catch (e) {
+          // Ignorer les réponses non JSON
+        }
+      }
     });
 
-    // Pause de 5 secondes pour laisser Cloudflare valider la session
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    console.log("📡 Navigation vers la page calendrier de Betrail...");
+    await page.goto('https://www.betrail.run/calendar', {
+      waitUntil: 'networkidle2',
+      timeout: 90000
+    });
 
-    // 2. Récupérer l'API Drizzle
-    const API_URL = 'https://www.betrail.run/api/events-drizzle?after=2026-10-05&before=2027-10-06&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false';
-    console.log("📊 Récupération des données API...");
+    // Attendre 10 secondes pour laisser charger tous les appels réseau
+    await new Promise(resolve => setTimeout(resolve, 10000));
 
-    const responseText = await page.evaluate(async (url) => {
-      const res = await fetch(url, {
-        headers: {
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest'
-        }
-      });
-      return await res.text();
-    }, API_URL);
-
-    let responseData;
-    try {
-      responseData = JSON.parse(responseText);
-    } catch (e) {
-      console.error("❌ Échec Cloudflare. Extrait de la réponse :");
-      console.error(responseText.substring(0, 300));
+    if (!capturedEvents) {
+      console.error("❌ Impossible d'intercepter le flux JSON. Cloudflare bloque toujours le chargement de la page.");
       process.exit(1);
     }
 
-    const events = Array.isArray(responseData) ? responseData : (responseData.data || responseData.events || []);
-    console.log(`✅ ${events.length} épreuves récupérées !`);
+    console.log(`📊 ${capturedEvents.length} épreuves brutes récupérées !`);
 
-    const races = events.map(event => ({
+    const races = capturedEvents.map(event => ({
       title: event.name || event.title || 'Course sans nom',
       category: (event.distance || 0) > 42 ? 'Ultra Trail' : 'Trail',
       distance: parseFloat(event.distance) || 0,
@@ -92,7 +93,7 @@ async function scrapeWithPuppeteer() {
         console.error("❌ Erreur Supabase :", error.message);
         process.exit(1);
       }
-      console.log("✅ Base de données mise à jour !");
+      console.log("✅ Base de données mise à jour avec succès !");
     }
 
   } catch (err) {
@@ -103,5 +104,4 @@ async function scrapeWithPuppeteer() {
   }
 }
 
-scrapeWithPuppeteer();
-
+scrapeWithNetworkInterception();
