@@ -487,18 +487,27 @@
 
                 const marker = L.marker([mainRace.lat, mainRace.lng], { icon: customIcon });
 
-                let popupHtml = `<div style="max-height: 220px; overflow-y: auto; color: #f3f4f6; padding: 4px;">`;
-                racesAtLocation.forEach((r, idx) => {
-                    popupHtml += `
-                        <div style="padding-bottom: 6px; margin-bottom: 6px; ${idx < racesAtLocation.length - 1 ? 'border-b: 1px solid #1f293d;' : ''}">
-                            <strong style="color: #fff; font-size: 13px;">${r.title}</strong><br>
-                            <span style="color: #34d399; font-size: 12px; font-weight: 600;">${r.distance} km</span> | 
-                            <span style="color: #9ca3af; font-size: 12px;">+${r.elevation}m</span>
-                            <button onclick="openAlertModal('${r.id}')" style="display: block; width: 100%; margin-top: 6px; padding: 3px; font-size: 11px; font-weight: bold; background-color: #10b981; color: #0b0f17; border-radius: 6px;">Alerte</button>
-                        </div>
-                    `;
-                });
-                popupHtml += `</div>`;
+               let popupHtml = `<div style="max-height: 220px; overflow-y: auto; padding: 2px;">`;
+racesAtLocation.forEach((r, idx) => {
+    const formattedDate = formatDateFR(r.raceDate);
+    const displayPrice = r.price > 0 ? `${r.price} €` : 'N/C';
+
+    popupHtml += `
+        <div style="padding-bottom: 6px; margin-bottom: 6px; ${idx < racesAtLocation.length - 1 ? 'border-b: 1px solid #1f293d;' : ''}">
+            <strong style="color: #fff; font-size: 13px;">${r.title}</strong><br>
+            <div style="color: #9ca3af; font-size: 11px; margin-top: 2px;">
+                📅 <span>${formattedDate}</span>
+            </div>
+            <div style="font-size: 12px; margin-top: 2px;">
+                <span style="color: #34d399; font-weight: 600;">${r.distance} km</span> | 
+                <span style="color: #9ca3af;">+${r.elevation}m</span> | 
+                <span style="color: #f59e0b; font-weight: 600;">${displayPrice}</span>
+            </div>
+            <button onclick="openAlertModal('${r.id}')" style="display: block; width: 100%; margin-top: 6px; padding: 3px; font-size: 11px; font-weight: bold; background-color: #10b981; color: #0b0f17; border-radius: 4px;">Alerte</button>
+        </div>
+    `;
+});
+popupHtml += `</div>`;
 
                 marker.bindPopup(popupHtml);
                 markerClusterGroup.addLayer(marker);
@@ -507,33 +516,60 @@
             leafletMap.addLayer(markerClusterGroup);
         }
 
-        function renderListView() {
-            const container = document.getElementById('container-list-view');
-            if (!container) return;
-            container.innerHTML = '';
+        / Fonction utilitaire pour formater la date au format français
+function formatDateFR(dateStr) {
+    if (!dateStr) return 'Date non communiquée';
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? dateStr : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
-            filteredRaces.forEach(race => {
-                const card = `
-                    <div class="glass-panel p-5 rounded-2xl border border-borderBg flex flex-col justify-between">
-                        <div>
-                            <span class="text-[10px] font-mono text-gray-400">${race.category} • ${race.region}</span>
-                            <h3 class="text-lg font-bold text-white mt-1">${race.title}</h3>
-                            <div class="grid grid-cols-3 gap-2 py-3 my-3 border-y border-borderBg text-center text-xs">
-                                <div><span class="block text-gray-500">Dist.</span><span class="font-bold text-white">${race.distance} km</span></div>
-                                <div><span class="block text-gray-500">D+</span><span class="font-bold text-emerald-400">+${race.elevation}m</span></div>
-                                <div><span class="block text-gray-500">DDI</span><span class="font-bold text-amber-400">${race.ddi}/5</span></div>
-                            </div>
-                        </div>
-                        <div class="flex justify-between items-center pt-2">
-                            <span class="text-xs px-2.5 py-1 rounded-full font-bold ${race.status === 'Open' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}">${race.status}</span>
-                            <button onclick="openAlertModal('${race.id}')" class="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-xs">Alerte</button>
-                        </div>
+function renderListView() {
+    const container = document.getElementById('container-list-view');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const racesToRender = filteredRaces.slice(0, currentDisplayLimit);
+
+    racesToRender.forEach(race => {
+        const formattedDate = formatDateFR(race.raceDate);
+        const displayPrice = race.price > 0 ? `${race.price} €` : 'N/C';
+
+        const card = `
+            <div class="glass-panel p-5 rounded-2xl border border-borderBg flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center text-[10px] font-mono text-gray-400">
+                        <span>${race.category} • ${race.region}</span>
+                        <span class="text-emerald-400 font-bold"><i class="fa-regular fa-calendar mr-1"></i>${formattedDate}</span>
                     </div>
-                `;
-                container.insertAdjacentHTML('beforeend', card);
-            });
-        }
+                    <h3 class="text-lg font-bold text-white mt-1">${race.title}</h3>
+                    
+                    <div class="grid grid-cols-4 gap-2 py-3 my-3 border-y border-borderBg text-center text-xs">
+                        <div><span class="block text-gray-500">Dist.</span><span class="font-bold text-white">${race.distance} km</span></div>
+                        <div><span class="block text-gray-500">D+</span><span class="font-bold text-emerald-400">+${race.elevation}m</span></div>
+                        <div><span class="block text-gray-500">Prix</span><span class="font-bold text-amber-400">${displayPrice}</span></div>
+                        <div><span class="block text-gray-500">DDI</span><span class="font-bold text-purple-400">${race.ddi}/5</span></div>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center pt-2">
+                    <span class="text-xs px-2.5 py-1 rounded-full font-bold ${race.status === 'Open' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}">${race.status}</span>
+                    <button onclick="openAlertModal('${race.id}')" class="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-xs">Alerte</button>
+                </div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', card);
+    });
 
+    if (filteredRaces.length > currentDisplayLimit) {
+        const loadMoreBtn = `
+            <div class="col-span-full text-center py-4">
+                <button onclick="loadMoreRaces()" class="px-6 py-3 bg-emerald-500 text-darkBg font-bold rounded-xl shadow-lg">
+                    Voir plus de courses (${filteredRaces.length - currentDisplayLimit} restantes)
+                </button>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', loadMoreBtn);
+    }
+}
         async function handleAlertSubmit(e) {
             e.preventDefault();
             const raceId = document.getElementById('modal-race-id').value;
