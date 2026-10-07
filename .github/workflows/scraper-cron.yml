@@ -1,26 +1,27 @@
-name: Veille et Scraper Automatique de Courses
+name: Scraper Races
+
 on:
+  workflow_dispatch:
   schedule:
-    # S'exécute tous les jours à minuit UTC
     - cron: '0 0 * * *'
-  workflow_dispatch: # Permet le lancement manuel depuis GitHub
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - run: echo '{"type":"module"}' > package.json
+      - name: Install dependencies
+        run: npm install puppeteer @supabase/supabase-js
 
-      - run: npm install axios @supabase/supabase-js
-
-      - run: node scraper.js
+      - name: Run Scraper
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-
+        run: node scraper.js
