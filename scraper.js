@@ -23,17 +23,26 @@ async function scrapeWithPuppeteer() {
     const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
 
-    // Remplace par ton URL exacte events-drizzle copiée depuis DevTools
+    // ⚠️ Vérifie que cette URL est bien celle qui renvoie du JSON dans l'onglet Network (Réseau)
     const API_URL = 'https://www.betrail.run/api/events-drizzle?after=2026-10-05&before=2027-10-06&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false';
 
-    console.log("📡 Envoi de la requête via Puppeteer...");
+    console.log("📡 Navigation vers l'API via Puppeteer...");
     
-    await page.goto('https://www.betrail.run/calendar', { waitUntil: 'domcontentloaded' });
+    // Aller directement sur l'URL avec Puppeteer
+    const response = await page.goto(API_URL, { waitUntil: 'networkidle0' });
 
-    const responseData = await page.evaluate(async (url) => {
-      const res = await fetch(url);
-      return await res.json();
-    }, API_URL);
+    // Récupérer le contenu textuel renvoyé
+    const responseText = await response.text();
+
+    // Parser le JSON
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      console.error("❌ La réponse n'est pas au format JSON. Début de la réponse reçue :");
+      console.error(responseText.substring(0, 300));
+      process.exit(1);
+    }
 
     const events = Array.isArray(responseData) ? responseData : (responseData.data || responseData.events || []);
 
@@ -79,3 +88,4 @@ async function scrapeWithPuppeteer() {
 }
 
 scrapeWithPuppeteer();
+
