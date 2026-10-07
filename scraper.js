@@ -65,7 +65,7 @@ async function runScraper() {
       if (!eventName || eventName === 'Course sans nom') continue;
 
       // Vérifie si l'événement contient un sous-tableau de courses/distances
-      const subRaces = item.races || item.distances || item.courses || item.sub_events || item.e preuves || [];
+      const subRaces = item.races || item.distances || item.courses || item.sub_events || item.epreuves || [];
 
       if (Array.isArray(subRaces) && subRaces.length > 0) {
         // Extraction de chaque sous-course
