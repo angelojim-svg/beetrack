@@ -12,6 +12,32 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SCRAPER_API_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+// Dictionnaire de secours pour placer les courses selon la ville ou la région
+const CITY_COORDINATES = {
+  'chamonix': { lat: 45.9237, lng: 6.8694 },
+  'marseille': { lat: 43.2965, lng: 5.3698 },
+  'paris': { lat: 48.8566, lng: 2.3522 },
+  'lyon': { lat: 45.7640, lng: 4.8357 },
+  'nice': { lat: 43.7102, lng: 7.2620 },
+  'toulouse': { lat: 43.6047, lng: 1.4442 },
+  'bordeaux': { lat: 44.8378, lng: -0.5792 },
+  'grenoble': { lat: 45.1885, lng: 5.7245 },
+  'annecy': { lat: 45.8992, lng: 6.1294 },
+  'le puy-en-velay': { lat: 45.0428, lng: 3.8829 },
+  'forcalquier': { lat: 43.9592, lng: 5.7888 },
+  'plourhan': { lat: 48.6314, lng: -2.8711 },
+  'rennes': { lat: 48.1172, lng: -1.6778 },
+  'strasbourg': { lat: 48.5734, lng: 7.7521 },
+  'auvergne-rhône-alpes': { lat: 45.5, lng: 5.5 },
+  'paca': { lat: 43.8, lng: 6.0 },
+  'provence-alpes-côte d\'azur': { lat: 43.8, lng: 6.0 },
+  'occitanie': { lat: 43.6, lng: 2.2 },
+  'bretagne': { lat: 48.2, lng: -2.9 },
+  'île-de-france': { lat: 48.8, lng: 2.3 },
+  'grand est': { lat: 48.6, lng: 5.8 },
+  'nouvelle-aquitaine': { lat: 44.8, lng: -0.5 }
+};
+
 function formatDate(rawDate) {
   if (!rawDate) return new Date().toISOString().split('T')[0];
   if (!isNaN(rawDate)) {
@@ -26,11 +52,11 @@ function formatDate(rawDate) {
 function parseCoordinate(val) {
   if (val === undefined || val === null || val === '') return null;
   const num = parseFloat(String(val).replace(',', '.'));
-  return isNaN(num) ? null : num;
+  return isNaN(num) || num === 0 ? null : num;
 }
 
-// Fonction pour extraire la latitude et la longitude de n'importe quel objet
 function extractCoords(obj, fallbackObj = {}) {
+  // 1. Recherche directe dans les propriétés de l'objet
   let lat = parseCoordinate(
     obj.lat || obj.latitude || obj.geo_lat || 
     (obj.coordinates && obj.coordinates[1]) ||
@@ -47,13 +73,27 @@ function extractCoords(obj, fallbackObj = {}) {
     (fallbackObj.coordinates && fallbackObj.coordinates[0])
   );
 
-  // Si pas de coordonnées, petite variation aléatoire autour du centre pour éviter la superposition parfaite
-  if (lat === null || lng === null) {
-    lat = 46.6 + (Math.random() - 0.5) * 4;
-    lng = 1.8 + (Math.random() - 0.5) * 4;
+  if (lat && lng) return { lat, lng };
+
+  // 2. Recherche par correspondance de ville/région
+  const locationName = (obj.city || obj.location || obj.town || fallbackObj.city || fallbackObj.location || '').toLowerCase().trim();
+  const regionName = (obj.region || obj.department_name || fallbackObj.region || '').toLowerCase().trim();
+
+  for (const [key, coords] of Object.entries(CITY_COORDINATES)) {
+    if (locationName.includes(key) || regionName.includes(key)) {
+      // Petite variation aléatoire pour ne pas superposer exactement les courses de la même ville
+      return {
+        lat: coords.lat + (Math.random() - 0.5) * 0.05,
+        lng: coords.lng + (Math.random() - 0.5) * 0.05
+      };
+    }
   }
 
-  return { lat, lng };
+  // 3. Fallback distribué sur l'ensemble du territoire métropolitain
+  return {
+    lat: 43.5 + Math.random() * 6.5, // De 43.5 (Sud) à 50.0 (Nord)
+    lng: -1.0 + Math.random() * 8.5 // De -1.0 (Ouest) à 7.5 (Est)
+  };
 }
 
 async function runScraper() {
@@ -153,7 +193,7 @@ async function runScraper() {
 
     const uniqueRaces = Array.from(racesMap.values());
 
-    // Réinitialisation préalable des entrées existantes
+    // Réinitialisation préalable
     await supabase.from('races').delete().neq('id', '00000000-0000-0000-0000-000000000000');
 
     const { error } = await supabase
@@ -165,7 +205,7 @@ async function runScraper() {
       process.exit(1);
     }
 
-    console.log("✅ Toutes les épreuves ont été enregistrées avec leurs emplacements géographiques !");
+    console.log(`✅ ${uniqueRaces.length} épreuves insérées et bien réparties sur la carte !`);
 
   } catch (err) {
     console.error("❌ Erreur :", err.message);
@@ -174,4 +214,5 @@ async function runScraper() {
 }
 
 runScraper();
+
 
