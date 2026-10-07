@@ -13,9 +13,9 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SCRAPER_API_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 async function runScraper() {
-  console.log("🚀 Démarrage du test d'extraction...");
+  console.log("🚀 Extraction des données...");
 
-  // Colle ici l'URL exacte copiée depuis l'onglet Réseau (Network) de ton navigateur
+  // Remplace bien par l'URL exacte copiée depuis l'onglet Réseau/Network
   const REAL_API_URL = 'https://www.betrail.run/api/events-drizzle?after=2026-10-06&before=2027-10-07&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false';
 
   try {
@@ -23,30 +23,24 @@ async function runScraper() {
     const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${TARGET_URL}`;
 
     const response = await axios.get(proxyUrl);
-
-    console.log("📌 Statut HTTP :", response.status);
-    console.log("📌 Content-Type :", response.headers['content-type']);
-
     let rawData = response.data;
 
-    // Si les données sont renvoyées sous forme de texte, on tente le parse JSON
-    if (typeof rawData === 'string') {
-      console.log("📝 Extrait du texte reçu :", rawData.substring(0, 300));
-      try {
-        rawData = JSON.parse(rawData);
-      } catch (e) {
-        console.error("❌ Impossible de convertir la réponse en JSON.");
-        process.exit(1);
-      }
+    // Si les données sont encapsulées dans 'body'
+    if (rawData && rawData.body) {
+      rawData = typeof rawData.body === 'string' ? JSON.parse(rawData.body) : rawData.body;
+    } else if (typeof rawData === 'string') {
+      rawData = JSON.parse(rawData);
     }
 
-    // Récupération du tableau d'événements
-    const events = Array.isArray(rawData) ? rawData : (rawData.data || rawData.events || rawData.races || []);
+    // Récupération du tableau final
+    const events = Array.isArray(rawData) 
+      ? rawData 
+      : (rawData.data || rawData.events || rawData.races || rawData.results || []);
 
-    console.log(`📊 Nombre d'éléments trouvés : ${events.length}`);
+    console.log(`📊 ${events.length} épreuves récupérées !`);
 
     if (events.length === 0) {
-      console.log("⚠️ Structure d'objet reçue :", Object.keys(rawData));
+      console.log("⚠️ Contenu de body après découpage :", typeof rawData, Array.isArray(rawData) ? "Tableau" : Object.keys(rawData));
       return;
     }
 
@@ -76,13 +70,10 @@ async function runScraper() {
       process.exit(1);
     }
 
-    console.log("✅ Base de données mise à jour avec succès !");
+    console.log("✅ Base de données Supabase mise à jour avec succès !");
 
   } catch (err) {
-    console.error("❌ Erreur lors de la requête :", err.message);
-    if (err.response) {
-      console.error("Détails réponse :", err.response.status, err.response.data);
-    }
+    console.error("❌ Erreur :", err.message);
     process.exit(1);
   }
 }
