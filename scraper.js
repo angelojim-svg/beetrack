@@ -58,78 +58,86 @@ async function runScraper() {
       return;
     }
 
-    const races = [];
+    const racesMap = new Map();
 
     for (const item of rawEvents) {
       const eventName = item.name || item.title || item.race_name || item.event_name || '';
       if (!eventName || eventName === 'Course sans nom') continue;
 
-      // Vérifie si l'événement contient un sous-tableau de courses/distances
       const subRaces = item.races || item.distances || item.courses || item.sub_events || item.epreuves || [];
 
       if (Array.isArray(subRaces) && subRaces.length > 0) {
-        // Extraction de chaque sous-course
         for (const sub of subRaces) {
           const subTitle = sub.name || sub.title || `${eventName} - ${sub.distance || sub.length || ''}km`;
           const dist = parseFloat(String(sub.distance || sub.distance_km || sub.length || sub.dist || 0).replace(',', '.'));
           const elev = parseInt(String(sub.elevation || sub.positive_elevation || sub.denivele || sub.ascent || sub.dplus || 0), 10);
+          const raceDate = formatDate(sub.date || sub.start_date || item.date || item.start_date);
 
-          races.push({
-            title: subTitle,
+          const key = `${subTitle.trim().toLowerCase()}_${raceDate}`;
+
+          if (!racesMap.has(key)) {
+            racesMap.set(key, {
+              title: subTitle,
+              category: dist > 42 ? 'Ultra Trail' : 'Trail',
+              distance: dist,
+              elevation: elev,
+              location: item.city || item.location || sub.city || 'France',
+              region: item.region || item.department_name || 'France',
+              lat: parseFloat(item.latitude || item.lat || 46.6),
+              lng: parseFloat(item.longitude || item.lng || 1.8),
+              price: parseFloat(sub.price || sub.entry_fee || item.price || 0),
+              ddi: dist > 80 ? 5 : 3,
+              opening_date: formatDate(sub.opening_date || item.opening_date),
+              race_date: raceDate,
+              status: 'Open',
+              organizer_url: sub.url || item.url || 'https://www.betrail.run'
+            });
+          }
+        }
+      } else {
+        const dist = parseFloat(String(item.distance || item.distance_km || item.length || item.dist || 0).replace(',', '.'));
+        const elev = parseInt(String(item.elevation || item.positive_elevation || item.denivele || item.ascent || item.dplus || 0), 10);
+        const raceDate = formatDate(item.date || item.start_date);
+
+        const key = `${eventName.trim().toLowerCase()}_${raceDate}`;
+
+        if (!racesMap.has(key)) {
+          racesMap.set(key, {
+            title: eventName,
             category: dist > 42 ? 'Ultra Trail' : 'Trail',
             distance: dist,
             elevation: elev,
-            location: item.city || item.location || sub.city || 'France',
+            location: item.city || item.location || 'France',
             region: item.region || item.department_name || 'France',
             lat: parseFloat(item.latitude || item.lat || 46.6),
             lng: parseFloat(item.longitude || item.lng || 1.8),
-            price: parseFloat(sub.price || sub.entry_fee || item.price || 0),
+            price: parseFloat(item.price || item.entry_fee || 0),
             ddi: dist > 80 ? 5 : 3,
-            opening_date: formatDate(sub.opening_date || item.opening_date),
-            race_date: formatDate(sub.date || sub.start_date || item.date || item.start_date),
+            opening_date: formatDate(item.opening_date),
+            race_date: raceDate,
             status: 'Open',
-            organizer_url: sub.url || item.url || 'https://www.betrail.run'
+            organizer_url: item.url || 'https://www.betrail.run'
           });
         }
-      } else {
-        // Si l'objet est déjà une course directe
-        const dist = parseFloat(String(item.distance || item.distance_km || item.length || item.dist || 0).replace(',', '.'));
-        const elev = parseInt(String(item.elevation || item.positive_elevation || item.denivele || item.ascent || item.dplus || 0), 10);
-
-        races.push({
-          title: eventName,
-          category: dist > 42 ? 'Ultra Trail' : 'Trail',
-          distance: dist,
-          elevation: elev,
-          location: item.city || item.location || 'France',
-          region: item.region || item.department_name || 'France',
-          lat: parseFloat(item.latitude || item.lat || 46.6),
-          lng: parseFloat(item.longitude || item.lng || 1.8),
-          price: parseFloat(item.price || item.entry_fee || 0),
-          ddi: dist > 80 ? 5 : 3,
-          opening_date: formatDate(item.opening_date),
-          race_date: formatDate(item.date || item.start_date),
-          status: 'Open',
-          organizer_url: item.url || 'https://www.betrail.run'
-        });
       }
     }
 
-    console.log(`📊 ${races.length} épreuves individuelles générées.`);
+    const uniqueRaces = Array.from(racesMap.values());
+    console.log(`📊 ${uniqueRaces.length} épreuves uniques générées après déduplication.`);
 
-    // Purge des anciennes entrées invalides dans Supabase puis réinsertion
-    await supabase.from('races').delete().eq('distance', 0);
+    // Optionnel : Vider la table avant de tout réinsérer proprement
+    await supabase.from('races').delete().neq('id', '00000000-0000-0000-0000-000000000000');
 
     const { error } = await supabase
       .from('races')
-      .upsert(races);
+      .upsert(uniqueRaces);
 
     if (error) {
       console.error("❌ Erreur Supabase :", error.message);
       process.exit(1);
     }
 
-    console.log("✅ Toutes les épreuves ont été insérées avec leurs distances et D+ !");
+    console.log("✅ Toutes les épreuves uniques ont été insérées sans doublons !");
 
   } catch (err) {
     console.error("❌ Erreur :", err.message);
@@ -138,4 +146,3 @@ async function runScraper() {
 }
 
 runScraper();
-
