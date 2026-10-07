@@ -61,16 +61,18 @@ async function runScraper() {
       organizer_url: event.url || 'https://www.betrail.run'
     }));
 
+    // Insertion simple sans contrainte d'unicité explicite
     const { error } = await supabase
       .from('races')
-      .upsert(batch);
+      .upsert(races);
 
     if (error) {
       console.error("❌ Erreur Supabase :", error.message);
       process.exit(1);
     }
 
-    console.log("✅ Base de données Supabase mise à jour avec succès !");
+    console.log("✅ Toutes les épreuves ont été insérées dans Supabase avec succès !");
+
 
   } catch (err) {
     console.error("❌ Erreur :", err.message);
