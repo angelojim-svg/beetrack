@@ -12,8 +12,22 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SCRAPER_API_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-// Cache mémoire des villes déjà géocodées pour limiter les requêtes
 const geoCache = new Map();
+
+// Base de coordonnées connue pour les villes récurrentes et pays
+const KNOWN_PLACES = {
+  'waterloo': { lat: 50.7147, lng: 4.3991 },
+  'chamonix': { lat: 45.9237, lng: 6.8694 },
+  'marseille': { lat: 43.2965, lng: 5.3698 },
+  'paris': { lat: 48.8566, lng: 2.3522 },
+  'lyon': { lat: 45.7640, lng: 4.8357 },
+  'nice': { lat: 43.7102, lng: 7.2620 },
+  'toulouse': { lat: 43.6047, lng: 1.4442 },
+  'bordeaux': { lat: 44.8378, lng: -0.5792 },
+  'grenoble': { lat: 45.1885, lng: 5.7245 },
+  'annecy': { lat: 45.8992, lng: 6.1294 },
+  'ellezelles': { lat: 50.7333, lng: 3.6833 }
+};
 
 function formatDate(rawDate) {
   if (!rawDate) return new Date().toISOString().split('T')[0];
@@ -32,39 +46,32 @@ function parseCoordinate(val) {
   return isNaN(num) || num === 0 ? null : num;
 }
 
-// Géocodage dynamique via l'API adresse.data.gouv.fr / Nominatim
-async function getRealCoordinates(cityName, regionName) {
-  const query = `${cityName || ''} ${regionName || ''}`.trim();
+async function getRealCoordinates(title, city, region, country) {
+  const fullText = `${title || ''} ${city || ''} ${region || ''} ${country || ''}`.toLowerCase();
+
+  // 1. Dictionnaire local instantané
+  for (const [place, coords] of Object.entries(KNOWN_PLACES)) {
+    if (fullText.includes(place)) {
+      return coords;
+    }
+  }
+
+  const query = `${city || ''} ${country || region || ''}`.trim() || title;
   if (!query || query === 'France') return { lat: 46.6, lng: 1.8 };
 
   if (geoCache.has(query.toLowerCase())) {
     return geoCache.get(query.toLowerCase());
   }
 
+  // 2. Requête API OpenStreetMap / Nominatim
   try {
-    // 1. Essai via l'API BAN (France)
-    const banUrl = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&limit=1`;
-    const res = await axios.get(banUrl, { timeout: 3000 });
-
-    if (res.data?.features?.length > 0) {
-      const [lng, lat] = res.data.features[0].geometry.coordinates;
-      const result = { lat, lng };
-      geoCache.set(query.toLowerCase(), result);
-      return result;
-    }
-  } catch (e) {
-    // Fallback silencieux si timeout
-  }
-
-  try {
-    // 2. Essai via Nominatim pour les villes hors France (ex: Belgique)
     const nomUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
     const res = await axios.get(nomUrl, { 
       headers: { 'User-Agent': 'PacePulse-App/1.0' },
-      timeout: 3000 
+      timeout: 2000 
     });
 
-    if (res.data?.length > 0) {
+    if (res.data && res.data.length > 0) {
       const result = { 
         lat: parseFloat(res.data[0].lat), 
         lng: parseFloat(res.data[0].lon) 
@@ -73,10 +80,9 @@ async function getRealCoordinates(cityName, regionName) {
       return result;
     }
   } catch (e) {
-    // Fallback silencieux
+    // En cas de rate-limit ou d'erreur réseau
   }
 
-  // Par défaut centre France si introuvable
   return { lat: 46.6, lng: 1.8 };
 }
 
@@ -116,18 +122,17 @@ async function runScraper() {
       if (!eventName || eventName === 'Course sans nom') continue;
 
       const subRaces = item.races || item.distances || item.courses || item.sub_events || item.epreuves || [];
-      const location = item.city || item.location || item.town || '';
+      const city = item.city || item.location || item.town || item.place || '';
       const region = item.region || item.department_name || '';
+      const country = item.country || item.country_name || '';
 
-      // Extraction des coordonnées directes si elles existent dans l'API
       let directLat = parseCoordinate(item.lat || item.latitude || item.geo_lat || (item.coordinates && item.coordinates[1]));
       let directLng = parseCoordinate(item.lng || item.longitude || item.lon || item.geo_lng || (item.coordinates && item.coordinates[0]));
 
       let coords = { lat: directLat, lng: directLng };
 
-      // Si pas de coordonnées précises fournies par Betrail, on géocode la ville
       if (!coords.lat || !coords.lng) {
-        coords = await getRealCoordinates(location, region);
+        coords = await getRealCoordinates(eventName, city, region, country);
       }
 
       if (Array.isArray(subRaces) && subRaces.length > 0) {
@@ -145,8 +150,8 @@ async function runScraper() {
               category: dist > 42 ? 'Ultra Trail' : 'Trail',
               distance: dist,
               elevation: elev,
-              location: location || sub.city || 'France',
-              region: region || 'France',
+              location: city || sub.city || country || 'France',
+              region: region || country || 'France',
               lat: coords.lat,
               lng: coords.lng,
               price: parseFloat(sub.price || sub.entry_fee || item.price || 0),
@@ -171,8 +176,8 @@ async function runScraper() {
             category: dist > 42 ? 'Ultra Trail' : 'Trail',
             distance: dist,
             elevation: elev,
-            location: location || 'France',
-            region: region || 'France',
+            location: city || country || 'France',
+            region: region || country || 'France',
             lat: coords.lat,
             lng: coords.lng,
             price: parseFloat(item.price || item.entry_fee || 0),
@@ -188,7 +193,6 @@ async function runScraper() {
 
     const uniqueRaces = Array.from(racesMap.values());
 
-    // Nettoyage préalable
     await supabase.from('races').delete().neq('id', '00000000-0000-0000-0000-000000000000');
 
     const { error } = await supabase
@@ -200,7 +204,7 @@ async function runScraper() {
       process.exit(1);
     }
 
-    console.log(`✅ ${uniqueRaces.length} épreuves géocodées et insérées aux vrais emplacements !`);
+    console.log(`✅ ${uniqueRaces.length} épreuves insérées !`);
 
   } catch (err) {
     console.error("❌ Erreur :", err.message);
@@ -209,4 +213,5 @@ async function runScraper() {
 }
 
 runScraper();
+
 
