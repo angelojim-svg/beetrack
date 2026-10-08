@@ -38,7 +38,7 @@ async function getCachedCoordinates(locationName) {
 
     return coords;
 }
-        }
+        
     } catch (err) {
         console.error(`Erreur géocodage pour "${locationName}" :`, err.message);
     }
