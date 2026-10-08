@@ -40,13 +40,25 @@ function saveGeoCache() {
     }
 }
 
-// Fonction pour convertir une date textuelle française (ex: "27 févr. 2026" ou "12 mars 2026") en format standard "YYYY-MM-DD"
+// Fonction de parsing robuste pour tous les formats de date possibles
 function parseFrenchDate(dateStr) {
     if (!dateStr) return null;
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr; // Déjà au bon format
+   
+    // Si c'est déjà un objet Date valide
+    if (dateStr instanceof Date) {
+        return dateStr.toISOString().split('T')[0];
+    }
 
+    let str = String(dateStr).trim();
+
+    // 1. Si format ISO ou YYYY-MM-DD (ex: "2027-06-15T00:00:00.000Z" ou "2027-06-15")
+    if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+        return str.substring(0, 10);
+    }
+
+    // 2. Format textuel français (ex: "27 févr. 2026")
     const months = {
-        'janv': '01', 'janvier': '01',
+        'janv': '01', 'janvier': '01', 'jan': '01',
         'févr': '02', 'février': '02', 'fev': '02',
         'mars': '03', 'mar': '03',
         'avr': '04', 'avril': '04',
@@ -60,7 +72,7 @@ function parseFrenchDate(dateStr) {
         'déc': '12', 'décembre': '12', 'dec': '12'
     };
 
-    const cleanStr = dateStr.toLowerCase().replace('.', '').trim();
+    const cleanStr = str.toLowerCase().replace(/\./g, '').trim();
     const parts = cleanStr.split(/\s+/);
 
     if (parts.length >= 3) {
@@ -72,6 +84,7 @@ function parseFrenchDate(dateStr) {
             return `${year}-${months[monthKey]}-${day}`;
         }
     }
+
     return null;
 }
 
@@ -116,7 +129,7 @@ async function runScraper() {
 
     let rawRaces = [];
     try {
-        // Remplace ici par ta logique de récupération (fetch de ton site source)
+        // Remplace ici par ta logique de récupération de données brutes (fetch de ton site source)
         // const response = await fetch("TON_URL_HTTPS");
         // rawRaces = await response.json();
 
@@ -130,7 +143,6 @@ async function runScraper() {
     let skippedPastCount = 0;
 
     for (const race of rawRaces) {
-        // Normalisation et conversion de la date de course
         const formattedRaceDate = parseFrenchDate(race.raceDate);
 
         // 1. FILTRE STRICT : Ignore si la date est passée ou invalide
@@ -139,7 +151,6 @@ async function runScraper() {
             continue;
         }
 
-        // Normalisation de la date d'ouverture des inscriptions
         const formattedOpeningDate = parseFrenchDate(race.openingDate);
 
         // 2. Détermination dynamique du statut / alerte d'inscription
