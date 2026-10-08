@@ -142,12 +142,11 @@ async function runScraper() {
             status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
         }
 
-        // On revient sur la logique location qui fonctionnait bien
-        const location = item.location || item.city || item.ville || subItem.location || 'France';
+        // Recherche ultra-élargie de la localisation dans tous les champs possibles
+        const location = item.location || item.city || item.ville || item.place || item.town || item.address || item.venue || item.commune || subItem.location || subItem.city || subItem.place || 'France';
 
-        // Récupération des coordonnées directes si elles existent, sinon géocodage de location
-        let lat = Number(subItem.lat || subItem.latitude || item.lat || item.latitude) || null;
-        let lng = Number(subItem.lng || subItem.longitude || item.lng || item.longitude) || null;
+        let lat = Number(subItem.lat || subItem.latitude || item.lat || item.latitude || item.y) || null;
+        let lng = Number(subItem.lng || subItem.longitude || item.lng || item.longitude || item.lon || item.x) || null;
 
         if (!lat || !lng) {
             const coords = await getCachedCoordinates(location);
