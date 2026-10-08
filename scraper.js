@@ -114,11 +114,6 @@ async function runScraper() {
         rawRaces = Array.isArray(dataContainer) ? dataContainer : (dataContainer.events || dataContainer.races || dataContainer.data || dataContainer.results || []);
 
         console.log(`🔍 ${rawRaces.length} événements bruts récupérés.`);
-
-        if (rawRaces.length > 0) {
-            console.log("📦 Structure du 1er événement brut (Diagnostic) :", JSON.stringify(rawRaces[0], null, 2));
-        }
-
     } catch (e) {
         console.error("❌ Erreur lors de la récupération des données source :", e.message);
         return;
@@ -128,7 +123,6 @@ async function runScraper() {
     let skippedPastCount = 0;
 
     for (const item of rawRaces) {
-        // S'il y a un sous-tableau de courses/distances, on extrait la première sous-course principale
         const subItem = (item.races && item.races.length > 0) ? item.races[0] :
                         (item.distances && item.distances.length > 0) ? item.distances[0] : {};
 
@@ -148,8 +142,18 @@ async function runScraper() {
             status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
         }
 
-        const location = item.location || item.city || item.ville || item.place || item.address || item.departement || subItem.location || 'France';
-        const coords = await getCachedCoordinates(location);
+        // 1. Essayer de récupérer les coordonnées GPS directement de l'API
+        let lat = Number(subItem.lat || subItem.latitude || item.lat || item.latitude || item.y) || null;
+        let lng = Number(subItem.lng || subItem.longitude || item.lng || item.longitude || item.lon || item.x) || null;
+
+        // 2. Si les coordonnées directes sont absentes, chercher un lieu/ville pour géocoder
+        const location = item.location || item.city || item.ville || item.place || item.address || item.departement || item.venue || subItem.location || subItem.city || 'France';
+       
+        if (!lat || !lng) {
+            const coords = await getCachedCoordinates(location);
+            lat = coords.lat;
+            lng = coords.lng;
+        }
 
         const raceRecord = {
             title: item.title || item.name || item.event_name || subItem.title || 'Course sans nom',
@@ -158,8 +162,8 @@ async function runScraper() {
             elevation: Number(subItem.elevation || subItem.denivele || item.elevation || item.denivele || item.dplus || item.gain || item.deniv) || 0,
             location: location,
             region: item.region || item.state || 'France',
-            lat: coords.lat,
-            lng: coords.lng,
+            lat: lat,
+            lng: lng,
             price: Number(subItem.price || subItem.tarif || item.price || item.tarif || item.cost || item.amount) || 0,
             ddi: Number(item.ddi || subItem.ddi) || 3,
             opening_date: formattedOpeningDate || formattedRaceDate || today,
