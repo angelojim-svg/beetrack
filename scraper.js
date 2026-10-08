@@ -40,18 +40,51 @@ function saveGeoCache() {
     }
 }
 
+// Fonction pour convertir une date textuelle française (ex: "27 févr. 2026" ou "12 mars 2026") en format standard "YYYY-MM-DD"
+function parseFrenchDate(dateStr) {
+    if (!dateStr) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr; // Déjà au bon format
+
+    const months = {
+        'janv': '01', 'janvier': '01',
+        'févr': '02', 'février': '02', 'fev': '02',
+        'mars': '03', 'mar': '03',
+        'avr': '04', 'avril': '04',
+        'mai': '05',
+        'juin': '06',
+        'juil': '07', 'juillet': '07',
+        'août': '08', 'aout': '08',
+        'sept': '09', 'septembre': '09',
+        'oct': '10', 'octobre': '10',
+        'nov': '11', 'novembre': '11',
+        'déc': '12', 'décembre': '12', 'dec': '12'
+    };
+
+    const cleanStr = dateStr.toLowerCase().replace('.', '').trim();
+    const parts = cleanStr.split(/\s+/);
+
+    if (parts.length >= 3) {
+        const day = parts[0].padStart(2, '0');
+        const monthKey = Object.keys(months).find(m => parts[1].startsWith(m));
+        const year = parts[2];
+
+        if (monthKey && year) {
+            return `${year}-${months[monthKey]}-${day}`;
+        }
+    }
+    return null;
+}
+
 // Fonction de géocodage optimisée avec cache (Nominatim / OpenStreetMap)
 async function getCachedCoordinates(locationName) {
     if (!locationName) return { lat: null, lng: null };
     const cleanLocation = locationName.trim().toLowerCase();
 
-    // 1. Vérification dans le cache local
     if (geoCache[cleanLocation]) {
         return geoCache[cleanLocation];
     }
 
     try {
-        // 2. Appel API si inconnu
         const encodedQuery = encodeURIComponent(locationName + ", France");
         const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&limit=1`, {
             headers: { 'User-Agent': 'PacePulseScraper/1.0' }
@@ -64,11 +97,8 @@ async function getCachedCoordinates(locationName) {
                 lng: parseFloat(data[0].lon)
             };
             geoCache[cleanLocation] = coords;
-            saveGeoCache(); // Sauvegarde immédiate du cache mis à jour
-           
-            // Pause de courtoisie pour l'API (1 requête / seconde)
+            saveGeoCache();
             await new Promise(resolve => setTimeout(resolve, 1000));
-           
             return coords;
         }
     } catch (err) {
@@ -81,14 +111,13 @@ async function getCachedCoordinates(locationName) {
 async function runScraper() {
     console.log("🚀 Démarrage du scraper PacePulse...");
    
-    // Date du jour au format YYYY-MM-DD pour ignorer le passé
     const today = new Date().toISOString().split('T')[0];
-    console.log(`📅 Filtre actif : Suppression de toutes les courses antérieures au ${today}`);
+    console.log(`📅 Date de référence (Aujourd'hui) : ${today}`);
 
     let rawRaces = [];
     try {
-        // Remplace ici par ta logique de récupération de données brutes (fetch ton URL cible)
-        // const response = await fetch("https://www.betrail.run/api/events-drizzle?after=2026-10-07&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0");
+        // Remplace ici par ta logique de récupération (fetch de ton site source)
+        // const response = await fetch("TON_URL_HTTPS");
         // rawRaces = await response.json();
 
         console.log(`🔍 ${rawRaces.length} événements bruts récupérés.`);
@@ -101,16 +130,32 @@ async function runScraper() {
     let skippedPastCount = 0;
 
     for (const race of rawRaces) {
-        // 1. FILTRE STRICT : Ignore les courses passées
-        if (race.raceDate && race.raceDate < today) {
+        // Normalisation et conversion de la date de course
+        const formattedRaceDate = parseFrenchDate(race.raceDate);
+
+        // 1. FILTRE STRICT : Ignore si la date est passée ou invalide
+        if (!formattedRaceDate || formattedRaceDate < today) {
             skippedPastCount++;
             continue;
         }
 
-        // 2. GÉOCODAGE (via le cache ou l'API)
+        // Normalisation de la date d'ouverture des inscriptions
+        const formattedOpeningDate = parseFrenchDate(race.openingDate);
+
+        // 2. Détermination dynamique du statut / alerte d'inscription
+        let status = race.status || 'Upcoming';
+        if (formattedOpeningDate) {
+            if (formattedOpeningDate > today) {
+                status = 'Opening Soon'; // Inscriptions bientôt ouvertes (alerte)
+            } else {
+                status = 'Open'; // Inscriptions ouvertes
+            }
+        }
+
+        // 3. GÉOCODAGE (via le cache ou l'API)
         const coords = await getCachedCoordinates(race.location);
 
-        // 3. PRÉPARATION DE L'OBJET POUR SUPABASE
+        // 4. PRÉPARATION DE L'OBJET POUR SUPABASE
         const raceRecord = {
             title: race.title,
             category: race.category || 'Trail',
@@ -122,13 +167,13 @@ async function runScraper() {
             lng: coords.lng,
             price: Number(race.price) || 0,
             ddi: Number(race.ddi) || 3,
-            opening_date: race.openingDate || null,
-            race_date: race.raceDate,
-            status: race.status || 'Upcoming',
+            opening_date: formattedOpeningDate,
+            race_date: formattedRaceDate,
+            status: status,
             organizer_url: race.url || ''
         };
 
-        // 4. INSERTION DANS SUPABASE
+        // 5. INSERTION DANS SUPABASE
         const { error } = await supabase
             .from('races')
             .upsert(raceRecord, { onConflict: 'title,race_date' });
