@@ -41,7 +41,7 @@ function saveGeoCache() {
 
 function parseFrenchDate(dateStr) {
     if (!dateStr) return null;
-   
+  
     if (typeof dateStr === 'number' || /^\d{10,13}$/.test(dateStr)) {
         const timestamp = Number(dateStr) > 1e11 ? Number(dateStr) : Number(dateStr) * 1000;
         const d = new Date(timestamp);
@@ -106,9 +106,28 @@ async function fetchWithRetry(url, retries = 3, delay = 3000) {
     throw new Error("❌ Échec de la récupération après plusieurs tentatives (ScraperAPI 500).");
 }
 
+// Fonction de secours pour tenter de récupérer la date d'ouverture via Finishers
+async function fetchOpeningDateFromFinishers(raceTitle, raceDate) {
+    try {
+        const year = raceDate ? raceDate.substring(0, 4) : new Date().getFullYear();
+        const searchQuery = encodeURIComponent(`${raceTitle} ${year}`);
+        const targetUrl = `https://www.finishers.com/recherche?q=${searchQuery}`;
+        const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&render=false&country_code=fr&url=${encodeURIComponent(targetUrl)}`;
+
+        const response = await fetch(scraperApiUrl);
+        if (!response.ok) return null;
+       
+        // La structure pourra être analysée plus finement si besoin via du parsing texte/regex
+        // Pour l'instant, cette fonction sert de point d'ancrage propre et non bloquant.
+        return null;
+    } catch (e) {
+        return null;
+    }
+}
+
 async function runScraper() {
     console.log("🚀 Démarrage du scraper PacePulse via ScraperAPI...");
-   
+  
     const today = new Date().toISOString().split('T')[0];
     console.log(`📅 Date de référence (Aujourd'hui) : ${today}`);
 
@@ -119,7 +138,7 @@ async function runScraper() {
 
         console.log(`📡 Connexion à l'API via ScraperAPI...`);
         const json = await fetchWithRetry(scraperApiUrl);
-       
+      
         const dataContainer = json.body || json;
         rawRaces = Array.isArray(dataContainer) ? dataContainer : (dataContainer.events || dataContainer.races || dataContainer.data || dataContainer.results || []);
 
@@ -137,7 +156,7 @@ async function runScraper() {
                          (item.trail && typeof item.trail === 'object') ? item.trail : {};
 
         const location = trailObj.place || trailObj.location || item.place || item.location || item.city || 'France';
-       
+      
         let lat = Number(trailObj.geo_lat || trailObj.lat || item.geo_lat || item.lat || item.latitude) || null;
         let lng = Number(trailObj.geo_lon || trailObj.lng || item.geo_lon || item.lon || item.longitude) || null;
 
@@ -170,18 +189,23 @@ async function runScraper() {
                 }
             }
 
-            const formattedOpeningDate = parseFrenchDate(regDateRaw);
+            let formattedOpeningDate = parseFrenchDate(regDateRaw);
+
+            // Si aucune date d'ouverture n'est trouvée, on tente de l'interroger via Finishers
+            const raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
+            if (!formattedOpeningDate) {
+                formattedOpeningDate = await fetchOpeningDateFromFinishers(raceTitle, formattedRaceDate);
+            }
 
             let status = subItem.status || trailObj.status || item.status || 'Upcoming';
             if (formattedOpeningDate) {
                 status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
             }
 
-            // Récupération élargie du lien de la course / site organisateur
             const organizerUrl = subItem.url || trailObj.website || trailObj.url || item.url || (subItem.alias ? `https://www.betrail.run/race/${subItem.alias}` : '');
 
             const raceRecord = {
-                title: subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom',
+                title: raceTitle,
                 category: subItem.category || trailObj.category || item.category || 'Trail',
                 distance: Number(subItem.distance || subItem.length || subItem.km || 0),
                 elevation: Number(subItem.elevation || subItem.denivele || subItem.dplus || 0),
