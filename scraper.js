@@ -40,25 +40,36 @@ function saveGeoCache() {
     }
 }
 
-// Fonction de géocodage avec cache
+// Fonction de géocodage optimisée avec cache (Nominatim / OpenStreetMap)
 async function getCachedCoordinates(locationName) {
     if (!locationName) return { lat: null, lng: null };
     const cleanLocation = locationName.trim().toLowerCase();
 
+    // 1. Vérification dans le cache local
     if (geoCache[cleanLocation]) {
-        return geoCache[cleanLocation]; // Utilisation directe du cache !
+        return geoCache[cleanLocation];
     }
 
-    // Sinon, on fait l'appel API de géocodage habituel
-    const coords = await fetchCoordinatesFromAPI(locationName);
-   
-    if (coords && coords.lat && coords.lng) {
-        geoCache[cleanLocation] = coords;
-        saveGeoCache(); // Sauvegarde automatique du cache
-    }
+    try {
+        // 2. Appel API si inconnu
+        const encodedQuery = encodeURIComponent(locationName + ", France");
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&limit=1`, {
+            headers: { 'User-Agent': 'PacePulseScraper/1.0' }
+        });
+        const data = await response.json();
 
-    return coords;
-}
+        if (data && data.length > 0) {
+            const coords = {
+                lat: parseFloat(data[0].lat),
+                lng: parseFloat(data[0].lon)
+            };
+            geoCache[cleanLocation] = coords;
+            saveGeoCache(); // Sauvegarde immédiate du cache mis à jour
+           
+            // Pause de courtoisie pour l'API (1 requête / seconde)
+            await new Promise(resolve => setTimeout(resolve, 1000));
+           
+            return coords;
         }
     } catch (err) {
         console.error(`Erreur géocodage pour "${locationName}" :`, err.message);
@@ -74,14 +85,12 @@ async function runScraper() {
     const today = new Date().toISOString().split('T')[0];
     console.log(`📅 Filtre actif : Suppression de toutes les courses antérieures au ${today}`);
 
-    // --- REMplace CETTE PARTIE PAR TON EXTRACTION CIBLE (ton URL HTTPS mise à jour) ---
-    // Exemple : Récupération des données brutes depuis ton site cible ou ton API source
     let rawRaces = [];
     try {
-        // const targetUrl = "https://www.betrail.run/api/events-drizzle?after=2026-10-07&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0";
-        // const response = await fetch(targetUrl);
+        // Remplace ici par ta logique de récupération de données brutes (fetch ton URL cible)
+        // const response = await fetch("https://www.betrail.run/api/events-drizzle?after=2026-10-07&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0");
         // rawRaces = await response.json();
-       
+
         console.log(`🔍 ${rawRaces.length} événements bruts récupérés.`);
     } catch (e) {
         console.error("❌ Erreur lors de la récupération des données source :", e.message);
