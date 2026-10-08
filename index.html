@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-widtfh, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PacePulse - Veille & Dossards Trail / Course à pied</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
 
-    <!-- JS de MarkerCluster (placé directement après leaflet.js) -->
+    <!-- JS de MarkerCluster -->
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
     <!-- FontAwesome Icons -->
@@ -133,84 +133,6 @@
     <!-- MAIN CONTAINER -->
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
-        <!-- DASHBOARD TOP ROW -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-           
-            <!-- PPS Widget -->
-            <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between border border-borderBg">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <span class="text-xs uppercase tracking-wider text-gray-400 font-semibold">Conformité Médicale</span>
-                        <h3 class="text-lg font-bold text-white mt-1">Pass Prévention Santé (PPS)</h3>
-                    </div>
-                    <div class="p-2 bg-emerald-500/10 rounded-xl text-emerald-400 border border-emerald-500/20">
-                        <i class="fa-solid fa-shield-heart text-xl"></i>
-                    </div>
-                </div>
-                <div class="my-4">
-                    <div class="flex justify-between items-end mb-1">
-                        <span class="text-sm text-gray-400" id="pps-status-text">Attestation non enregistrée</span>
-                        <span class="text-xs font-mono font-bold text-emerald-400" id="pps-days-left">0 jour</span>
-                    </div>
-                    <div class="w-full bg-darkBg rounded-full h-2 border border-borderBg overflow-hidden">
-                        <div id="pps-progress-bar" class="bg-emerald-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
-                    </div>
-                </div>
-                <div class="flex items-center justify-between text-xs text-gray-400 pt-2 border-t border-borderBg">
-                    <span>Validité : 3 mois (90 jours)</span>
-                    <button onclick="toggleModal('ppsModal')" class="text-emerald-400 hover:underline font-semibold">Mettre à jour</button>
-                </div>
-            </div>
-
-            <!-- Season Budget Widget -->
-            <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between border border-borderBg">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <span class="text-xs uppercase tracking-wider text-gray-400 font-semibold">Ma Saison 2026/2027</span>
-                        <h3 class="text-lg font-bold text-white mt-1">Budget Dossards Estimé</h3>
-                    </div>
-                    <div class="p-2 bg-amber-500/10 rounded-xl text-amber-400 border border-amber-500/20">
-                        <i class="fa-solid fa-wallet text-xl"></i>
-                    </div>
-                </div>
-                <div class="my-3 flex items-baseline space-x-3">
-                    <span class="text-3xl font-extrabold text-white font-mono" id="season-total-budget">0 €</span>
-                    <span class="text-sm text-gray-400"><span id="season-race-count" class="text-amber-400 font-bold">0</span> course(s) retenue(s)</span>
-                </div>
-                <div class="flex items-center justify-between text-xs text-gray-400 pt-2 border-t border-borderBg">
-                    <span id="season-km-total">0 km cumulés</span>
-                    <button onclick="scrollToSection('season-section')" class="text-amber-400 hover:underline font-semibold">Voir ma saison <i class="fa-solid fa-arrow-right ml-1"></i></button>
-                </div>
-            </div>
-
-            <!-- DDI Explanation Widget -->
-            <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between border border-borderBg">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <span class="text-xs uppercase tracking-wider text-gray-400 font-semibold">Indice Exclusif</span>
-                        <h3 class="text-lg font-bold text-white mt-1">Score DDI (Dossard Difficulty)</h3>
-                    </div>
-                    <div class="p-2 bg-purple-500/10 rounded-xl text-purple-400 border border-purple-500/20">
-                        <i class="fa-solid fa-gauge-high text-xl"></i>
-                    </div>
-                </div>
-                <p class="text-xs text-gray-400 my-2 leading-relaxed">
-                    Évalue la rapidité de saturation d'une course de <strong>1</strong> (inscription sereine) à <strong>5</strong> (sold-out en minutes ou tirage au sort).
-                </p>
-                <div class="flex items-center space-x-2 pt-2 border-t border-borderBg">
-                    <span class="text-xs text-gray-400">Échelle :</span>
-                    <div class="flex space-x-1">
-                        <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
-                        <span class="w-3 h-3 rounded-full bg-blue-500"></span>
-                        <span class="w-3 h-3 rounded-full bg-amber-500"></span>
-                        <span class="w-3 h-3 rounded-full bg-orange-500"></span>
-                        <span class="w-3 h-3 rounded-full bg-red-500"></span>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-
         <!-- SEARCH & FILTER PANEL -->
         <section class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-borderBg pb-4">
@@ -291,15 +213,6 @@
                         <i class="fa-solid fa-list-ul mr-1"></i> Liste des Courses
                     </button>
                 </div>
-
-                <div class="flex items-center space-x-3 text-sm">
-                    <span class="text-gray-400 text-xs uppercase font-semibold">Trier par :</span>
-                    <select id="sort-by" onchange="applyFilters()" class="bg-cardBg border border-borderBg rounded-xl px-3 py-2 text-xs text-white">
-                        <option value="openingDate">Date d'ouverture</option>
-                        <option value="raceDate">Date d'événement</option>
-                        <option value="ddiDesc">Tension DDI Fort</option>
-                    </select>
-                </div>
             </div>
 
             <!-- MAP CONTAINER -->
@@ -311,61 +224,7 @@
             <div id="container-list-view" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden"></div>
         </section>
 
-        <!-- SEASON PLANNER SECTION -->
-        <section id="season-section" class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6">
-            <div class="flex justify-between items-center border-b border-borderBg pb-4">
-                <h2 class="text-xl font-extrabold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-calendar-check text-amber-400"></i>
-                    Mon Calendrier de Saison
-                </h2>
-                <div>
-                    <span class="text-xs text-gray-400">Budget Total :</span>
-                    <span class="text-lg font-bold font-mono text-amber-400 ml-2" id="planner-budget-display">0 €</span>
-                </div>
-            </div>
-
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm text-gray-300">
-                    <thead class="text-xs uppercase bg-darkBg/80 text-gray-400 border-b border-borderBg">
-                        <tr>
-                            <th class="px-4 py-3">Épreuve</th>
-                            <th class="px-4 py-3">Date Course</th>
-                            <th class="px-4 py-3">Distance / D+</th>
-                            <th class="px-4 py-3">Tarif</th>
-                            <th class="px-4 py-3">Statut</th>
-                            <th class="px-4 py-3 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="season-table-body" class="divide-y divide-borderBg"></tbody>
-                </table>
-            </div>
-            <div id="season-empty-msg" class="text-center py-6 text-gray-500 text-sm">
-                Aucune course ajoutée à votre saison.
-            </div>
-        </section>
-
     </main>
-
-    <!-- MODAL ALERT -->
-    <div id="alertModal" class="fixed inset-0 bg-darkBg/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-        <div class="glass-panel max-w-md w-full p-6 rounded-2xl border border-borderBg relative">
-            <button onclick="toggleModal('alertModal')" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
-            <h3 class="text-lg font-bold text-white mb-2">Programmer une alerte</h3>
-            <p class="text-xs text-gray-400 mb-4" id="modal-race-title"></p>
-
-            <form onsubmit="handleAlertSubmit(event)" class="space-y-4">
-                <input type="hidden" id="modal-race-id">
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Votre Email</label>
-                    <input type="email" id="alert-email" required placeholder="runner@domaine.fr" class="w-full px-4 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white">
-                </div>
-                <div class="flex justify-end space-x-3 pt-2">
-                    <button type="button" onclick="toggleModal('alertModal')" class="px-4 py-2 rounded-xl text-sm text-gray-400">Annuler</button>
-                    <button type="submit" class="px-5 py-2 rounded-xl text-sm font-bold bg-emerald-500 text-darkBg">Valider l'alerte</button>
-                </div>
-            </form>
-        </div>
-    </div>
 
     <!-- SCRIPT JAVASCRIPT PRINCIPAL -->
     <script>
@@ -375,61 +234,59 @@
 
         window.dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Variables d'état
+        // Variables d'état (avec currentDisplayLimit ajouté pour éviter les erreurs)
         let racesData = [];
         let filteredRaces = [];
         let leafletMap = null;
         let markerClusterGroup = null;
+        let currentDisplayLimit = 50;
 
         // Initialisation de la carte Leaflet
         function initLeafletMap() {
             const mapContainer = document.getElementById('map');
             if (!mapContainer) return;
             leafletMap = L.map('map').setView([46.603354, 1.888334], 6);
-           
+          
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                attribution: '&copy; OpenStreetMap contributors'
             }).addTo(leafletMap);
         }
 
         // Récupération dynamique depuis Supabase
-       async function fetchRacesFromSupabase() {
-    const { data: races, error } = await window.dbClient
-        .from('races')
-        .select('*')
-        .limit(15000);
+        async function fetchRacesFromSupabase() {
+            const { data: races, error } = await window.dbClient
+                .from('races')
+                .select('*')
+                .limit(15000);
 
-    if (error) {
-        console.error("Erreur Supabase :", error.message);
-        return;
-    }
-// Remplace ou ajoute ceci après avoir récupéré tes données depuis Supabase :
-window.racesData = races; // 'data' étant ton tableau de courses
+            if (error) {
+                console.error("Erreur Supabase :", error.message);
+                return;
+            }
 
-    if (races) {
-        racesData = races.map(r => ({
-            id: r.id,
-            title: r.title,
-            category: r.category || 'Trail',
-            distance: Number(r.distance) || 0,
-            elevation: Number(r.elevation) || 0,
-            location: r.location || 'France',
-            region: r.region || 'France',
-            lat: r.lat !== null ? parseFloat(r.lat) : null,
-            lng: r.lng !== null ? parseFloat(r.lng) : null,
-            price: parseFloat(r.price) || 0,
-            ddi: r.ddi || 3,
-            openingDate: r.opening_date,
-            raceDate: r.race_date,
-            status: r.status,
-            url: r.organizer_url
-        }));
+            if (races) {
+                racesData = races.map(r => ({
+                    id: r.id,
+                    title: r.title,
+                    category: r.category || 'Trail',
+                    distance: Number(r.distance) || 0,
+                    elevation: Number(r.elevation) || 0,
+                    location: r.location || 'France',
+                    region: r.region || 'France',
+                    lat: r.lat !== null ? parseFloat(r.lat) : null,
+                    lng: r.lng !== null ? parseFloat(r.lng) : null,
+                    price: parseFloat(r.price) || 0,
+                    ddi: r.ddi || 3,
+                    openingDate: r.opening_date,
+                    raceDate: r.race_date,
+                    status: r.status,
+                    url: r.organizer_url
+                }));
 
-        applyFilters();
-        updateDashboardStats();
-    }
-}
-
+                applyFilters();
+                updateDashboardStats();
+            }
+        }
 
         // Moteur de filtrage
         function applyFilters() {
@@ -451,167 +308,115 @@ window.racesData = races; // 'data' étant ton tableau de courses
 
             const countElem = document.getElementById('filtered-count');
             if (countElem) countElem.innerText = filteredRaces.length;
-           
+          
             renderListView();
             updateMapMarkers();
         }
 
-        // Mise à jour optimisée des marqueurs avec MarkerCluster
+        // Mise à jour des marqueurs de la carte
         function updateMapMarkers() {
-    if (!leafletMap) return;
+            if (!leafletMap) return;
 
-    if (markerClusterGroup) {
-        leafletMap.removeLayer(markerClusterGroup);
-    }
-
-    markerClusterGroup = L.markerClusterGroup({
-        chunkedLoading: true,
-        maxClusterRadius: 35
-    });
-
-    const groupedRaces = {};
-
-    filteredRaces.forEach(race => {
-        const lat = parseFloat(race.lat);
-        const lng = parseFloat(race.lng);
-        if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
-
-        const geoKey = `${lat.toFixed(3)}_${lng.toFixed(3)}`;
-        if (!groupedRaces[geoKey]) groupedRaces[geoKey] = [];
-        groupedRaces[geoKey].push({ ...race, lat, lng });
-    });
-
-    Object.values(groupedRaces).forEach(racesAtLocation => {
-        const mainRace = racesAtLocation[0];
-        let color = mainRace.status === 'Open' ? '#10b981' : (mainRace.status === 'Upcoming' ? '#f59e0b' : '#ef4444');
-
-        const customIcon = L.divIcon({
-            className: 'custom-pin',
-            html: `<div style="background:${color}; width:14px; height:14px; border-radius:50%; border:2px solid white; box-shadow:0 0 4px rgba(0,0,0,0.5);"></div>`,
-            iconSize: [14, 14],
-            iconAnchor: [7, 7]
-        });
-
-        const marker = L.marker([mainRace.lat, mainRace.lng], { icon: customIcon });
-
-    let popupHtml = `<div style="max-height: 220px; overflow-y: auto; padding: 2px; color: #f3f4f6;">`;
-racesAtLocation.forEach((r, idx) => {
-    // Vérification directe dans la console pour déboguer
-    console.log("Objet course dans le popup :", r);
-
-    // Récupération sécurisée de la date et du prix
-    const rawDate = r.raceDate || r.race_date || r.date;
-    const formattedDate = typeof formatDateFR === 'function' ? formatDateFR(rawDate) : (rawDate ? new Date(rawDate).toLocaleDateString('fr-FR') : "Date à venir");
-
-    const rawPrice = r.price !== undefined && r.price !== null ? r.price : 0;
-    const displayPrice = rawPrice > 0 ? `${rawPrice} €` : 'Gratuit / N/C';
-
-    popupHtml += `
-        <div style="padding-bottom: 8px; margin-bottom: 8px; ${idx < racesAtLocation.length - 1 ? 'border-bottom: 1px solid rgba(255,255,255,0.1);' : ''}">
-            <strong style="color: #fff; font-size: 13px;">${r.title}</strong>
-            <div style="color: #9ca3af; font-size: 11px; margin-top: 3px;">
-                📅 <span style="color: #e2e8f0; font-weight: 600;">${formattedDate}</span>
-                <span style="margin: 0 5px;">•</span>
-                💰 <span style="color: #34d399; font-weight: 600;">${displayPrice}</span>
-            </div>
-        </div>
-    `;
-});
-popupHtml += `</div>`;
-
-
-
-
-
-        marker.bindPopup(popupHtml);
-        markerClusterGroup.addLayer(marker);
-    });
-
-    leafletMap.addLayer(markerClusterGroup);
-}
-
-
-
-        / Fonction utilitaire pour formater la date au format français
-function formatDateFR(dateStr) {
-    if (!dateStr) return 'Date non communiquée';
-    const d = new Date(dateStr);
-    return isNaN(d.getTime()) ? dateStr : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function renderListView() {
-    const container = document.getElementById('container-list-view');
-    if (!container) return;
-    container.innerHTML = '';
-
-    const racesToRender = filteredRaces.slice(0, currentDisplayLimit);
-
-    racesToRender.forEach(race => {
-        const formattedDate = formatDateFR(race.raceDate);
-        const displayPrice = race.price > 0 ? `${race.price} €` : 'N/C';
-
-        const card = `
-            <div class="glass-panel p-5 rounded-2xl border border-borderBg flex flex-col justify-between">
-                <div>
-                    <div class="flex justify-between items-center text-[10px] font-mono text-gray-400">
-                        <span>${race.category} • ${race.region}</span>
-                        <span class="text-emerald-400 font-bold"><i class="fa-regular fa-calendar mr-1"></i>${formattedDate}</span>
-                    </div>
-                    <h3 class="text-lg font-bold text-white mt-1">${race.title}</h3>
-                    
-                    <div class="grid grid-cols-4 gap-2 py-3 my-3 border-y border-borderBg text-center text-xs">
-                        <div><span class="block text-gray-500">Dist.</span><span class="font-bold text-white">${race.distance} km</span></div>
-                        <div><span class="block text-gray-500">D+</span><span class="font-bold text-emerald-400">+${race.elevation}m</span></div>
-                        <div><span class="block text-gray-500">Prix</span><span class="font-bold text-amber-400">${displayPrice}</span></div>
-                        <div><span class="block text-gray-500">DDI</span><span class="font-bold text-purple-400">${race.ddi}/5</span></div>
-                    </div>
-                </div>
-                <div class="flex justify-between items-center pt-2">
-                    <span class="text-xs px-2.5 py-1 rounded-full font-bold ${race.status === 'Open' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}">${race.status}</span>
-                    <button onclick="openAlertModal('${race.id}')" class="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-xs">Alerte</button>
-                </div>
-            </div>
-        `;
-        container.insertAdjacentHTML('beforeend', card);
-    });
-
-    if (filteredRaces.length > currentDisplayLimit) {
-        const loadMoreBtn = `
-            <div class="col-span-full text-center py-4">
-                <button onclick="loadMoreRaces()" class="px-6 py-3 bg-emerald-500 text-darkBg font-bold rounded-xl shadow-lg">
-                    Voir plus de courses (${filteredRaces.length - currentDisplayLimit} restantes)
-                </button>
-            </div>
-        `;
-        container.insertAdjacentHTML('beforeend', loadMoreBtn);
-    }
-}
-        async function handleAlertSubmit(e) {
-            e.preventDefault();
-            const raceId = document.getElementById('modal-race-id').value;
-            const email = document.getElementById('alert-email').value;
-
-            const { error } = await window.dbClient.from('alerts').insert([{ race_id: raceId, email: email }]);
-
-            if (error) {
-                alert("Erreur lors de l'enregistrement : " + error.message);
-            } else {
-                alert("✅ Alerte enregistrée ! Vous recevrez un mail dès l'ouverture.");
-                toggleModal('alertModal');
+            if (markerClusterGroup) {
+                leafletMap.removeLayer(markerClusterGroup);
             }
+
+            markerClusterGroup = L.markerClusterGroup({
+                chunkedLoading: true,
+                maxClusterRadius: 35
+            });
+
+            const groupedRaces = {};
+
+            filteredRaces.forEach(race => {
+                const lat = parseFloat(race.lat);
+                const lng = parseFloat(race.lng);
+                if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
+
+                const geoKey = `${lat.toFixed(3)}_${lng.toFixed(3)}`;
+                if (!groupedRaces[geoKey]) groupedRaces[geoKey] = [];
+                groupedRaces[geoKey].push({ ...race, lat, lng });
+            });
+
+            Object.values(groupedRaces).forEach(racesAtLocation => {
+                const mainRace = racesAtLocation[0];
+                let color = mainRace.status === 'Open' ? '#10b981' : (mainRace.status === 'Upcoming' ? '#f59e0b' : '#ef4444');
+
+                const customIcon = L.divIcon({
+                    className: 'custom-pin',
+                    html: `<div style="background:${color}; width:14px; height:14px; border-radius:50%; border:2px solid white; box-shadow:0 0 4px rgba(0,0,0,0.5);"></div>`,
+                    iconSize: [14, 14],
+                    iconAnchor: [7, 7]
+                });
+
+                const marker = L.marker([mainRace.lat, mainRace.lng], { icon: customIcon });
+
+                let popupHtml = `<div style="max-height: 220px; overflow-y: auto; padding: 2px; color: #f3f4f6;">`;
+                racesAtLocation.forEach((r, idx) => {
+                    const rawDate = r.raceDate || r.race_date;
+                    const formattedDate = formatDateFR(rawDate);
+
+                    const rawPrice = r.price !== undefined && r.price !== null ? r.price : 0;
+                    const displayPrice = rawPrice > 0 ? `${rawPrice} €` : 'Gratuit / N/C';
+
+                    popupHtml += `
+                        <div style="padding-bottom: 8px; margin-bottom: 8px; ${idx < racesAtLocation.length - 1 ? 'border-bottom: 1px solid rgba(255,255,255,0.1);' : ''}">
+                            <strong style="color: #fff; font-size: 13px;">${r.title}</strong>
+                            <div style="color: #9ca3af; font-size: 11px; margin-top: 3px;">
+                                📅 <span style="color: #e2e8f0; font-weight: 600;">${formattedDate}</span>
+                                <span style="margin: 0 5px;">•</span>
+                                💰 <span style="color: #34d399; font-weight: 600;">${displayPrice}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                popupHtml += `</div>`;
+
+                marker.bindPopup(popupHtml);
+                markerClusterGroup.addLayer(marker);
+            });
+
+            leafletMap.addLayer(markerClusterGroup);
         }
 
-        function openAlertModal(raceId) {
-            const race = racesData.find(r => r.id === raceId);
-            if (!race) return;
-            document.getElementById('modal-race-id').value = race.id;
-            document.getElementById('modal-race-title').innerText = race.title;
-            toggleModal('alertModal');
+        // Formatage de la date en français
+        function formatDateFR(dateStr) {
+            if (!dateStr) return 'Date non communiquée';
+            const d = new Date(dateStr);
+            return isNaN(d.getTime()) ? dateStr : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
         }
 
-        function toggleModal(id) {
-            const m = document.getElementById(id);
-            if (m) m.classList.toggle('hidden');
+        function renderListView() {
+            const container = document.getElementById('container-list-view');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const racesToRender = filteredRaces.slice(0, currentDisplayLimit);
+
+            racesToRender.forEach(race => {
+                const formattedDate = formatDateFR(race.raceDate);
+                const displayPrice = race.price > 0 ? `${race.price} €` : 'N/C';
+
+                const card = `
+                    <div class="glass-panel p-5 rounded-2xl border border-borderBg flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center text-[10px] font-mono text-gray-400">
+                                <span>${race.category} • ${race.region}</span>
+                                <span class="text-emerald-400 font-bold"><i class="fa-regular fa-calendar mr-1"></i>${formattedDate}</span>
+                            </div>
+                            <h3 class="text-lg font-bold text-white mt-1">${race.title}</h3>
+                           
+                            <div class="grid grid-cols-4 gap-2 py-3 my-3 border-y border-borderBg text-center text-xs">
+                                <div><span class="block text-gray-500">Dist.</span><span class="font-bold text-white">${race.distance} km</span></div>
+                                <div><span class="block text-gray-500">D+</span><span class="font-bold text-emerald-400">+${race.elevation}m</span></div>
+                                <div><span class="block text-gray-500">Prix</span><span class="font-bold text-amber-400">${displayPrice}</span></div>
+                                <div><span class="block text-gray-500">DDI</span><span class="font-bold text-purple-400">${race.ddi}/5</span></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', card);
+            });
         }
 
         function updateSliderLabels() {
