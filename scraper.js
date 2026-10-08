@@ -1,208 +1,146 @@
-import axios from 'axios';
-import { createClient } from '@supabase/supabase-js';
+const fs = require('fs');
+const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
+// Configuration Supabase depuis les variables d'environnement GitHub Actions
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SCRAPER_API_KEY) {
-  console.error("❌ ERREUR : Identifiants ou clés manquants.");
-  process.exit(1);
+if (!supabaseUrl || !supabaseKey) {
+    console.error("❌ Erreur : Les clés Supabase sont manquantes dans les variables d'environnement.");
+    process.exit(1);
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-const geoCache = new Map();
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-function formatDate(rawDate) {
-  if (!rawDate) return new Date().toISOString().split('T')[0];
-  if (!isNaN(rawDate)) {
-    const timestamp = Number(rawDate);
-    const date = new Date(timestamp > 1e11 ? timestamp : timestamp * 1000);
-    return date.toISOString().split('T')[0];
-  }
-  const parsed = new Date(rawDate);
-  return !isNaN(parsed.getTime()) ? parsed.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+// --- GESTION DU CACHE DE GÉOCODAGE ---
+const CACHE_FILE = path.join(__dirname, 'geocode_cache.json');
+let geoCache = {};
+
+if (fs.existsSync(CACHE_FILE)) {
+    try {
+        geoCache = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'));
+        console.log(`📦 Cache de géocodage chargé : ${Object.keys(geoCache).length} lieux connus.`);
+    } catch (e) {
+        console.warn("⚠️ Erreur lors de la lecture du cache, réinitialisation.");
+        geoCache = {};
+    }
 }
 
-function parseCoord(val) {
-  if (!val) return null;
-  const num = parseFloat(String(val).replace(',', '.'));
-  return isNaN(num) || num === 0 ? null : num;
+function saveGeoCache() {
+    try {
+        fs.writeFileSync(CACHE_FILE, JSON.stringify(geoCache, null, 2));
+    } catch (e) {
+        console.error("⚠️ Impossible de sauvegarder le cache :", e.message);
+    }
 }
 
-function cleanCityName(title, city, region) {
-  if (city && city.length > 2 && city !== 'France') return city;
-  const match = title.match(/(?:trail|course|foulées|ultra)\s+(?:du|des|de|d')?\s*([A-Za-zÀ-ÖØ-öø-ÿ\s-]+)/i);
-  if (match && match[1] && match[1].length > 3) {
-    return match[1].split('-')[0].trim();
-  }
-  return region || city || 'France';
-}
+// Fonction de géocodage optimisée avec cache (Nominatim / OpenStreetMap)
+async function getCachedCoordinates(locationName) {
+    if (!locationName) return { lat: null, lng: null };
+    const cleanLocation = locationName.trim().toLowerCase();
 
-// Batch de géocodage rapide
-async function preloadCities(cities) {
-  const uniqueCities = [...new Set(cities)].filter(c => c && c !== 'France' && !geoCache.has(c.toLowerCase()));
-  
-  // Exécution par paquets de 10 requêtes simultanées
-  const chunkSize = 10;
-  for (let i = 0; i < uniqueCities.length; i += chunkSize) {
-    const chunk = uniqueCities.slice(i, i + chunkSize);
-    await Promise.all(chunk.map(async (cityName) => {
-      try {
-        const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(cityName)}&type=municipality&limit=1`;
-        const res = await axios.get(url, { timeout: 1500 });
-        if (res.data?.features?.length > 0) {
-          const [lng, lat] = res.data.features[0].geometry.coordinates;
-          geoCache.set(cityName.toLowerCase(), { lat, lng });
+    // 1. Vérification dans le cache local
+    if (geoCache[cleanLocation]) {
+        return geoCache[cleanLocation];
+    }
+
+    try {
+        // 2. Appel API si inconnu
+        const encodedQuery = encodeURIComponent(locationName + ", France");
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&limit=1`, {
+            headers: { 'User-Agent': 'PacePulseScraper/1.0' }
+        });
+        const data = await response.json();
+
+        if (data && data.length > 0) {
+            const coords = {
+                lat: parseFloat(data[0].lat),
+                lng: parseFloat(data[0].lon)
+            };
+            geoCache[cleanLocation] = coords;
+            saveGeoCache(); // Sauvegarde immédiate du cache mis à jour
+           
+            // Pause de courtoisie pour l'API (1 requête / seconde)
+            await new Promise(resolve => setTimeout(resolve, 1000));
+           
+            return coords;
         }
-      } catch (e) {
-        // Ignorer en cas de timeout
-      }
-    }));
-  }
+    } catch (err) {
+        console.error(`Erreur géocodage pour "${locationName}" :`, err.message);
+    }
+
+    return { lat: null, lng: null };
 }
 
 async function runScraper() {
-  console.log("🚀 Extraction ultra-rapide des données...");
+    console.log("🚀 Démarrage du scraper PacePulse...");
+   
+    // Date du jour au format YYYY-MM-DD pour ignorer le passé
+    const today = new Date().toISOString().split('T')[0];
+    console.log(`📅 Filtre actif : Suppression de toutes les courses antérieures au ${today}`);
 
-  const REAL_API_URL = process.env.BETRAIL_API_URL || 'https://www.betrail.run/api/events-drizzle?after=2026-10-06&before=2027-10-07&scope=calendar&predicted=1&length=full&offset=0&country=all&forAddition=false';
-
-  try {
-    const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${encodeURIComponent(REAL_API_URL)}`;
-    const response = await axios.get(proxyUrl);
-    let rawData = response.data;
-
-    if (rawData && rawData.body) {
-      rawData = typeof rawData.body === 'string' ? JSON.parse(rawData.body) : rawData.body;
-    } else if (typeof rawData === 'string') {
-      rawData = JSON.parse(rawData);
+    // --- REMplace CETTE PARTIE PAR TON EXTRACTION CIBLE (ton URL HTTPS mise à jour) ---
+    // Exemple : Récupération des données brutes depuis ton site cible ou ton API source
+    let rawRaces = [];
+    try {
+        // const targetUrl = "TON_URL_HTTPS_CIBLE";
+        // const response = await fetch(targetUrl);
+        // rawRaces = await response.json();
+       
+        console.log(`🔍 ${rawRaces.length} événements bruts récupérés.`);
+    } catch (e) {
+        console.error("❌ Erreur lors de la récupération des données source :", e.message);
+        return;
     }
 
-    const rawEvents = Array.isArray(rawData) 
-      ? rawData 
-      : (rawData.data || rawData.events || rawData.races || rawData.results || []);
+    let savedCount = 0;
+    let skippedPastCount = 0;
 
-    console.log(`📊 ${rawEvents.length} événements bruts récupérés !`);
-    if (rawEvents.length === 0) return;
-
-    // 1. Pré-extraction des villes à géocoder
-    const citiesToFetch = rawEvents.map(item => {
-      const lat = parseCoord(item.lat || item.latitude || (item.coordinates && item.coordinates[1]));
-      if (!lat) {
-        const eventName = item.name || item.title || item.race_name || '';
-        return cleanCityName(eventName, item.city || item.location || item.town || '', item.region);
-      }
-      return null;
-    }).filter(Boolean);
-
-    console.log(`🌍 Géocodage accéléré de ${citiesToFetch.length} communes...`);
-    await preloadCities(citiesToFetch);
-
-    // 2. Traitement direct en mémoire
-    const racesMap = new Map();
-
-    for (const item of rawEvents) {
-      const eventName = item.name || item.title || item.race_name || item.event_name || '';
-      if (!eventName || eventName === 'Course sans nom') continue;
-
-      const subRaces = item.races || item.distances || item.courses || item.sub_events || item.epreuves || [];
-      const city = cleanCityName(eventName, item.city || item.location || item.town || '', item.region);
-      const region = item.region || item.department_name || 'France';
-
-// Verification stricte des coordonnées avant d'appliquer le jitter
-// Détermination des coordonnées géographiques
-let baseLat = parseCoord(item.lat || item.latitude || item.gps_lat);
-let baseLng = parseCoord(item.lng || item.longitude || item.gps_lng);
-
-// Secours : Si les coordonnées sont nulles, on essaie de géocoder via la ville ou la région
-if ((!baseLat || !baseLng) && (city || region)) {
-  const queryGeo = city && city !== 'France' ? city : region;
-  // Si tu utilises déjà une fonction de fetch vers l'API adresse.data.gouv.fr :
-  try {
-    const geoRes = await axios.get(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(queryGeo)}&limit=1`);
-    if (geoRes.data && geoRes.data.features && geoRes.data.features.length > 0) {
-      const coords = geoRes.data.features[0].geometry.coordinates; // [lng, lat]
-      baseLng = coords[0];
-      baseLat = coords[1];
-    }
-  } catch (e) {
-    // En cas d'échec de l'API, on applique une position centrale par défaut en France (ex: Lyon/Clermont) pour éviter les NULL
-    baseLat = 45.7640;
-    baseLng = 4.8357;
-  }
-}
-
-// Application du jitter pour éviter que tous les points se superposent exactement
-const jitterLat = baseLat ? baseLat + ((Math.random() - 0.5) * 0.01) : 46.2276;
-const jitterLng = baseLng ? baseLng + ((Math.random() - 0.5) * 0.01) : 2.2137;
-
-
-     const processRace = (title, distVal, elevVal, dateVal, subObj = {}) => {
-  const dist = parseFloat(String(distVal || 0).replace(',', '.'));
-  const elev = parseInt(String(elevVal || 0), 10);
-  const raceDate = formatDate(dateVal);
-  const key = `${title.trim().toLowerCase()}_${dist}km_${raceDate}`;
-
-  // Vérification stricte : les coordonnées doivent appartenir à la France (lat entre 41 et 52, lng entre -5 et 10)
-  let finalLat = null;
-  let finalLng = null;
-
-  if (baseLat && baseLng && baseLat > 40 && baseLat < 53) {
-    const jitterLat = (Math.random() - 0.5) * 0.003;
-    const jitterLng = (Math.random() - 0.5) * 0.003;
-    finalLat = baseLat + jitterLat;
-    finalLng = baseLng + jitterLng;
-  }
-
-  if (!racesMap.has(key)) {
-    racesMap.set(key, {
-      title: title,
-      category: dist > 42 ? 'Ultra Trail' : 'Trail',
-      distance: dist,
-      elevation: elev,
-      location: city,
-      region: region,
-      lat: finalLat,
-      lng: finalLng,
-      price: parseFloat(subObj.price || item.price || 0),
-      ddi: dist > 80 ? 5 : 3,
-      opening_date: formatDate(subObj.opening_date || item.opening_date),
-      race_date: raceDate,
-      status: 'Open',
-      organizer_url: subObj.url || item.url || 'https://www.betrail.run'
-    });
-  }
-};
-
-
-      if (Array.isArray(subRaces) && subRaces.length > 0) {
-        for (const sub of subRaces) {
-          const subTitle = sub.name || sub.title || `${eventName} - ${sub.distance || sub.length || ''}km`;
-          processRace(subTitle, sub.distance || sub.length || sub.dist, sub.elevation || sub.positive_elevation, sub.date || sub.start_date || item.date, sub);
+    for (const race of rawRaces) {
+        // 1. FILTRE STRICT : Ignore les courses passées
+        if (race.raceDate && race.raceDate < today) {
+            skippedPastCount++;
+            continue;
         }
-      } else {
-        processRace(eventName, item.distance || item.length || item.dist, item.elevation || item.positive_elevation, item.date || item.start_date, item);
-      }
+
+        // 2. GÉOCODAGE (via le cache ou l'API)
+        const coords = await getCachedCoordinates(race.location);
+
+        // 3. PRÉPARATION DE L'OBJET POUR SUPABASE
+        const raceRecord = {
+            title: race.title,
+            category: race.category || 'Trail',
+            distance: Number(race.distance) || 0,
+            elevation: Number(race.elevation) || 0,
+            location: race.location || 'France',
+            region: race.region || 'France',
+            lat: coords.lat,
+            lng: coords.lng,
+            price: Number(race.price) || 0,
+            ddi: Number(race.ddi) || 3,
+            opening_date: race.openingDate || null,
+            race_date: race.raceDate,
+            status: race.status || 'Upcoming',
+            organizer_url: race.url || ''
+        };
+
+        // 4. INSERTION DANS SUPABASE
+        const { error } = await supabase
+            .from('races')
+            .upsert(raceRecord, { onConflict: 'title,race_date' });
+
+        if (error) {
+            console.error(`Erreur d'insertion pour "${race.title}" :`, error.message);
+        } else {
+            savedCount++;
+        }
     }
 
-    const uniqueRaces = Array.from(racesMap.values());
-
-    await supabase.from('races').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-
-    const { error } = await supabase.from('races').upsert(uniqueRaces);
-
-    if (error) {
-      console.error("❌ Erreur Supabase :", error.message);
-      process.exit(1);
-    }
-
-    console.log(`✅ ${uniqueRaces.length} épreuves insérées en un temps record !`);
-
-  } catch (err) {
-    console.error("❌ Erreur :", err.message);
-    process.exit(1);
-  }
+    console.log(`✅ Fin du script ! ${savedCount} courses futures enregistrées/mises à jour. (${skippedPastCount} courses passées ignorées).`);
 }
 
-runScraper();
-
+runScraper().catch(err => {
+    console.error("❌ Erreur fatale :", err);
+    process.exit(1);
+});
