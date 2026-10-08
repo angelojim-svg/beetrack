@@ -3,11 +3,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
 
-// Configuration __dirname pour les ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configuration Supabase depuis les variables d'environnement GitHub Actions
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -27,7 +25,6 @@ if (fs.existsSync(CACHE_FILE)) {
         geoCache = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'));
         console.log(`📦 Cache de géocodage chargé : ${Object.keys(geoCache).length} lieux connus.`);
     } catch (e) {
-        console.warn("⚠️ Erreur lors de la lecture du cache, réinitialisation.");
         geoCache = {};
     }
 }
@@ -40,36 +37,26 @@ function saveGeoCache() {
     }
 }
 
-// Fonction de parsing robuste pour tous les formats de date (JJ/MM/AAAA, ISO, YYYY-MM-DD, texte français)
+// Fonction de parsing robuste des dates
 function parseFrenchDate(dateStr) {
     if (!dateStr) return null;
-   
-    if (dateStr instanceof Date) {
-        return dateStr.toISOString().split('T')[0];
-    }
-
-    // Si c'est un timestamp (nombre)
-    if (typeof dateStr === 'number') {
-        return new Date(dateStr).toISOString().split('T')[0];
-    }
+    if (dateStr instanceof Date) return dateStr.toISOString().split('T')[0];
+    if (typeof dateStr === 'number') return new Date(dateStr).toISOString().split('T')[0];
 
     let str = String(dateStr).trim();
 
-    // 0. Format JJ/MM/AAAA ou JJ-MM-AAAA (ex: "15/06/2027" ou "15-06-2027")
+    // Format JJ/MM/AAAA ou JJ-MM-AAAA
     const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
     if (dmyMatch) {
-        const day = dmyMatch[1].padStart(2, '0');
-        const month = dmyMatch[2].padStart(2, '0');
-        const year = dmyMatch[3];
-        return `${year}-${month}-${day}`;
+        return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
     }
 
-    // 1. Format ISO ou YYYY-MM-DD (ex: "2027-06-15")
+    // Format ISO ou YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
         return str.substring(0, 10);
     }
 
-    // 2. Format textuel français (ex: "27 févr. 2026")
+    // Format textuel français
     const months = {
         'janv': '01', 'janvier': '01', 'jan': '01',
         'févr': '02', 'février': '02', 'fev': '02',
@@ -92,25 +79,19 @@ function parseFrenchDate(dateStr) {
         const day = parts[0].padStart(2, '0');
         const monthKey = Object.keys(months).find(m => parts[1].startsWith(m));
         const year = parts[2];
-
         if (monthKey && year) {
             return `${year}-${months[monthKey]}-${day}`;
         }
     }
 
-    // Si vraiment rien ne correspond, on affiche un avertissement dans les logs pour voir le format exact reçu
-    console.warn(`⚠️ Format de date non reconnu : "${dateStr}"`);
     return null;
 }
 
-// Fonction de géocodage optimisée avec cache (Nominatim / OpenStreetMap)
 async function getCachedCoordinates(locationName) {
     if (!locationName) return { lat: null, lng: null };
     const cleanLocation = locationName.trim().toLowerCase();
 
-    if (geoCache[cleanLocation]) {
-        return geoCache[cleanLocation];
-    }
+    if (geoCache[cleanLocation]) return geoCache[cleanLocation];
 
     try {
         const encodedQuery = encodeURIComponent(locationName + ", France");
@@ -120,10 +101,7 @@ async function getCachedCoordinates(locationName) {
         const data = await response.json();
 
         if (data && data.length > 0) {
-            const coords = {
-                lat: parseFloat(data[0].lat),
-                lng: parseFloat(data[0].lon)
-            };
+            const coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
             geoCache[cleanLocation] = coords;
             saveGeoCache();
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -132,7 +110,6 @@ async function getCachedCoordinates(locationName) {
     } catch (err) {
         console.error(`Erreur géocodage pour "${locationName}" :`, err.message);
     }
-
     return { lat: null, lng: null };
 }
 
@@ -145,14 +122,26 @@ async function runScraper() {
     let rawRaces = [];
     try {
         // ==========================================
-        // 👇 REMPLACE CETTE URL PAR TON API OU TON SITE SOURCE 👇
+        // 👇 METS TON URL SOURCE ICI 👇
         const targetUrl = "https://www.betrail.run/api/events-drizzle?after=2026-10-07&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0";
         // ==========================================
 
         const response = await fetch(targetUrl);
-        rawRaces = await response.json();
+        const json = response.ok ? await response.json() : null;
+
+        // Extraction intelligente du tableau (peu importe si le JSON est un tableau direct ou enveloppé)
+        if (Array.isArray(json)) {
+            rawRaces = json;
+        } else if (json) {
+            rawRaces = json.races || json.data || json.results || json.items || [];
+        }
 
         console.log(`🔍 ${rawRaces.length} événements bruts récupérés.`);
+        if (rawRaces.length > 0) {
+            console.log("📦 Aperçu du premier élément brut :", JSON.stringify(rawRaces[0]));
+        } else {
+            console.warn("⚠️ Attention : Aucun événement trouvé ou structure JSON non reconnue.");
+        }
     } catch (e) {
         console.error("❌ Erreur lors de la récupération des données source :", e.message);
         return;
@@ -161,55 +150,53 @@ async function runScraper() {
     let savedCount = 0;
     let skippedPastCount = 0;
 
-    for (const race of rawRaces) {
-        const formattedRaceDate = parseFrenchDate(race.raceDate);
+    for (const item of rawRaces) {
+        // Tolérance sur les noms de clés (ex: title ou name ou nom)
+        const title = item.title || item.name || item.nom;
+        const rawDate = item.raceDate || item.date || item.date_start || item.start_date;
+        const rawOpening = item.openingDate || item.opening_date || item.date_ouverture;
+        const location = item.location || item.city || item.ville || item.lieu;
 
-        // 1. FILTRE STRICT : Ignore les courses passées ou dont la date est invalide
+        const formattedRaceDate = parseFrenchDate(rawDate);
+
+        // Filtre strict : Ignore si la date est passée ou invalide
         if (!formattedRaceDate || formattedRaceDate < today) {
             skippedPastCount++;
             continue;
         }
 
-        const formattedOpeningDate = parseFrenchDate(race.openingDate);
+        const formattedOpeningDate = parseFrenchDate(rawOpening);
 
-        // 2. Détermination dynamique du statut / alerte d'inscription
-        let status = race.status || 'Upcoming';
+        let status = item.status || 'Upcoming';
         if (formattedOpeningDate) {
-            if (formattedOpeningDate > today) {
-                status = 'Opening Soon'; // Alerte : Inscriptions bientôt ouvertes
-            } else {
-                status = 'Open'; // Inscriptions ouvertes
-            }
+            status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
         }
 
-        // 3. GÉOCODAGE (via le cache ou l'API)
-        const coords = await getCachedCoordinates(race.location);
+        const coords = await getCachedCoordinates(location);
 
-        // 4. PRÉPARATION DE L'OBJET POUR SUPABASE
         const raceRecord = {
-            title: race.title,
-            category: race.category || 'Trail',
-            distance: Number(race.distance) || 0,
-            elevation: Number(race.elevation) || 0,
-            location: race.location || 'France',
-            region: race.region || 'France',
+            title: title || 'Course sans nom',
+            category: item.category || item.type || 'Trail',
+            distance: Number(item.distance) || 0,
+            elevation: Number(item.elevation || item.denivele) || 0,
+            location: location || 'France',
+            region: item.region || 'France',
             lat: coords.lat,
             lng: coords.lng,
-            price: Number(race.price) || 0,
-            ddi: Number(race.ddi) || 3,
+            price: Number(item.price || item.tarif) || 0,
+            ddi: Number(item.ddi) || 3,
             opening_date: formattedOpeningDate,
             race_date: formattedRaceDate,
             status: status,
-            organizer_url: race.url || ''
+            organizer_url: item.url || item.link || ''
         };
 
-        // 5. INSERTION DANS SUPABASE
         const { error } = await supabase
             .from('races')
             .upsert(raceRecord, { onConflict: 'title,race_date' });
 
         if (error) {
-            console.error(`Erreur d'insertion pour "${race.title}" :`, error.message);
+            console.error(`Erreur d'insertion pour "${title}" :`, error.message);
         } else {
             savedCount++;
         }
