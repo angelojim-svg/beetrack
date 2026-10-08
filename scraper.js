@@ -40,7 +40,7 @@ function saveGeoCache() {
     }
 }
 
-// Fonction de parsing robuste pour tous les formats de date (ISO, YYYY-MM-DD, texte français)
+// Fonction de parsing robuste pour tous les formats de date (JJ/MM/AAAA, ISO, YYYY-MM-DD, texte français)
 function parseFrenchDate(dateStr) {
     if (!dateStr) return null;
    
@@ -48,9 +48,23 @@ function parseFrenchDate(dateStr) {
         return dateStr.toISOString().split('T')[0];
     }
 
+    // Si c'est un timestamp (nombre)
+    if (typeof dateStr === 'number') {
+        return new Date(dateStr).toISOString().split('T')[0];
+    }
+
     let str = String(dateStr).trim();
 
-    // 1. Format ISO ou YYYY-MM-DD
+    // 0. Format JJ/MM/AAAA ou JJ-MM-AAAA (ex: "15/06/2027" ou "15-06-2027")
+    const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if (dmyMatch) {
+        const day = dmyMatch[1].padStart(2, '0');
+        const month = dmyMatch[2].padStart(2, '0');
+        const year = dmyMatch[3];
+        return `${year}-${month}-${day}`;
+    }
+
+    // 1. Format ISO ou YYYY-MM-DD (ex: "2027-06-15")
     if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
         return str.substring(0, 10);
     }
@@ -84,6 +98,8 @@ function parseFrenchDate(dateStr) {
         }
     }
 
+    // Si vraiment rien ne correspond, on affiche un avertissement dans les logs pour voir le format exact reçu
+    console.warn(`⚠️ Format de date non reconnu : "${dateStr}"`);
     return null;
 }
 
