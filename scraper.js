@@ -40,18 +40,17 @@ function saveGeoCache() {
     }
 }
 
-// Fonction de parsing robuste pour tous les formats de date possibles
+// Fonction de parsing robuste pour tous les formats de date (ISO, YYYY-MM-DD, texte français)
 function parseFrenchDate(dateStr) {
     if (!dateStr) return null;
    
-    // Si c'est déjà un objet Date valide
     if (dateStr instanceof Date) {
         return dateStr.toISOString().split('T')[0];
     }
 
     let str = String(dateStr).trim();
 
-    // 1. Si format ISO ou YYYY-MM-DD (ex: "2027-06-15T00:00:00.000Z" ou "2027-06-15")
+    // 1. Format ISO ou YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
         return str.substring(0, 10);
     }
@@ -129,77 +128,6 @@ async function runScraper() {
 
     let rawRaces = [];
     try {
-        // Remplace ici par ta logique de récupération de données brutes (fetch de ton site source)
-        // const response = await fetch("TON_URL_HTTPS");
-        // rawRaces = await response.json();
-
-        console.log(`🔍 ${rawRaces.length} événements bruts récupérés.`);
-    } catch (e) {
-        console.error("❌ Erreur lors de la récupération des données source :", e.message);
-        return;
-    }
-
-    let savedCount = 0;
-    let skippedPastCount = 0;
-
-    for (const race of rawRaces) {
-        const formattedRaceDate = parseFrenchDate(race.raceDate);
-
-        // 1. FILTRE STRICT : Ignore si la date est passée ou invalide
-        if (!formattedRaceDate || formattedRaceDate < today) {
-            skippedPastCount++;
-            continue;
-        }
-
-        const formattedOpeningDate = parseFrenchDate(race.openingDate);
-
-        // 2. Détermination dynamique du statut / alerte d'inscription
-        let status = race.status || 'Upcoming';
-        if (formattedOpeningDate) {
-            if (formattedOpeningDate > today) {
-                status = 'Opening Soon'; // Inscriptions bientôt ouvertes (alerte)
-            } else {
-                status = 'Open'; // Inscriptions ouvertes
-            }
-        }
-
-        // 3. GÉOCODAGE (via le cache ou l'API)
-        const coords = await getCachedCoordinates(race.location);
-
-        // 4. PRÉPARATION DE L'OBJET POUR SUPABASE
-        const raceRecord = {
-            title: race.title,
-            category: race.category || 'Trail',
-            distance: Number(race.distance) || 0,
-            elevation: Number(race.elevation) || 0,
-            location: race.location || 'France',
-            region: race.region || 'France',
-            lat: coords.lat,
-            lng: coords.lng,
-            price: Number(race.price) || 0,
-            ddi: Number(race.ddi) || 3,
-            opening_date: formattedOpeningDate,
-            race_date: formattedRaceDate,
-            status: status,
-            organizer_url: race.url || ''
-        };
-
-        // 5. INSERTION DANS SUPABASE
-        const { error } = await supabase
-            .from('races')
-            .upsert(raceRecord, { onConflict: 'title,race_date' });
-
-        if (error) {
-            console.error(`Erreur d'insertion pour "${race.title}" :`, error.message);
-        } else {
-            savedCount++;
-        }
-    }
-
-    console.log(`✅ Fin du script ! ${savedCount} courses futures enregistrées/mises à jour. (${skippedPastCount} courses passées ignorées).`);
-}
-
-runScraper().catch(err => {
-    console.error("❌ Erreur fatale :", err);
-    process.exit(1);
-});
+        // ==========================================
+        // 👇 REMPLACE CETTE URL PAR TON API OU TON SITE SOURCE 👇
+        const targetUrl = https://www.betrail.run/api/events-drizzle?after=2026-10-07&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0"
