@@ -91,7 +91,6 @@ async function runScraper() {
     try {
         const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2027-10-08&scope=calendar&predicted=18&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
 
-        // Utilisation de render=false pour interroger proprement l'API brute
         const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&render=false&country_code=fr&url=${encodeURIComponent(targetUrl)}`;
 
         console.log(`📡 Connexion à l'API via ScraperAPI...`);
@@ -103,6 +102,10 @@ async function runScraper() {
         }
 
         const json = await response.json();
+       
+        // 🔎 Log de débogage pour voir la structure exacte reçue
+        console.log("📦 Réponse brute reçue de l'API :", JSON.stringify(json).substring(0, 300));
+
         rawRaces = Array.isArray(json) ? json : (json.races || json.data || json.results || json.events || []);
 
         console.log(`🔍 ${rawRaces.length} événements bruts récupérés.`);
