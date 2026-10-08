@@ -114,11 +114,6 @@ async function runScraper() {
         rawRaces = Array.isArray(dataContainer) ? dataContainer : (dataContainer.events || dataContainer.races || dataContainer.data || dataContainer.results || []);
 
         console.log(`🔍 ${rawRaces.length} événements bruts récupérés.`);
-
-        if (rawRaces.length > 0) {
-            console.log("📦 Structure d'un événement brut Betrail (Diagnostic) :", JSON.stringify(rawRaces[0], null, 2));
-        }
-
     } catch (e) {
         console.error("❌ Erreur lors de la récupération des données source :", e.message);
         return;
@@ -128,10 +123,11 @@ async function runScraper() {
     let skippedPastCount = 0;
 
     for (const item of rawRaces) {
-        const subItem = (item.races && item.races.length > 0) ? item.races[0] :
-                        (item.distances && item.distances.length > 0) ? item.distances[0] : {};
+        // Extraction du sous-objet 'trail' identifié dans le diagnostic
+        const trailItem = (item.trail && item.trail.length > 0) ? item.trail[0] : {};
+        const subItem = (trailItem.races && trailItem.races.length > 0) ? trailItem.races[0] : {};
 
-        const rawDate = subItem.raceDate || subItem.date || item.raceDate || item.date || item.date_start;
+        const rawDate = subItem.raceDate || subItem.date || trailItem.date || item.date;
         const formattedRaceDate = parseFrenchDate(rawDate);
 
         if (formattedRaceDate && formattedRaceDate < today) {
@@ -139,22 +135,20 @@ async function runScraper() {
             continue;
         }
 
-        const rawOpening = item.openingDate || item.opening_date || subItem.openingDate;
+        const rawOpening = item.openingDate || item.opening_date || trailItem.openingDate;
         const formattedOpeningDate = parseFrenchDate(rawOpening);
 
-        let status = item.status || subItem.status || 'Upcoming';
+        let status = item.status || trailItem.status || 'Upcoming';
         if (formattedOpeningDate) {
             status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
         }
 
-        // Recherche approfondie de la localisation (ville, département, lieu-dit)
-        const location = item.location || item.city || item.town || item.place || item.address || item.venue || item.commune || item.department || subItem.location || subItem.city || subItem.place || 'France';
+        // Récupération de la ville et des coordonnées GPS depuis 'trail'
+        const location = trailItem.place || item.location || 'France';
+       
+        let lat = Number(trailItem.geo_lat || trailItem.man_lat || subItem.lat) || null;
+        let lng = Number(trailItem.geo_lon || trailItem.man_lon || subItem.lng) || null;
 
-        // Recherche élargie des coordonnées (lat/lng directes)
-        let lat = Number(subItem.lat || subItem.latitude || item.lat || item.latitude || item.y || (item.coordinates && item.coordinates[1]) || (item.latlng && item.latlng[0])) || null;
-        let lng = Number(subItem.lng || subItem.longitude || item.lng || item.longitude || item.lon || item.x || (item.coordinates && item.coordinates[0]) || (item.latlng && item.latlng[1])) || null;
-
-        // Si pas de coordonnées directes, on tente de géocoder le lieu trouvé
         if (!lat || !lng) {
             const coords = await getCachedCoordinates(location);
             lat = coords.lat;
@@ -162,20 +156,20 @@ async function runScraper() {
         }
 
         const raceRecord = {
-            title: item.title || item.name || item.event_name || subItem.title || 'Course sans nom',
-            category: item.category || subItem.category || item.type || 'Trail',
-            distance: Number(subItem.distance || subItem.length || item.distance || item.length || item.km || item.dist) || 0,
-            elevation: Number(subItem.elevation || subItem.denivele || item.elevation || item.denivele || item.dplus || item.gain || item.deniv) || 0,
+            title: trailItem.title || item.title || item.event_name || 'Course sans nom',
+            category: trailItem.category || item.category || 'Trail',
+            distance: Number(subItem.distance || subItem.length || 0),
+            elevation: Number(subItem.elevation || subItem.denivele || 0),
             location: location,
             region: item.region || item.state || 'France',
             lat: lat,
             lng: lng,
-            price: Number(subItem.price || subItem.tarif || item.price || item.tarif || item.cost || item.amount) || 0,
-            ddi: Number(item.ddi || subItem.ddi) || 3,
+            price: Number(subItem.price || subItem.tarif || 0),
+            ddi: Number(item.ddi || trailItem.ddi) || 3,
             opening_date: formattedOpeningDate || formattedRaceDate || today,
             race_date: formattedRaceDate || rawDate || today,
             status: status,
-            organizer_url: item.url || item.link || subItem.url || ''
+            organizer_url: trailItem.website || item.url || ''
         };
 
         const { error } = await supabase
