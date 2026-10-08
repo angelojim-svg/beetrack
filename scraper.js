@@ -130,4 +130,4 @@ async function runScraper() {
     try {
         // ==========================================
         // 👇 REMPLACE CETTE URL PAR TON API OU TON SITE SOURCE 👇
-        const targetUrl = https://www.betrail.run/api/events-drizzle?after=2026-10-07&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0"
+        const targetUrl = "https://www.betrail.run/api/events-drizzle?after=2026-10-07&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0"
