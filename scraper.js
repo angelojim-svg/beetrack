@@ -123,65 +123,68 @@ async function runScraper() {
     let skippedPastCount = 0;
 
     for (const item of rawRaces) {
-        // Extraction sécurisée de l'objet 'trail' et de ses sous-éléments de course
-        const trailItem = (item.trail && item.trail.length > 0) ? item.trail[0] : {};
-        const subItem = (trailItem.races && trailItem.races.length > 0) ? trailItem.races[0] :
-                        (trailItem.distances && trailItem.distances.length > 0) ? trailItem.distances[0] : {};
+        const trails = (item.trail && Array.isArray(item.trail) && item.trail.length > 0) ? item.trail : [item];
 
-        const rawDate = subItem.raceDate || subItem.date || trailItem.date || item.date;
-        const formattedRaceDate = parseFrenchDate(rawDate);
+        for (const trailItem of trails) {
+            const location = trailItem.place || trailItem.location || item.location || item.city || 'France';
+           
+            let lat = Number(trailItem.geo_lat || trailItem.lat || trailItem.latitude || item.lat || item.latitude) || null;
+            let lng = Number(trailItem.geo_lon || trailItem.lng || trailItem.longitude || item.lng || item.longitude) || null;
 
-        if (formattedRaceDate && formattedRaceDate < today) {
-            skippedPastCount++;
-            continue;
-        }
+            if (!lat || !lng) {
+                const coords = await getCachedCoordinates(location);
+                lat = coords.lat;
+                lng = coords.lng;
+            }
 
-        const rawOpening = item.openingDate || item.opening_date || trailItem.openingDate;
-        const formattedOpeningDate = parseFrenchDate(rawOpening);
+            const subItems = (trailItem.races && Array.isArray(trailItem.races) && trailItem.races.length > 0) ? trailItem.races :
+                             (trailItem.distances && Array.isArray(trailItem.distances) && trailItem.distances.length > 0) ? trailItem.distances :
+                             (item.races && Array.isArray(item.races) && item.races.length > 0) ? item.races : [trailItem];
 
-        let status = item.status || trailItem.status || 'Upcoming';
-        if (formattedOpeningDate) {
-            status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
-        }
+            for (const subItem of subItems) {
+                const rawDate = subItem.raceDate || subItem.date || trailItem.date || item.date;
+                const formattedRaceDate = parseFrenchDate(rawDate);
 
-        // Récupération propre de la localisation et des coordonnées GPS depuis l'objet trail
-        const location = trailItem.place || item.location || 'France';
-       
-        let lat = Number(trailItem.geo_lat || trailItem.man_lat || subItem.lat || subItem.latitude) || null;
-        let lng = Number(trailItem.geo_lon || trailItem.man_lon || subItem.lng || subItem.longitude) || null;
+                if (formattedRaceDate && formattedRaceDate < today) {
+                    skippedPastCount++;
+                    continue;
+                }
 
-        // Si les coordonnées GPS directes manquent, on utilise le géocodage sur la ville (place)
-        if (!lat || !lng) {
-            const coords = await getCachedCoordinates(location);
-            lat = coords.lat;
-            lng = coords.lng;
-        }
+                const rawOpening = item.openingDate || item.opening_date || trailItem.openingDate || subItem.openingDate;
+                const formattedOpeningDate = parseFrenchDate(rawOpening);
 
-        const raceRecord = {
-            title: trailItem.title || item.event_name || item.title || 'Course sans nom',
-            category: trailItem.category || item.category || 'Trail',
-            distance: Number(subItem.distance || subItem.length || subItem.km || 0),
-            elevation: Number(subItem.elevation || subItem.denivele || subItem.dplus || 0),
-            location: location,
-            region: item.region || item.state || 'France',
-            lat: lat,
-            lng: lng,
-            price: Number(subItem.price || subItem.tarif || 0),
-            ddi: Number(item.ddi || trailItem.ddi) || 3,
-            opening_date: formattedOpeningDate || formattedRaceDate || today,
-            race_date: formattedRaceDate || rawDate || today,
-            status: status,
-            organizer_url: trailItem.website || item.url || ''
-        };
+                let status = item.status || trailItem.status || subItem.status || 'Upcoming';
+                if (formattedOpeningDate) {
+                    status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
+                }
 
-        const { error } = await supabase
-            .from('races')
-            .upsert(raceRecord, { onConflict: 'title,race_date' });
+                const raceRecord = {
+                    title: subItem.title || trailItem.title || item.event_name || item.title || 'Course sans nom',
+                    category: subItem.category || trailItem.category || item.category || 'Trail',
+                    distance: Number(subItem.distance || subItem.length || subItem.km || 0),
+                    elevation: Number(subItem.elevation || subItem.denivele || subItem.dplus || 0),
+                    location: location,
+                    region: item.region || item.state || 'France',
+                    lat: lat,
+                    lng: lng,
+                    price: Number(subItem.price || subItem.tarif || 0),
+                    ddi: Number(item.ddi || trailItem.ddi || subItem.ddi) || 3,
+                    opening_date: formattedOpeningDate || formattedRaceDate || today,
+                    race_date: formattedRaceDate || rawDate || today,
+                    status: status,
+                    organizer_url: trailItem.website || item.url || subItem.url || ''
+                };
 
-        if (!error) {
-            savedCount++;
-        } else {
-            console.error(`Erreur d'insertion pour "${raceRecord.title}" :`, error.message);
+                const { error } = await supabase
+                    .from('races')
+                    .upsert(raceRecord, { onConflict: 'title,race_date' });
+
+                if (!error) {
+                    savedCount++;
+                } else {
+                    console.error(`Erreur d'insertion pour "${raceRecord.title}" :`, error.message);
+                }
+            }
         }
     }
 
