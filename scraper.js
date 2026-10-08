@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const scraperApiKey = process.env.SCRAPER_API_KEY; // 🔑 Récupération de ta clé ScraperAPI
+const scraperApiKey = process.env.SCRAPER_API_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
     console.error("❌ Erreur : Les clés Supabase sont manquantes dans les variables d'environnement.");
@@ -89,11 +89,10 @@ async function runScraper() {
 
     let rawRaces = [];
     try {
-        // 1. Ton URL cible Betrail dynamique
         const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2028-12-31&scope=calendar&predicted=18&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
 
-        // 2. Encapsulation dans ScraperAPI pour contourner Cloudflare
-        const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(targetUrl)}`;
+        // Utilisation de render=false pour interroger proprement l'API brute
+        const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&render=false&country_code=fr&url=${encodeURIComponent(targetUrl)}`;
 
         console.log(`📡 Connexion à l'API via ScraperAPI...`);
 
