@@ -41,7 +41,7 @@ function saveGeoCache() {
 
 function parseFrenchDate(dateStr) {
     if (!dateStr) return null;
-   
+    
     if (typeof dateStr === 'number' || /^\d{10,13}$/.test(dateStr)) {
         const timestamp = Number(dateStr) > 1e11 ? Number(dateStr) : Number(dateStr) * 1000;
         const d = new Date(timestamp);
@@ -68,7 +68,7 @@ async function getCachedCoordinates(locationName) {
     if (!locationName || locationName === 'France') return { lat: null, lng: null };
     const cleanLocation = locationName.trim().toLowerCase();
 
-    if (geoCache[cleanLocation]) return geoCache[cleanLocation];
+    if (geoCache[cleanLocation]) return geoCache[cleanLocation]; 
 
     try {
         const encodedQuery = encodeURIComponent(locationName + ", France");
@@ -108,7 +108,7 @@ async function fetchWithRetry(url, retries = 3, delay = 3000) {
 
 async function runScraper() {
     console.log("🚀 Démarrage du scraper PacePulse via ScraperAPI...");
-   
+    
     const today = new Date().toISOString().split('T')[0];
     console.log(`📅 Date de référence (Aujourd'hui) : ${today}`);
 
@@ -119,7 +119,7 @@ async function runScraper() {
 
         console.log(`📡 Connexion à l'API via ScraperAPI...`);
         const json = await fetchWithRetry(scraperApiUrl);
-       
+        
         const dataContainer = json.body || json;
         rawRaces = Array.isArray(dataContainer) ? dataContainer : (dataContainer.events || dataContainer.races || dataContainer.data || dataContainer.results || []);
 
@@ -131,14 +131,13 @@ async function runScraper() {
 
     let savedCount = 0;
     let skippedPastCount = 0;
-    let debugPrinted = false;
 
     for (const item of rawRaces) {
-        const trailObj = (item.trail && Array.isArray(item.trail) && item.trail.length > 0) ? item.trail[0] :
+        const trailObj = (item.trail && Array.isArray(item.trail) && item.trail.length > 0) ? item.trail[0] : 
                          (item.trail && typeof item.trail === 'object') ? item.trail : {};
 
         const location = trailObj.place || trailObj.location || item.place || item.location || item.city || 'France';
-       
+        
         let lat = Number(trailObj.geo_lat || trailObj.lat || item.geo_lat || item.lat || item.latitude) || null;
         let lng = Number(trailObj.geo_lon || trailObj.lng || item.geo_lon || item.lon || item.longitude) || null;
 
@@ -148,30 +147,32 @@ async function runScraper() {
             lng = coords.lng;
         }
 
-        const subItems = (trailObj.races && Array.isArray(trailObj.races) && trailObj.races.length > 0) ? trailObj.races :
+        const subItems = (trailObj.races && Array.isArray(trailObj.races) && trailObj.races.length > 0) ? trailObj.races : 
                          (trailObj.distances && Array.isArray(trailObj.distances) && trailObj.distances.length > 0) ? trailObj.distances :
                          (item.races && Array.isArray(item.races) && item.races.length > 0) ? item.races : [trailObj];
 
-        // Afficher la structure complète d'un premier sous-élément pour inspecter tous les champs disponibles
-        if (!debugPrinted && subItems.length > 0) {
-            console.log("🔍 [DEBUG STRUCTURE API] Keys disponibles dans subItem :", Object.keys(subItems[0]));
-            console.log("🔍 [DEBUG STRUCTURE API] Exemples de valeurs subItem :", subItems[0]);
-            console.log("🔍 [DEBUG STRUCTURE API] Keys disponibles dans trailObj :", Object.keys(trailObj));
-            debugPrinted = true;
-        }
-
         for (const subItem of subItems) {
+            // Date de la course spécifique au sous-élément
             const rawDate = subItem.date || subItem.raceDate || subItem.start_date || subItem.time || trailObj.date || item.date;
             const formattedRaceDate = parseFrenchDate(rawDate);
 
             if (formattedRaceDate && formattedRaceDate < today) {
                 skippedPastCount++;
-                continue;
+                continue; 
             }
 
-            // Recherche large élargie à tous les noms potentiels d'ouverture d'inscription
-            const rawOpening = subItem.openingDate || subItem.opening_date || subItem.regOpen || subItem.registrationOpen || subItem.opens_at || subItem.opening || trailObj.openingDate || trailObj.opening_date || trailObj.regOpen || item.openingDate || item.opening_date;
-            const formattedOpeningDate = parseFrenchDate(rawOpening);
+            // Extraction robuste de la date d'ouverture depuis betrail_registration (si c'est un objet ou une valeur brute)
+            let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
+            let regDateRaw = null;
+            if (regRaw) {
+                if (typeof regRaw === 'object') {
+                    regDateRaw = regRaw.openingDate || regRaw.date || regRaw.opens_at || regRaw.opening_date;
+                } else {
+                    regDateRaw = regRaw;
+                }
+            }
+
+            const formattedOpeningDate = parseFrenchDate(regDateRaw);
 
             let status = subItem.status || trailObj.status || item.status || 'Upcoming';
             if (formattedOpeningDate) {
@@ -189,8 +190,9 @@ async function runScraper() {
                 lng: lng,
                 price: Number(subItem.price || subItem.tarif || 0),
                 ddi: Number(item.ddi || trailObj.ddi || subItem.ddi) || 3,
+                // Si la date d'ouverture existe, on la met. Sinon, on met la date de la course ou aujourd'hui pour respecter la contrainte NOT NULL de Supabase.
                 opening_date: formattedOpeningDate || formattedRaceDate || today,
-                race_date: formattedRaceDate || rawDate || today,
+                race_date: formattedRaceDate || rawDate || today, 
                 status: status,
                 organizer_url: trailObj.website || item.url || subItem.url || ''
             };
