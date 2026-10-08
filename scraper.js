@@ -131,6 +131,7 @@ async function runScraper() {
 
     let savedCount = 0;
     let skippedPastCount = 0;
+    let debugPrinted = false;
 
     for (const item of rawRaces) {
         const trailObj = (item.trail && Array.isArray(item.trail) && item.trail.length > 0) ? item.trail[0] :
@@ -151,8 +152,15 @@ async function runScraper() {
                          (trailObj.distances && Array.isArray(trailObj.distances) && trailObj.distances.length > 0) ? trailObj.distances :
                          (item.races && Array.isArray(item.races) && item.races.length > 0) ? item.races : [trailObj];
 
+        // Afficher la structure complète d'un premier sous-élément pour inspecter tous les champs disponibles
+        if (!debugPrinted && subItems.length > 0) {
+            console.log("🔍 [DEBUG STRUCTURE API] Keys disponibles dans subItem :", Object.keys(subItems[0]));
+            console.log("🔍 [DEBUG STRUCTURE API] Exemples de valeurs subItem :", subItems[0]);
+            console.log("🔍 [DEBUG STRUCTURE API] Keys disponibles dans trailObj :", Object.keys(trailObj));
+            debugPrinted = true;
+        }
+
         for (const subItem of subItems) {
-            // Priorité absolue à la date spécifique du sous-élément (distance/course)
             const rawDate = subItem.date || subItem.raceDate || subItem.start_date || subItem.time || trailObj.date || item.date;
             const formattedRaceDate = parseFrenchDate(rawDate);
 
@@ -161,8 +169,8 @@ async function runScraper() {
                 continue;
             }
 
-            // Recherche élargie pour la date d'ouverture des inscriptions
-            const rawOpening = subItem.openingDate || subItem.opening_date || subItem.regOpen || trailObj.openingDate || trailObj.opening_date || item.openingDate || item.opening_date;
+            // Recherche large élargie à tous les noms potentiels d'ouverture d'inscription
+            const rawOpening = subItem.openingDate || subItem.opening_date || subItem.regOpen || subItem.registrationOpen || subItem.opens_at || subItem.opening || trailObj.openingDate || trailObj.opening_date || trailObj.regOpen || item.openingDate || item.opening_date;
             const formattedOpeningDate = parseFrenchDate(rawOpening);
 
             let status = subItem.status || trailObj.status || item.status || 'Upcoming';
@@ -181,7 +189,7 @@ async function runScraper() {
                 lng: lng,
                 price: Number(subItem.price || subItem.tarif || 0),
                 ddi: Number(item.ddi || trailObj.ddi || subItem.ddi) || 3,
-                opening_date: formattedOpeningDate || null, // Permet d'avoir null si non renseigné au lieu de forcer une date par défaut
+                opening_date: formattedOpeningDate || formattedRaceDate || today,
                 race_date: formattedRaceDate || rawDate || today,
                 status: status,
                 organizer_url: trailObj.website || item.url || subItem.url || ''
