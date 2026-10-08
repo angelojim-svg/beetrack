@@ -98,7 +98,8 @@ async function runScraper() {
     try {
         const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2027-10-08&scope=calendar&predicted=18&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
 
-        const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&render=false&country_code=fr&url=${encodeURIComponent(targetUrl)}`;
+        // Ajout du paramètre &timeout=60000 pour éviter les erreurs 500 de temps de réponse
+        const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&render=false&country_code=fr&timeout=60000&url=${encodeURIComponent(targetUrl)}`;
 
         console.log(`📡 Connexion à l'API via ScraperAPI...`);
 
@@ -142,11 +143,9 @@ async function runScraper() {
             status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
         }
 
-        // 1. Essayer de récupérer les coordonnées GPS directement de l'API
         let lat = Number(subItem.lat || subItem.latitude || item.lat || item.latitude || item.y) || null;
         let lng = Number(subItem.lng || subItem.longitude || item.lng || item.longitude || item.lon || item.x) || null;
 
-        // 2. Si les coordonnées directes sont absentes, chercher un lieu/ville pour géocoder
         const location = item.location || item.city || item.ville || item.place || item.address || item.departement || item.venue || subItem.location || subItem.city || 'France';
        
         if (!lat || !lng) {
