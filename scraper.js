@@ -22,7 +22,6 @@ if (!scraperApiKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// --- GESTION DU CACHE DE GÉOCODAGE ---
 const CACHE_FILE = path.join(__dirname, 'geocode_cache.json');
 let geoCache = {};
 
@@ -115,6 +114,11 @@ async function runScraper() {
         rawRaces = Array.isArray(dataContainer) ? dataContainer : (dataContainer.events || dataContainer.races || dataContainer.data || dataContainer.results || []);
 
         console.log(`🔍 ${rawRaces.length} événements bruts récupérés.`);
+
+        if (rawRaces.length > 0) {
+            console.log("📦 Structure du 1er événement brut (Diagnostic) :", JSON.stringify(rawRaces[0], null, 2));
+        }
+
     } catch (e) {
         console.error("❌ Erreur lors de la récupération des données source :", e.message);
         return;
@@ -124,7 +128,11 @@ async function runScraper() {
     let skippedPastCount = 0;
 
     for (const item of rawRaces) {
-        const rawDate = item.raceDate || item.date || item.date_start;
+        // S'il y a un sous-tableau de courses/distances, on extrait la première sous-course principale
+        const subItem = (item.races && item.races.length > 0) ? item.races[0] :
+                        (item.distances && item.distances.length > 0) ? item.distances[0] : {};
+
+        const rawDate = subItem.raceDate || subItem.date || item.raceDate || item.date || item.date_start;
         const formattedRaceDate = parseFrenchDate(rawDate);
 
         if (formattedRaceDate && formattedRaceDate < today) {
@@ -132,33 +140,32 @@ async function runScraper() {
             continue;
         }
 
-        const rawOpening = item.openingDate || item.opening_date;
+        const rawOpening = item.openingDate || item.opening_date || subItem.openingDate;
         const formattedOpeningDate = parseFrenchDate(rawOpening);
 
-        let status = item.status || 'Upcoming';
+        let status = item.status || subItem.status || 'Upcoming';
         if (formattedOpeningDate) {
             status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
         }
 
-        // Recherche élargie pour la localisation
-        const location = item.location || item.city || item.ville || item.place || item.address || item.departement || 'France';
+        const location = item.location || item.city || item.ville || item.place || item.address || item.departement || subItem.location || 'France';
         const coords = await getCachedCoordinates(location);
 
         const raceRecord = {
-            title: item.title || item.name || item.event_name || 'Course sans nom',
-            category: item.category || item.type || 'Trail',
-            distance: Number(item.distance || item.length || item.km || item.dist) || 0,
-            elevation: Number(item.elevation || item.denivele || item.dplus || item.gain || item.deniv) || 0,
+            title: item.title || item.name || item.event_name || subItem.title || 'Course sans nom',
+            category: item.category || subItem.category || item.type || 'Trail',
+            distance: Number(subItem.distance || subItem.length || item.distance || item.length || item.km || item.dist) || 0,
+            elevation: Number(subItem.elevation || subItem.denivele || item.elevation || item.denivele || item.dplus || item.gain || item.deniv) || 0,
             location: location,
             region: item.region || item.state || 'France',
             lat: coords.lat,
             lng: coords.lng,
-            price: Number(item.price || item.tarif || item.cost || item.amount) || 0,
-            ddi: Number(item.ddi) || 3,
+            price: Number(subItem.price || subItem.tarif || item.price || item.tarif || item.cost || item.amount) || 0,
+            ddi: Number(item.ddi || subItem.ddi) || 3,
             opening_date: formattedOpeningDate || formattedRaceDate || today,
             race_date: formattedRaceDate || rawDate || today,
             status: status,
-            organizer_url: item.url || item.link || ''
+            organizer_url: item.url || item.link || subItem.url || ''
         };
 
         const { error } = await supabase
