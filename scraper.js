@@ -8,9 +8,15 @@ const __dirname = path.dirname(__filename);
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const scraperApiKey = process.env.SCRAPER_API_KEY; // 🔑 Récupération de ta clé ScraperAPI
 
 if (!supabaseUrl || !supabaseKey) {
     console.error("❌ Erreur : Les clés Supabase sont manquantes dans les variables d'environnement.");
+    process.exit(1);
+}
+
+if (!scraperApiKey) {
+    console.error("❌ Erreur : La clé SCRAPER_API_KEY est manquante dans les secrets GitHub.");
     process.exit(1);
 }
 
@@ -39,12 +45,10 @@ function parseFrenchDate(dateStr) {
     if (!dateStr) return null;
     let str = String(dateStr).trim();
 
-    // Si c'est déjà au format YYYY-MM-DD ou ISO
     if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
         return str.substring(0, 10);
     }
 
-    // Format JJ/MM/AAAA ou JJ-MM-AAAA
     const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
     if (dmyMatch) {
         return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
@@ -78,30 +82,25 @@ async function getCachedCoordinates(locationName) {
 }
 
 async function runScraper() {
-    console.log("🚀 Démarrage du scraper PacePulse...");
+    console.log("🚀 Démarrage du scraper PacePulse via ScraperAPI...");
    
     const today = new Date().toISOString().split('T')[0];
     console.log(`📅 Date de référence (Aujourd'hui) : ${today}`);
 
     let rawRaces = [];
     try {
-        // URL dynamique de l'API Betrail de la date du jour jusqu'à fin 2028
+        // 1. Ton URL cible Betrail dynamique
         const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2028-12-31&scope=calendar&predicted=18&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
 
-        console.log(`📡 Connexion à l'API Betrail...`);
+        // 2. Encapsulation dans ScraperAPI pour contourner Cloudflare
+        const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(targetUrl)}`;
 
-        // Requête avec des headers de navigateur pour passer Cloudflare
-        const response = await fetch(targetUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'application/json, text/plain, */*',
-                'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
-                'Referer': 'https://www.betrail.run/'
-            }
-        });
+        console.log(`📡 Connexion à l'API via ScraperAPI...`);
+
+        const response = await fetch(scraperApiUrl);
 
         if (!response.ok) {
-            throw new Error(`Erreur HTTP ! statut : ${response.status}`);
+            throw new Error(`Erreur HTTP ScraperAPI ! statut : ${response.status}`);
         }
 
         const json = await response.json();
@@ -120,7 +119,6 @@ async function runScraper() {
         const rawDate = item.raceDate || item.date || item.date_start;
         const formattedRaceDate = parseFrenchDate(rawDate);
 
-        // Ignore uniquement si la date est clairement passée
         if (formattedRaceDate && formattedRaceDate < today) {
             skippedPastCount++;
             continue;
