@@ -40,7 +40,6 @@ function saveGeoCache() {
     } catch (e) {}
 }
 
-// Fonction de parsing robuste (gère les dates textes, les formats FR et les timestamps UNIX)
 function parseFrenchDate(dateStr) {
     if (!dateStr) return null;
    
@@ -67,7 +66,7 @@ function parseFrenchDate(dateStr) {
 }
 
 async function getCachedCoordinates(locationName) {
-    if (!locationName) return { lat: null, lng: null };
+    if (!locationName || locationName === 'France') return { lat: null, lng: null };
     const cleanLocation = locationName.trim().toLowerCase();
 
     if (geoCache[cleanLocation]) return geoCache[cleanLocation];
@@ -141,21 +140,22 @@ async function runScraper() {
             status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
         }
 
-        const location = item.location || item.city || item.ville;
+        // Recherche élargie pour la localisation
+        const location = item.location || item.city || item.ville || item.place || item.address || item.departement || 'France';
         const coords = await getCachedCoordinates(location);
 
         const raceRecord = {
             title: item.title || item.name || item.event_name || 'Course sans nom',
-            category: item.category || 'Trail',
-            distance: Number(item.distance) || 0,
-            elevation: Number(item.elevation || item.denivele) || 0,
-            location: location || 'France',
-            region: item.region || 'France',
+            category: item.category || item.type || 'Trail',
+            distance: Number(item.distance || item.length || item.km || item.dist) || 0,
+            elevation: Number(item.elevation || item.denivele || item.dplus || item.gain || item.deniv) || 0,
+            location: location,
+            region: item.region || item.state || 'France',
             lat: coords.lat,
             lng: coords.lng,
-            price: Number(item.price || item.tarif) || 0,
+            price: Number(item.price || item.tarif || item.cost || item.amount) || 0,
             ddi: Number(item.ddi) || 3,
-            opening_date: formattedOpeningDate || formattedRaceDate || today, // Valeur de repli sécurisée
+            opening_date: formattedOpeningDate || formattedRaceDate || today,
             race_date: formattedRaceDate || rawDate || today,
             status: status,
             organizer_url: item.url || item.link || ''
