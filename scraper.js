@@ -114,7 +114,7 @@ async function runScraper() {
 
     let rawRaces = [];
     try {
-        const targetUrl = `https://api.maptiler.com/fonts/Metropolis%20Semi%20Bold%20Italic,Noto%20Sans%20Bold/0-255.pbf?key=139kODQcEwVrJvGYViA4`;
+        const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2027-10-08&scope=calendar&predicted=18&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
         const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&render=false&country_code=fr&timeout=60000&url=${encodeURIComponent(targetUrl)}`;
 
         console.log(`📡 Connexion à l'API via ScraperAPI...`);
