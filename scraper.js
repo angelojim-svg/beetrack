@@ -44,7 +44,6 @@ function saveGeoCache() {
 function parseFrenchDate(dateStr) {
     if (!dateStr) return null;
    
-    // Si c'est un nombre ou un timestamp UNIX en secondes/millisecondes
     if (typeof dateStr === 'number' || /^\d{10,13}$/.test(dateStr)) {
         const timestamp = Number(dateStr) > 1e11 ? Number(dateStr) : Number(dateStr) * 1000;
         const d = new Date(timestamp);
@@ -113,7 +112,6 @@ async function runScraper() {
 
         const json = await response.json();
        
-        // Extraction robuste en ciblant json.body.events
         const dataContainer = json.body || json;
         rawRaces = Array.isArray(dataContainer) ? dataContainer : (dataContainer.events || dataContainer.races || dataContainer.data || dataContainer.results || []);
 
@@ -157,7 +155,7 @@ async function runScraper() {
             lng: coords.lng,
             price: Number(item.price || item.tarif) || 0,
             ddi: Number(item.ddi) || 3,
-            opening_date: formattedOpeningDate,
+            opening_date: formattedOpeningDate || formattedRaceDate || today, // Valeur de repli sécurisée
             race_date: formattedRaceDate || rawDate || today,
             status: status,
             organizer_url: item.url || item.link || ''
