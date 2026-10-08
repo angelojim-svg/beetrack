@@ -103,10 +103,9 @@ async function runScraper() {
 
         const json = await response.json();
        
-        // 🔎 Log de débogage pour voir la structure exacte reçue
-        console.log("📦 Réponse brute reçue de l'API :", JSON.stringify(json).substring(0, 300));
-
-        rawRaces = Array.isArray(json) ? json : (json.races || json.data || json.results || json.events || []);
+        // Extraction robuste en ciblant json.body.events
+        const dataContainer = json.body || json;
+        rawRaces = Array.isArray(dataContainer) ? dataContainer : (dataContainer.events || dataContainer.races || dataContainer.data || dataContainer.results || []);
 
         console.log(`🔍 ${rawRaces.length} événements bruts récupérés.`);
     } catch (e) {
@@ -138,7 +137,7 @@ async function runScraper() {
         const coords = await getCachedCoordinates(location);
 
         const raceRecord = {
-            title: item.title || item.name || 'Course sans nom',
+            title: item.title || item.name || item.event_name || 'Course sans nom',
             category: item.category || 'Trail',
             distance: Number(item.distance) || 0,
             elevation: Number(item.elevation || item.denivele) || 0,
