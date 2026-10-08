@@ -130,4 +130,79 @@ async function runScraper() {
     try {
         // ==========================================
         // 👇 REMPLACE CETTE URL PAR TON API OU TON SITE SOURCE 👇
-        const targetUrl = "https://www.betrail.run/api/events-drizzle?after=2026-10-07&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0"
+        const targetUrl = "https://www.betrail.run/api/events-drizzle?after=2026-10-07&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0";
+        // ==========================================
+
+        const response = await fetch(targetUrl);
+        rawRaces = await response.json();
+
+        console.log(`🔍 ${rawRaces.length} événements bruts récupérés.`);
+    } catch (e) {
+        console.error("❌ Erreur lors de la récupération des données source :", e.message);
+        return;
+    }
+
+    let savedCount = 0;
+    let skippedPastCount = 0;
+
+    for (const race of rawRaces) {
+        const formattedRaceDate = parseFrenchDate(race.raceDate);
+
+        // 1. FILTRE STRICT : Ignore les courses passées ou dont la date est invalide
+        if (!formattedRaceDate || formattedRaceDate < today) {
+            skippedPastCount++;
+            continue;
+        }
+
+        const formattedOpeningDate = parseFrenchDate(race.openingDate);
+
+        // 2. Détermination dynamique du statut / alerte d'inscription
+        let status = race.status || 'Upcoming';
+        if (formattedOpeningDate) {
+            if (formattedOpeningDate > today) {
+                status = 'Opening Soon'; // Alerte : Inscriptions bientôt ouvertes
+            } else {
+                status = 'Open'; // Inscriptions ouvertes
+            }
+        }
+
+        // 3. GÉOCODAGE (via le cache ou l'API)
+        const coords = await getCachedCoordinates(race.location);
+
+        // 4. PRÉPARATION DE L'OBJET POUR SUPABASE
+        const raceRecord = {
+            title: race.title,
+            category: race.category || 'Trail',
+            distance: Number(race.distance) || 0,
+            elevation: Number(race.elevation) || 0,
+            location: race.location || 'France',
+            region: race.region || 'France',
+            lat: coords.lat,
+            lng: coords.lng,
+            price: Number(race.price) || 0,
+            ddi: Number(race.ddi) || 3,
+            opening_date: formattedOpeningDate,
+            race_date: formattedRaceDate,
+            status: status,
+            organizer_url: race.url || ''
+        };
+
+        // 5. INSERTION DANS SUPABASE
+        const { error } = await supabase
+            .from('races')
+            .upsert(raceRecord, { onConflict: 'title,race_date' });
+
+        if (error) {
+            console.error(`Erreur d'insertion pour "${race.title}" :`, error.message);
+        } else {
+            savedCount++;
+        }
+    }
+
+    console.log(`✅ Fin du script ! ${savedCount} courses futures enregistrées/mises à jour. (${skippedPastCount} courses passées ignorées).`);
+}
+
+runScraper().catch(err => {
+    console.error("❌ Erreur fatale :", err);
+    process.exit(1);
+});
