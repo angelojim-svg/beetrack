@@ -88,6 +88,24 @@ async function getCachedCoordinates(locationName) {
     return { lat: null, lng: null };
 }
 
+async function fetchWithRetry(url, retries = 3, delay = 3000) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await fetch(url);
+            if (response.ok) {
+                return await response.json();
+            }
+            console.warn(`⚠️ Tentative ${i + 1}/${retries} échouée (Statut ${response.status}). Nouvelle tentative...`);
+        } catch (err) {
+            console.warn(`⚠️ Tentative ${i + 1}/${retries} erreur réseau : ${err.message}`);
+        }
+        if (i < retries - 1) {
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+    throw new Error("❌ Échec de la récupération après plusieurs tentatives (ScraperAPI 500).");
+}
+
 async function runScraper() {
     console.log("🚀 Démarrage du scraper PacePulse via ScraperAPI...");
    
@@ -97,18 +115,10 @@ async function runScraper() {
     let rawRaces = [];
     try {
         const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2027-10-08&scope=calendar&predicted=18&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
-
         const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&render=false&country_code=fr&timeout=60000&url=${encodeURIComponent(targetUrl)}`;
 
         console.log(`📡 Connexion à l'API via ScraperAPI...`);
-
-        const response = await fetch(scraperApiUrl);
-
-        if (!response.ok) {
-            throw new Error(`Erreur HTTP ScraperAPI ! statut : ${response.status}`);
-        }
-
-        const json = await response.json();
+        const json = await fetchWithRetry(scraperApiUrl);
        
         const dataContainer = json.body || json;
         rawRaces = Array.isArray(dataContainer) ? dataContainer : (dataContainer.events || dataContainer.races || dataContainer.data || dataContainer.results || []);
@@ -121,21 +131,16 @@ async function runScraper() {
 
     let savedCount = 0;
     let skippedPastCount = 0;
-    let loggedCount = 0;
 
     for (const item of rawRaces) {
-        // Extraction sécurisée : on gère si 'trail' est un tableau, un objet ou absent
         const trailObj = (item.trail && Array.isArray(item.trail) && item.trail.length > 0) ? item.trail[0] :
                          (item.trail && typeof item.trail === 'object') ? item.trail : {};
 
-        // Recherche de la localisation à tous les niveaux possibles (trail, item, etc.)
         const location = trailObj.place || trailObj.location || item.place || item.location || item.city || 'France';
        
-        // Recherche des coordonnées GPS à tous les niveaux
         let lat = Number(trailObj.geo_lat || trailObj.lat || item.geo_lat || item.lat || item.latitude) || null;
         let lng = Number(trailObj.geo_lon || trailObj.lng || item.geo_lon || item.lon || item.longitude) || null;
 
-        // Si toujours rien, on passe par le cache OpenStreetMap Nominatim avec la ville trouvée
         if (!lat || !lng) {
             const coords = await getCachedCoordinates(location);
             lat = coords.lat;
@@ -147,7 +152,8 @@ async function runScraper() {
                          (item.races && Array.isArray(item.races) && item.races.length > 0) ? item.races : [trailObj];
 
         for (const subItem of subItems) {
-            const rawDate = subItem.raceDate || subItem.date || trailObj.date || item.date;
+            // Priorité absolue à la date spécifique du sous-élément (distance/course)
+            const rawDate = subItem.date || subItem.raceDate || subItem.start_date || subItem.time || trailObj.date || item.date;
             const formattedRaceDate = parseFrenchDate(rawDate);
 
             if (formattedRaceDate && formattedRaceDate < today) {
@@ -155,10 +161,11 @@ async function runScraper() {
                 continue;
             }
 
-            const rawOpening = item.openingDate || item.opening_date || trailObj.openingDate || subItem.openingDate;
+            // Recherche élargie pour la date d'ouverture des inscriptions
+            const rawOpening = subItem.openingDate || subItem.opening_date || subItem.regOpen || trailObj.openingDate || trailObj.opening_date || item.openingDate || item.opening_date;
             const formattedOpeningDate = parseFrenchDate(rawOpening);
 
-            let status = item.status || trailObj.status || subItem.status || 'Upcoming';
+            let status = subItem.status || trailObj.status || item.status || 'Upcoming';
             if (formattedOpeningDate) {
                 status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
             }
@@ -174,23 +181,11 @@ async function runScraper() {
                 lng: lng,
                 price: Number(subItem.price || subItem.tarif || 0),
                 ddi: Number(item.ddi || trailObj.ddi || subItem.ddi) || 3,
-                opening_date: formattedOpeningDate || formattedRaceDate || today,
+                opening_date: formattedOpeningDate || null, // Permet d'avoir null si non renseigné au lieu de forcer une date par défaut
                 race_date: formattedRaceDate || rawDate || today,
                 status: status,
                 organizer_url: trailObj.website || item.url || subItem.url || ''
             };
-
-            if (loggedCount < 3) {
-                console.log(`🛠️ [DEBUG Fix Enregistrement ${loggedCount + 1}]`, {
-                    title: raceRecord.title,
-                    location: raceRecord.location,
-                    lat: raceRecord.lat,
-                    lng: raceRecord.lng,
-                    foundPlace: trailObj.place,
-                    foundLat: trailObj.geo_lat
-                });
-                loggedCount++;
-            }
 
             const { error } = await supabase
                 .from('races')
