@@ -494,13 +494,15 @@ window.racesData = races; // 'data' étant ton tableau de courses
 
         const marker = L.marker([mainRace.lat, mainRace.lng], { icon: customIcon });
 
-     let popupHtml = `<div style="max-height: 220px; overflow-y: auto; padding: 2px; color: #f3f4f6;">`;
+    let popupHtml = `<div style="max-height: 220px; overflow-y: auto; padding: 2px; color: #f3f4f6;">`;
 racesAtLocation.forEach((r, idx) => {
-    // Récupération sécurisée de la date depuis l'objet mappé (raceDate)
+    // Vérification directe dans la console pour déboguer
+    console.log("Objet course dans le popup :", r);
+
+    // Récupération sécurisée de la date et du prix
     const rawDate = r.raceDate || r.race_date || r.date;
     const formattedDate = typeof formatDateFR === 'function' ? formatDateFR(rawDate) : (rawDate ? new Date(rawDate).toLocaleDateString('fr-FR') : "Date à venir");
 
-    // Récupération sécurisée du prix depuis l'objet mappé (price)
     const rawPrice = r.price !== undefined && r.price !== null ? r.price : 0;
     const displayPrice = rawPrice > 0 ? `${rawPrice} €` : 'Gratuit / N/C';
 
