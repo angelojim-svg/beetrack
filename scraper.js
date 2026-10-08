@@ -123,9 +123,10 @@ async function runScraper() {
     let skippedPastCount = 0;
 
     for (const item of rawRaces) {
-        // Extraction du sous-objet 'trail' identifié dans le diagnostic
+        // Extraction sécurisée de l'objet 'trail' et de ses sous-éléments de course
         const trailItem = (item.trail && item.trail.length > 0) ? item.trail[0] : {};
-        const subItem = (trailItem.races && trailItem.races.length > 0) ? trailItem.races[0] : {};
+        const subItem = (trailItem.races && trailItem.races.length > 0) ? trailItem.races[0] :
+                        (trailItem.distances && trailItem.distances.length > 0) ? trailItem.distances[0] : {};
 
         const rawDate = subItem.raceDate || subItem.date || trailItem.date || item.date;
         const formattedRaceDate = parseFrenchDate(rawDate);
@@ -143,12 +144,13 @@ async function runScraper() {
             status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
         }
 
-        // Récupération de la ville et des coordonnées GPS depuis 'trail'
+        // Récupération propre de la localisation et des coordonnées GPS depuis l'objet trail
         const location = trailItem.place || item.location || 'France';
        
-        let lat = Number(trailItem.geo_lat || trailItem.man_lat || subItem.lat) || null;
-        let lng = Number(trailItem.geo_lon || trailItem.man_lon || subItem.lng) || null;
+        let lat = Number(trailItem.geo_lat || trailItem.man_lat || subItem.lat || subItem.latitude) || null;
+        let lng = Number(trailItem.geo_lon || trailItem.man_lon || subItem.lng || subItem.longitude) || null;
 
+        // Si les coordonnées GPS directes manquent, on utilise le géocodage sur la ville (place)
         if (!lat || !lng) {
             const coords = await getCachedCoordinates(location);
             lat = coords.lat;
@@ -156,10 +158,10 @@ async function runScraper() {
         }
 
         const raceRecord = {
-            title: trailItem.title || item.title || item.event_name || 'Course sans nom',
+            title: trailItem.title || item.event_name || item.title || 'Course sans nom',
             category: trailItem.category || item.category || 'Trail',
-            distance: Number(subItem.distance || subItem.length || 0),
-            elevation: Number(subItem.elevation || subItem.denivele || 0),
+            distance: Number(subItem.distance || subItem.length || subItem.km || 0),
+            elevation: Number(subItem.elevation || subItem.denivele || subItem.dplus || 0),
             location: location,
             region: item.region || item.state || 'France',
             lat: lat,
