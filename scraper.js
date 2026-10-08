@@ -114,6 +114,11 @@ async function runScraper() {
         rawRaces = Array.isArray(dataContainer) ? dataContainer : (dataContainer.events || dataContainer.races || dataContainer.data || dataContainer.results || []);
 
         console.log(`🔍 ${rawRaces.length} événements bruts récupérés.`);
+
+        if (rawRaces.length > 0) {
+            console.log("📦 Structure d'un événement brut Betrail (Diagnostic) :", JSON.stringify(rawRaces[0], null, 2));
+        }
+
     } catch (e) {
         console.error("❌ Erreur lors de la récupération des données source :", e.message);
         return;
@@ -142,12 +147,14 @@ async function runScraper() {
             status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
         }
 
-        // Recherche ultra-élargie de la localisation dans tous les champs possibles
-        const location = item.location || item.city || item.ville || item.place || item.town || item.address || item.venue || item.commune || subItem.location || subItem.city || subItem.place || 'France';
+        // Recherche approfondie de la localisation (ville, département, lieu-dit)
+        const location = item.location || item.city || item.town || item.place || item.address || item.venue || item.commune || item.department || subItem.location || subItem.city || subItem.place || 'France';
 
-        let lat = Number(subItem.lat || subItem.latitude || item.lat || item.latitude || item.y) || null;
-        let lng = Number(subItem.lng || subItem.longitude || item.lng || item.longitude || item.lon || item.x) || null;
+        // Recherche élargie des coordonnées (lat/lng directes)
+        let lat = Number(subItem.lat || subItem.latitude || item.lat || item.latitude || item.y || (item.coordinates && item.coordinates[1]) || (item.latlng && item.latlng[0])) || null;
+        let lng = Number(subItem.lng || subItem.longitude || item.lng || item.longitude || item.lon || item.x || (item.coordinates && item.coordinates[0]) || (item.latlng && item.latlng[1])) || null;
 
+        // Si pas de coordonnées directes, on tente de géocoder le lieu trouvé
         if (!lat || !lng) {
             const coords = await getCachedCoordinates(location);
             lat = coords.lat;
