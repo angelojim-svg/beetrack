@@ -34,7 +34,7 @@ function saveGeoCache() {
     } catch (e) {}
 }
 
-// Fonction de parsing souple
+// Fonction de parsing souple des dates
 function parseFrenchDate(dateStr) {
     if (!dateStr) return null;
     let str = String(dateStr).trim();
@@ -44,13 +44,13 @@ function parseFrenchDate(dateStr) {
         return str.substring(0, 10);
     }
 
-    // Format JJ/MM/AAAA
+    // Format JJ/MM/AAAA ou JJ-MM-AAAA
     const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
     if (dmyMatch) {
         return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
     }
 
-    return null; // Si non reconnu, on renvoie null mais on ne bloque pas la ligne
+    return null;
 }
 
 async function getCachedCoordinates(locationName) {
@@ -81,21 +81,35 @@ async function runScraper() {
     console.log("🚀 Démarrage du scraper PacePulse...");
    
     const today = new Date().toISOString().split('T')[0];
+    console.log(`📅 Date de référence (Aujourd'hui) : ${today}`);
 
     let rawRaces = [];
     try {
-        // ==========================================
-        // 👇 TON URL SOURCE ICI 👇
-        const targetUrl = "https://www.betrail.run/api/events-drizzle?after=2026-10-07&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0";
-        // ==========================================
+        // URL dynamique de l'API Betrail de la date du jour jusqu'à fin 2028
+        const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2028-12-31&scope=calendar&predicted=18&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
 
-        const response = await fetch(targetUrl);
+        console.log(`📡 Connexion à l'API Betrail...`);
+
+        // Requête avec des headers de navigateur pour passer Cloudflare
+        const response = await fetch(targetUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+                'Referer': 'https://www.betrail.run/'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP ! statut : ${response.status}`);
+        }
+
         const json = await response.json();
-        rawRaces = Array.isArray(json) ? json : (json.races || json.data || json.results || []);
+        rawRaces = Array.isArray(json) ? json : (json.races || json.data || json.results || json.events || []);
 
         console.log(`🔍 ${rawRaces.length} événements bruts récupérés.`);
     } catch (e) {
-        console.error("❌ Erreur de récupération :", e.message);
+        console.error("❌ Erreur lors de la récupération des données source :", e.message);
         return;
     }
 
@@ -106,7 +120,7 @@ async function runScraper() {
         const rawDate = item.raceDate || item.date || item.date_start;
         const formattedRaceDate = parseFrenchDate(rawDate);
 
-        // FILTRE SOUPLE : On ne saute la ligne que si on est 100% sûr que la date est passée
+        // Ignore uniquement si la date est clairement passée
         if (formattedRaceDate && formattedRaceDate < today) {
             skippedPastCount++;
             continue;
@@ -135,7 +149,6 @@ async function runScraper() {
             price: Number(item.price || item.tarif) || 0,
             ddi: Number(item.ddi) || 3,
             opening_date: formattedOpeningDate,
-            // Si la date formatée n'a pas pu être convertie, on remet la date brute pour ne pas perdre la ligne
             race_date: formattedRaceDate || rawDate || today,
             status: status,
             organizer_url: item.url || item.link || ''
@@ -147,11 +160,15 @@ async function runScraper() {
 
         if (!error) {
             savedCount++;
+        } else {
+            console.error(`Erreur d'insertion pour "${raceRecord.title}" :`, error.message);
         }
     }
 
     console.log(`✅ Fin du script ! ${savedCount} courses enregistrées. (${skippedPastCount} passées ignorées).`);
 }
 
-runScraper().catch(err => console.error("❌ Erreur :", err));
- 
+runScraper().catch(err => {
+    console.error("❌ Erreur fatale :", err);
+    process.exit(1);
+});
