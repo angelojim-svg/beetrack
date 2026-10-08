@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Beetrack - Gestion de saisonTrail & Route</title>
+    <title>BeeTrack - Gestion de saison Trail & Route</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -128,7 +128,7 @@
     <!-- MAIN CONTAINER -->
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
-        <!-- SEARCH & FILTER PANEL -->
+        <!-- SEARCH & FILTER PANEL (Curseurs homogènes) -->
         <section class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-borderBg pb-4">
                 <div>
@@ -160,6 +160,7 @@
                 </div>
             </div>
 
+            <!-- Curseurs homogènes pour distance, D+ et échéance -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2 border-t border-borderBg/50">
                 <div>
                     <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">Distance Max :</span><span id="slider-dist-val" class="text-emerald-400 font-bold">200 km</span></div>
@@ -170,13 +171,8 @@
                     <input type="range" id="filter-elevation" min="0" max="10000" step="250" value="10000" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Échéance (Date de course)</label>
-                    <select id="filter-date-range" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white">
-                        <option value="ALL">Toutes les dates</option>
-                        <option value="1">Moins d'1 mois</option>
-                        <option value="6">Moins de 6 mois</option>
-                        <option value="12">Moins d'1 an</option>
-                    </select>
+                    <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">Échéance Max :</span><span id="slider-horizon-val" class="text-emerald-400 font-bold">12 mois</span></div>
+                    <input type="range" id="filter-horizon" min="1" max="12" step="1" value="12" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
                 </div>
             </div>
         </section>
@@ -224,7 +220,7 @@
             const mapContainer = document.getElementById('map');
             if (!mapContainer) return;
             leafletMap = L.map('map').setView([46.603354, 1.888334], 6);
-         
+        
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap contributors'
             }).addTo(leafletMap);
@@ -286,7 +282,6 @@
                     lat: r.lat !== null ? parseFloat(r.lat) : null,
                     lng: r.lng !== null ? parseFloat(r.lng) : null,
                     price: parseFloat(r.price) || 0,
-                    ddi: r.ddi || 3,
                     openingDate: r.opening_date,
                     raceDate: r.race_date,
                     status: r.status,
@@ -298,12 +293,47 @@
             }
         }
 
+        // Mise à jour visuelle des labels des curseurs
+        function updateSliderLabels() {
+            const dist = document.getElementById('filter-distance');
+            const elev = document.getElementById('filter-elevation');
+            const horizon = document.getElementById('filter-horizon');
+
+            if (dist) document.getElementById('slider-dist-val').innerText = dist.value + ' km';
+            if (elev) document.getElementById('slider-elev-val').innerText = elev.value + ' m';
+            if (horizon) document.getElementById('slider-horizon-val').innerText = horizon.value + ' mois';
+        }
+
+        // Moteur de calcul du statut d'ouverture dynamique / compte à rebours
+        function renderOpeningStatus(openingDateStr, raceStatus) {
+            if (!openingDateStr) {
+                return '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/30 px-2 py-0.5 rounded text-[10px] font-bold">À CONFIRMER</span>';
+            }
+
+            const now = new Date();
+            const opening = new Date(openingDateStr);
+            const diffTime = opening - now;
+
+            if (diffTime <= 0 || raceStatus === 'Open') {
+                return '<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-bold"><i class="fa-solid fa-circle-check mr-1"></i>OUVERTES</span>';
+            }
+
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            const diffHours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+            if (diffDays > 0) {
+                return `<span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-bold font-mono">⏳ Ouverture J-${diffDays} (${diffHours}h)</span>`;
+            } else {
+                return `<span class="bg-red-500/10 text-red-400 border border-red-500/30 px-2 py-0.5 rounded text-[10px] font-bold animate-pulse">🔥 Ouverture imminente !</span>`;
+            }
+        }
+
         function applyFilters() {
             const keyword = (document.getElementById('filter-keyword')?.value || '').toLowerCase();
             const status = document.getElementById('filter-status')?.value || 'ALL';
             const maxDist = parseInt(document.getElementById('filter-distance')?.value || 200);
             const maxElev = parseInt(document.getElementById('filter-elevation')?.value || 10000);
-            const dateRange = document.getElementById('filter-date-range')?.value || 'ALL';
+            const maxMonths = parseInt(document.getElementById('filter-horizon')?.value || 12);
 
             const now = new Date();
 
@@ -313,12 +343,12 @@
 
                 const matchKw = !keyword || r.title.toLowerCase().includes(keyword) || r.location.toLowerCase().includes(keyword);
                 const matchStat = status === 'ALL' || r.status === status;
-               
+              
                 let matchDate = true;
-                if (dateRange !== 'ALL' && r.raceDate) {
+                if (r.raceDate) {
                     const rDate = new Date(r.raceDate);
                     const diffMonths = (rDate.getFullYear() - now.getFullYear()) * 12 + (rDate.getMonth() - now.getMonth());
-                    matchDate = diffMonths >= 0 && diffMonths <= parseInt(dateRange);
+                    matchDate = diffMonths >= 0 && diffMonths <= maxMonths;
                 }
 
                 return matchKw && matchStat && matchDate && r.distance <= maxDist && r.elevation <= maxElev;
@@ -326,7 +356,7 @@
 
             const countElem = document.getElementById('filtered-count');
             if (countElem) countElem.innerText = filteredRaces.length;
-         
+        
             renderListView();
             updateMapMarkers();
         }
@@ -371,8 +401,7 @@
                 let popupHtml = `<div style="max-height: 220px; overflow-y: auto; padding: 2px; color: #f3f4f6;">`;
                 racesAtLocation.forEach((r, idx) => {
                     const formattedDate = formatDateFR(r.raceDate || r.race_date);
-                    const isOpen = r.status === 'Open';
-                    const statusText = isOpen ? '<span style="color: #34d399; font-weight: bold;">• OUVERTES</span>' : (r.openingDate ? `<span style="color: #f59e0b;">• Fermées (Ouverture : ${formatDateFR(r.openingDate)})</span>` : '<span style="color: #f59e0b;">• À CONFIRMER</span>');
+                    const statusBadgeHtml = renderOpeningStatus(r.openingDate, r.status);
                     const isFav = favorites.includes(`${r.title}_${r.raceDate}`);
                     const emailSubject = encodeURIComponent(`Alerte Inscription Course : ${r.title}`);
                     const emailBody = encodeURIComponent(`Bonjour,\n\nJe souhaite être prévenu de l'ouverture des inscriptions pour la course "${r.title}" prévue le ${formattedDate}.\n\nLien de la course : ${r.url || 'N/C'}`);
@@ -384,7 +413,7 @@
                                 <button onclick="toggleFavorite('${r.title.replace(/'/g, "\\'")}', '${r.raceDate}')" style="background:none; border:none; color: ${isFav ? '#ef4444' : '#9ca3af'}; cursor:pointer; font-size: 14px;">♥</button>
                             </div>
                             <div style="color: #9ca3af; font-size: 11px; margin-top: 3px;">
-                                📅 ${formattedDate} | ${statusText}
+                                📅 ${formattedDate} | ${statusBadgeHtml}
                             </div>
                             <div style="margin-top: 5px; display: flex; gap: 8px; align-items: center;">
                                 ${r.url ? `<a href="${r.url}" target="_blank" style="color: #34d399; text-decoration: underline; font-size: 11px;">S'inscrire</a>` : ''}
@@ -419,11 +448,7 @@
                 const formattedDate = formatDateFR(race.raceDate);
                 const displayPrice = race.price > 0 ? `${race.price} €` : 'N/C';
                 const isFav = favorites.includes(`${race.title}_${race.raceDate}`);
-                const isOpen = race.status === 'Open';
-
-                let statusBadge = isOpen
-                    ? '<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-bold"><i class="fa-solid fa-circle-check mr-1"></i>OUVERTES</span>'
-                    : (race.openingDate ? `<span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-bold"><i class="fa-solid fa-clock mr-1"></i>FERMÉES (Ouverture le ${formatDateFR(race.openingDate)})</span>` : '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/30 px-2 py-0.5 rounded text-[10px] font-bold">À CONFIRMER</span>');
+                const statusBadge = renderOpeningStatus(race.openingDate, race.status);
 
                 const linkBtn = race.url ? `
                     <a href="${race.url}" target="_blank" class="flex-1 text-center bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold py-2 rounded-xl text-xs transition duration-200 flex items-center justify-center">
@@ -455,12 +480,11 @@
                             </div>
                             <h3 class="text-lg font-bold text-white">${race.title}</h3>
                             <p class="text-xs text-gray-400 mt-1"><i class="fa-regular fa-calendar mr-1"></i>Course : ${formattedDate}</p>
-                          
-                            <div class="grid grid-cols-4 gap-2 py-3 my-3 border-y border-borderBg text-center text-xs">
+                         
+                            <div class="grid grid-cols-3 gap-2 py-3 my-3 border-y border-borderBg text-center text-xs">
                                 <div><span class="block text-gray-500">Dist.</span><span class="font-bold text-white">${race.distance} km</span></div>
                                 <div><span class="block text-gray-500">D+</span><span class="font-bold text-emerald-400">+${race.elevation}m</span></div>
                                 <div><span class="block text-gray-500">Prix</span><span class="font-bold text-amber-400">${displayPrice}</span></div>
-                                <div><span class="block text-gray-500">DDI</span><span class="font-bold text-purple-400">${race.ddi}/5</span></div>
                             </div>
                         </div>
                         <div class="flex gap-2 mt-2">
@@ -479,7 +503,8 @@
             if (document.getElementById('filter-status')) document.getElementById('filter-status').value = 'ALL';
             if (document.getElementById('filter-distance')) document.getElementById('filter-distance').value = 200;
             if (document.getElementById('filter-elevation')) document.getElementById('filter-elevation').value = 10000;
-            if (document.getElementById('filter-date-range')) document.getElementById('filter-date-range').value = 'ALL';
+            if (document.getElementById('filter-horizon')) document.getElementById('filter-horizon').value = 12;
+            updateSliderLabels();
             applyFilters();
         }
 
@@ -495,6 +520,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             initLeafletMap();
+            updateSliderLabels();
             fetchRacesFromSupabase();
         });
     </script>
