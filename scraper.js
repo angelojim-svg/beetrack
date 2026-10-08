@@ -40,9 +40,19 @@ function saveGeoCache() {
     } catch (e) {}
 }
 
-// Fonction de parsing souple des dates
+// Fonction de parsing robuste (gère les dates textes, les formats FR et les timestamps UNIX)
 function parseFrenchDate(dateStr) {
     if (!dateStr) return null;
+   
+    // Si c'est un nombre ou un timestamp UNIX en secondes/millisecondes
+    if (typeof dateStr === 'number' || /^\d{10,13}$/.test(dateStr)) {
+        const timestamp = Number(dateStr) > 1e11 ? Number(dateStr) : Number(dateStr) * 1000;
+        const d = new Date(timestamp);
+        if (!isNaN(d.getTime())) {
+            return d.toISOString().split('T')[0];
+        }
+    }
+
     let str = String(dateStr).trim();
 
     if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
