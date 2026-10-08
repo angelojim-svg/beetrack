@@ -89,7 +89,7 @@ async function runScraper() {
 
     let rawRaces = [];
     try {
-        const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2028-12-31&scope=calendar&predicted=18&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
+        const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2027-10-08&scope=calendar&predicted=18&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
 
         // Utilisation de render=false pour interroger proprement l'API brute
         const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&render=false&country_code=fr&url=${encodeURIComponent(targetUrl)}`;
