@@ -98,7 +98,7 @@
                 <div>
                     <div class="flex items-center space-x-2">
                         <span class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-gray-200 to-emerald-400 bg-clip-text text-transparent">PacePulse</span>
-                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">PRO v2.4</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">PRO v2.5</span>
                     </div>
                     <p class="text-xs text-gray-400 hidden sm:block">Radar d'ouvertures & Gestion de saison Trail</p>
                 </div>
@@ -121,10 +121,6 @@
                 <button onclick="toggleModal('addRaceModal')" class="bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold px-4 py-2.5 rounded-xl transition duration-200 flex items-center space-x-2 shadow-lg shadow-emerald-500/20 text-sm">
                     <i class="fa-solid fa-plus"></i>
                     <span class="hidden sm:inline">Ajouter une course</span>
-                </button>
-                <button onclick="toggleModal('ppsModal')" class="bg-cardBg hover:bg-borderBg text-gray-200 border border-borderBg px-3 py-2.5 rounded-xl transition duration-200 flex items-center space-x-2 text-sm">
-                    <i class="fa-solid fa-file-medical text-emerald-400"></i>
-                    <span class="hidden md:inline font-medium">PPS</span>
                 </button>
             </div>
         </div>
@@ -169,9 +165,8 @@
                     <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Statut</label>
                     <select id="filter-status" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white">
                         <option value="ALL">Tous les statuts</option>
-                        <option value="Open">Ouvertures Actives</option>
-                        <option value="Upcoming">Ouvertures Prochaines</option>
-                        <option value="SoldOut">Sold Out</option>
+                        <option value="Open">Ouvertes</option>
+                        <option value="Upcoming">Prochaines (Bientôt)</option>
                     </select>
                 </div>
                 <div>
@@ -183,21 +178,6 @@
                         <option value="Occitanie">Occitanie</option>
                         <option value="Île-de-France">Île-de-France</option>
                     </select>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2 border-t border-borderBg/50">
-                <div>
-                    <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">Distance Max :</span><span id="slider-dist-val" class="text-emerald-400 font-bold">200 km</span></div>
-                    <input type="range" id="filter-distance" min="5" max="200" step="5" value="200" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
-                </div>
-                <div>
-                    <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">D+ Max :</span><span id="slider-elev-val" class="text-emerald-400 font-bold">10 000 m</span></div>
-                    <input type="range" id="filter-elevation" min="0" max="10000" step="250" value="10000" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
-                </div>
-                <div>
-                    <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">Tension Max (DDI) :</span><span id="slider-ddi-val" class="text-amber-400 font-bold">Score 5</span></div>
-                    <input type="range" id="filter-ddi" min="1" max="5" step="1" value="5" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-amber-500 bg-darkBg h-2 rounded-lg cursor-pointer">
                 </div>
             </div>
         </section>
@@ -228,20 +208,18 @@
 
     <!-- SCRIPT JAVASCRIPT PRINCIPAL -->
     <script>
-        // Configuration Supabase
         const SUPABASE_URL = 'https://rjfykmedcxgasduebvbn.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqZnlrbWVkY3hnYXNkdWVidmJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNDI3NjEsImV4cCI6MjEwNjgxODc2MX0.4N9LkjjLno-z_o7NEGQjGdJDFXpzvBzRfzs-vRwv1GA';
 
         window.dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Variables d'état
         let racesData = [];
         let filteredRaces = [];
+        let userAlerts = new Set();
         let leafletMap = null;
         let markerClusterGroup = null;
         let currentDisplayLimit = 50;
 
-        // Initialisation de la carte Leaflet
         function initLeafletMap() {
             const mapContainer = document.getElementById('map');
             if (!mapContainer) return;
@@ -252,8 +230,30 @@
             }).addTo(leafletMap);
         }
 
-        // Récupération dynamique depuis Supabase
+        async function fetchUserAlerts() {
+            const { data, error } = await window.dbClient.from('user_alerts').select('race_title, race_date');
+            if (!error && data) {
+                userAlerts = new Set(data.map(a => `${a.race_title}_${a.race_date}`));
+            }
+        }
+
+        async function toggleAlert(title, raceDate, openingDate) {
+            const key = `${title}_${raceDate}`;
+            if (userAlerts.has(key)) {
+                // Supprimer l'alerte
+                await window.dbClient.from('user_alerts').delete().match({ race_title: title, race_date: raceDate });
+                userAlerts.delete(key);
+            } else {
+                // Ajouter l'alerte
+                await window.dbClient.from('user_alerts').insert({ race_title: title, race_date: raceDate, opening_date: openingDate });
+                userAlerts.add(key);
+            }
+            renderListView();
+            updateMapMarkers();
+        }
+
         async function fetchRacesFromSupabase() {
+            await fetchUserAlerts();
             const { data: races, error } = await window.dbClient
                 .from('races')
                 .select('*')
@@ -288,22 +288,18 @@
             }
         }
 
-        // Moteur de filtrage
         function applyFilters() {
             const keyword = (document.getElementById('filter-keyword')?.value || '').toLowerCase();
             const category = document.getElementById('filter-category')?.value || 'ALL';
             const status = document.getElementById('filter-status')?.value || 'ALL';
             const region = document.getElementById('filter-region')?.value || 'ALL';
-            const maxDist = parseInt(document.getElementById('filter-distance')?.value || 200);
-            const maxElev = parseInt(document.getElementById('filter-elevation')?.value || 10000);
-            const maxDdi = parseInt(document.getElementById('filter-ddi')?.value || 5);
 
             filteredRaces = racesData.filter(r => {
                 const matchKw = !keyword || r.title.toLowerCase().includes(keyword) || r.location.toLowerCase().includes(keyword);
                 const matchCat = category === 'ALL' || r.category === category;
                 const matchStat = status === 'ALL' || r.status === status;
                 const matchReg = region === 'ALL' || r.region === region;
-                return matchKw && matchCat && matchStat && matchReg && r.distance <= maxDist && r.elevation <= maxElev && r.ddi <= maxDdi;
+                return matchKw && matchCat && matchStat && matchReg;
             });
 
             const countElem = document.getElementById('filtered-count');
@@ -313,7 +309,6 @@
             updateMapMarkers();
         }
 
-        // Mise à jour des marqueurs de la carte avec lien cliquable
         function updateMapMarkers() {
             if (!leafletMap) return;
 
@@ -340,7 +335,7 @@
 
             Object.values(groupedRaces).forEach(racesAtLocation => {
                 const mainRace = racesAtLocation[0];
-                let color = mainRace.status === 'Open' ? '#10b981' : (mainRace.status === 'Upcoming' ? '#f59e0b' : '#ef4444');
+                let color = mainRace.status === 'Open' ? '#10b981' : '#f59e0b';
 
                 const customIcon = L.divIcon({
                     className: 'custom-pin',
@@ -353,23 +348,22 @@
 
                 let popupHtml = `<div style="max-height: 220px; overflow-y: auto; padding: 2px; color: #f3f4f6;">`;
                 racesAtLocation.forEach((r, idx) => {
-                    const rawDate = r.raceDate || r.race_date;
-                    const formattedDate = formatDateFR(rawDate);
-
-                    const rawPrice = r.price !== undefined && r.price !== null ? r.price : 0;
-                    const displayPrice = rawPrice > 0 ? `${rawPrice} €` : 'Gratuit / N/C';
-
-                    const linkHtml = r.url ? `<div style="margin-top: 4px;"><a href="${r.url}" target="_blank" style="color: #34d399; text-decoration: underline; font-size: 11px;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Voir / S'inscrire</a></div>` : '';
+                    const formattedDate = formatDateFR(r.raceDate || r.race_date);
+                    const statusBadge = r.status === 'Open' ? '<span style="color: #34d399; font-weight: bold;">• OUVERTE</span>' : '<span style="color: #f59e0b; font-weight: bold;">• FERMÉE</span>';
+                    const isAlerted = userAlerts.has(`${r.title}_${r.raceDate}`);
 
                     popupHtml += `
                         <div style="padding-bottom: 8px; margin-bottom: 8px; ${idx < racesAtLocation.length - 1 ? 'border-bottom: 1px solid rgba(255,255,255,0.1);' : ''}">
                             <strong style="color: #fff; font-size: 13px;">${r.title}</strong>
                             <div style="color: #9ca3af; font-size: 11px; margin-top: 3px;">
-                                📅 <span style="color: #e2e8f0; font-weight: 600;">${formattedDate}</span>
-                                <span style="margin: 0 5px;">•</span>
-                                💰 <span style="color: #34d399; font-weight: 600;">${displayPrice}</span>
+                                📅 ${formattedDate} | ${statusBadge}
                             </div>
-                            ${linkHtml}
+                            <div style="margin-top: 5px; display: flex; gap: 8px;">
+                                ${r.url ? `<a href="${r.url}" target="_blank" style="color: #34d399; text-decoration: underline; font-size: 11px;">Voir / S'inscrire</a>` : ''}
+                                <button onclick="toggleAlert('${r.title.replace(/'/g, "\\'")}', '${r.raceDate}', '${r.openingDate}')" style="background: none; border: none; color: ${isAlerted ? '#f59e0b' : '#9ca3af'}; cursor: pointer; font-size: 11px;">
+                                    <i class="fa-solid fa-bell"></i> ${isAlerted ? 'Alerte active' : 'Être prévenu'}
+                                </button>
+                            </div>
                         </div>
                     `;
                 });
@@ -382,14 +376,12 @@
             leafletMap.addLayer(markerClusterGroup);
         }
 
-        // Formatage de la date en français
         function formatDateFR(dateStr) {
             if (!dateStr) return 'Date non communiquée';
             const d = new Date(dateStr);
             return isNaN(d.getTime()) ? dateStr : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
         }
 
-        // Rendu de la liste avec intégration du lien vers la course
         function renderListView() {
             const container = document.getElementById('container-list-view');
             if (!container) return;
@@ -400,21 +392,34 @@
             racesToRender.forEach(race => {
                 const formattedDate = formatDateFR(race.raceDate);
                 const displayPrice = race.price > 0 ? `${race.price} €` : 'N/C';
+                const isAlerted = userAlerts.has(`${race.title}_${race.raceDate}`);
+                const isOpen = race.status === 'Open';
+
+                const statusBadge = isOpen
+                    ? '<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-bold"><i class="fa-solid fa-circle-check mr-1"></i>OUVERTES</span>'
+                    : '<span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-bold"><i class="fa-solid fa-clock mr-1"></i>FERMÉES (Bientôt)</span>';
 
                 const linkBtn = race.url ? `
-                    <a href="${race.url}" target="_blank" class="mt-4 block text-center bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold py-2 rounded-xl text-xs transition duration-200">
-                        <i class="fa-solid fa-arrow-up-right-from-square mr-1.5"></i> Voir / S'inscrire
+                    <a href="${race.url}" target="_blank" class="flex-1 text-center bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold py-2 rounded-xl text-xs transition duration-200 flex items-center justify-center">
+                        <i class="fa-solid fa-arrow-up-right-from-square mr-1.5"></i> S'inscrire
                     </a>
                 ` : '';
+
+                const alertBtn = `
+                    <button onclick="toggleAlert('${race.title.replace(/'/g, "\\'")}', '${race.raceDate}', '${race.openingDate}')" class="px-3 py-2 rounded-xl text-xs font-semibold border transition duration-200 flex items-center justify-center ${isAlerted ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'bg-darkBg text-gray-400 border-borderBg hover:text-white'}">
+                        <i class="fa-solid fa-bell mr-1.5"></i> ${isAlerted ? 'Alerte active' : 'Être prévenu'}
+                    </button>
+                `;
 
                 const card = `
                     <div class="glass-panel p-5 rounded-2xl border border-borderBg flex flex-col justify-between">
                         <div>
-                            <div class="flex justify-between items-center text-[10px] font-mono text-gray-400">
-                                <span>${race.category} • ${race.region}</span>
-                                <span class="text-emerald-400 font-bold"><i class="fa-regular fa-calendar mr-1"></i>${formattedDate}</span>
+                            <div class="flex justify-between items-center text-[10px] font-mono text-gray-400 mb-2">
+                                <span>${race.category}</span>
+                                ${statusBadge}
                             </div>
-                            <h3 class="text-lg font-bold text-white mt-1">${race.title}</h3>
+                            <h3 class="text-lg font-bold text-white">${race.title}</h3>
+                            <p class="text-xs text-gray-400 mt-1"><i class="fa-regular fa-calendar mr-1"></i>Course : ${formattedDate} ${race.openingDate ? `| Ouverture : ${formatDateFR(race.openingDate)}` : ''}</p>
                           
                             <div class="grid grid-cols-4 gap-2 py-3 my-3 border-y border-borderBg text-center text-xs">
                                 <div><span class="block text-gray-500">Dist.</span><span class="font-bold text-white">${race.distance} km</span></div>
@@ -423,20 +428,14 @@
                                 <div><span class="block text-gray-500">DDI</span><span class="font-bold text-purple-400">${race.ddi}/5</span></div>
                             </div>
                         </div>
-                        ${linkBtn}
+                        <div class="flex gap-2 mt-2">
+                            ${linkBtn}
+                            ${alertBtn}
+                        </div>
                     </div>
                 `;
                 container.insertAdjacentHTML('beforeend', card);
             });
-        }
-
-        function updateSliderLabels() {
-            const dist = document.getElementById('filter-distance')?.value;
-            const elev = document.getElementById('filter-elevation')?.value;
-            const ddi = document.getElementById('filter-ddi')?.value;
-            if (dist) document.getElementById('slider-dist-val').innerText = `${dist} km`;
-            if (elev) document.getElementById('slider-elev-val').innerText = `${elev} m`;
-            if (ddi) document.getElementById('slider-ddi-val').innerText = `Score ${ddi}`;
         }
 
         function resetFilters() {
@@ -444,10 +443,6 @@
             if (document.getElementById('filter-category')) document.getElementById('filter-category').value = 'ALL';
             if (document.getElementById('filter-status')) document.getElementById('filter-status').value = 'ALL';
             if (document.getElementById('filter-region')) document.getElementById('filter-region').value = 'ALL';
-            if (document.getElementById('filter-distance')) document.getElementById('filter-distance').value = 200;
-            if (document.getElementById('filter-elevation')) document.getElementById('filter-elevation').value = 10000;
-            if (document.getElementById('filter-ddi')) document.getElementById('filter-ddi').value = 5;
-            updateSliderLabels();
             applyFilters();
         }
 
@@ -464,7 +459,7 @@
         function updateDashboardStats() {
             const openMonth = document.getElementById('stat-opening-month');
             const highDdi = document.getElementById('stat-high-ddi');
-            if (openMonth) openMonth.innerText = racesData.filter(r => r.status === 'Open' || r.status === 'Upcoming').length;
+            if (openMonth) openMonth.innerText = racesData.filter(r => r.status === 'Open').length;
             if (highDdi) highDdi.innerText = racesData.filter(r => r.ddi === 5).length;
         }
 
