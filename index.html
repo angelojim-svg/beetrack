@@ -234,7 +234,7 @@
 
         window.dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Variables d'état (avec currentDisplayLimit ajouté pour éviter les erreurs)
+        // Variables d'état
         let racesData = [];
         let filteredRaces = [];
         let leafletMap = null;
@@ -246,7 +246,7 @@
             const mapContainer = document.getElementById('map');
             if (!mapContainer) return;
             leafletMap = L.map('map').setView([46.603354, 1.888334], 6);
-          
+         
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap contributors'
             }).addTo(leafletMap);
@@ -308,12 +308,12 @@
 
             const countElem = document.getElementById('filtered-count');
             if (countElem) countElem.innerText = filteredRaces.length;
-          
+         
             renderListView();
             updateMapMarkers();
         }
 
-        // Mise à jour des marqueurs de la carte
+        // Mise à jour des marqueurs de la carte avec lien cliquable
         function updateMapMarkers() {
             if (!leafletMap) return;
 
@@ -359,6 +359,8 @@
                     const rawPrice = r.price !== undefined && r.price !== null ? r.price : 0;
                     const displayPrice = rawPrice > 0 ? `${rawPrice} €` : 'Gratuit / N/C';
 
+                    const linkHtml = r.url ? `<div style="margin-top: 4px;"><a href="${r.url}" target="_blank" style="color: #34d399; text-decoration: underline; font-size: 11px;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Voir / S'inscrire</a></div>` : '';
+
                     popupHtml += `
                         <div style="padding-bottom: 8px; margin-bottom: 8px; ${idx < racesAtLocation.length - 1 ? 'border-bottom: 1px solid rgba(255,255,255,0.1);' : ''}">
                             <strong style="color: #fff; font-size: 13px;">${r.title}</strong>
@@ -367,6 +369,7 @@
                                 <span style="margin: 0 5px;">•</span>
                                 💰 <span style="color: #34d399; font-weight: 600;">${displayPrice}</span>
                             </div>
+                            ${linkHtml}
                         </div>
                     `;
                 });
@@ -386,6 +389,7 @@
             return isNaN(d.getTime()) ? dateStr : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
         }
 
+        // Rendu de la liste avec intégration du lien vers la course
         function renderListView() {
             const container = document.getElementById('container-list-view');
             if (!container) return;
@@ -397,6 +401,12 @@
                 const formattedDate = formatDateFR(race.raceDate);
                 const displayPrice = race.price > 0 ? `${race.price} €` : 'N/C';
 
+                const linkBtn = race.url ? `
+                    <a href="${race.url}" target="_blank" class="mt-4 block text-center bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold py-2 rounded-xl text-xs transition duration-200">
+                        <i class="fa-solid fa-arrow-up-right-from-square mr-1.5"></i> Voir / S'inscrire
+                    </a>
+                ` : '';
+
                 const card = `
                     <div class="glass-panel p-5 rounded-2xl border border-borderBg flex flex-col justify-between">
                         <div>
@@ -405,7 +415,7 @@
                                 <span class="text-emerald-400 font-bold"><i class="fa-regular fa-calendar mr-1"></i>${formattedDate}</span>
                             </div>
                             <h3 class="text-lg font-bold text-white mt-1">${race.title}</h3>
-                           
+                          
                             <div class="grid grid-cols-4 gap-2 py-3 my-3 border-y border-borderBg text-center text-xs">
                                 <div><span class="block text-gray-500">Dist.</span><span class="font-bold text-white">${race.distance} km</span></div>
                                 <div><span class="block text-gray-500">D+</span><span class="font-bold text-emerald-400">+${race.elevation}m</span></div>
@@ -413,6 +423,7 @@
                                 <div><span class="block text-gray-500">DDI</span><span class="font-bold text-purple-400">${race.ddi}/5</span></div>
                             </div>
                         </div>
+                        ${linkBtn}
                     </div>
                 `;
                 container.insertAdjacentHTML('beforeend', card);
