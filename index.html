@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PacePulse - Veille & Dossards Trail / Course à pied</title>
+    <title>PacePulse - Tableau de bord de saison Trail</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -98,30 +98,29 @@
                 <div>
                     <div class="flex items-center space-x-2">
                         <span class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-gray-200 to-emerald-400 bg-clip-text text-transparent">PacePulse</span>
-                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">PRO v2.5</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">DASHBOARD</span>
                     </div>
-                    <p class="text-xs text-gray-400 hidden sm:block">Radar d'ouvertures & Gestion de saison Trail</p>
+                    <p class="text-xs text-gray-400 hidden sm:block">Tableau de bord & Gestion de saison Trail</p>
                 </div>
             </div>
 
             <div class="hidden lg:flex items-center space-x-6 text-sm">
                 <div class="flex items-center space-x-2 bg-darkBg/60 px-3 py-1.5 rounded-lg border border-borderBg">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span class="text-gray-400">Ouvertures ce mois :</span>
-                    <span class="font-bold text-emerald-400" id="stat-opening-month">--</span>
-                </div>
-                <div class="flex items-center space-x-2 bg-darkBg/60 px-3 py-1.5 rounded-lg border border-borderBg">
-                    <i class="fa-solid fa-fire text-amber-500"></i>
-                    <span class="text-gray-400">Tension Haute (DDI 5) :</span>
-                    <span class="font-bold text-amber-400" id="stat-high-ddi">--</span>
+                    <span class="text-gray-400">Budget Favoris :</span>
+                    <span class="font-bold text-amber-400" id="stat-total-budget">0 €</span>
                 </div>
             </div>
 
+            <!-- MENU DÉROULANT FAVORIS -->
             <div class="flex items-center space-x-3">
-                <button onclick="toggleModal('addRaceModal')" class="bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold px-4 py-2.5 rounded-xl transition duration-200 flex items-center space-x-2 shadow-lg shadow-emerald-500/20 text-sm">
-                    <i class="fa-solid fa-plus"></i>
-                    <span class="hidden sm:inline">Ajouter une course</span>
-                </button>
+                <div class="relative">
+                    <select id="favorites-dropdown" onchange="filterByFavoriteSelection(this.value)" class="bg-cardBg hover:bg-borderBg text-gray-200 border border-borderBg px-4 py-2.5 rounded-xl transition duration-200 text-sm focus:outline-none cursor-pointer">
+                        <option value="ALL">♥ Mes Favoris (<span id="fav-count">0</span>)</option>
+                        <option value="ONLY_FAV">Afficher uniquement mes favoris</option>
+                        <option value="ALL">Afficher toutes les courses</option>
+                    </select>
+                </div>
             </div>
         </div>
     </header>
@@ -135,7 +134,7 @@
                 <div>
                     <h2 class="text-xl font-extrabold text-white flex items-center gap-2">
                         <i class="fa-solid fa-filter text-emerald-400"></i>
-                        Moteur de Recherche & Radar
+                        Recherche & Radar
                     </h2>
                 </div>
                 <div class="flex items-center space-x-3">
@@ -146,38 +145,33 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Recherche</label>
-                    <input type="text" id="filter-keyword" oninput="applyFilters()" placeholder="Nom, ville..." class="w-full px-4 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none">
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Recherche par nom ou ville</label>
+                    <input type="text" id="filter-keyword" oninput="applyFilters()" placeholder="Ex: Saint-Victoire, Chamonix..." class="w-full px-4 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Type d'épreuve</label>
-                    <select id="filter-category" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white">
-                        <option value="ALL">Toutes les épreuves</option>
-                        <option value="Trail">Trail Court</option>
-                        <option value="Ultra Trail">Ultra Trail</option>
-                        <option value="Marathon">Marathon & Route</option>
-                        <option value="10k">10 km / Semi</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Statut</label>
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Statut d'ouverture</label>
                     <select id="filter-status" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white">
                         <option value="ALL">Tous les statuts</option>
                         <option value="Open">Ouvertes</option>
                         <option value="Upcoming">Prochaines (Bientôt)</option>
                     </select>
                 </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2 border-t border-borderBg/50">
                 <div>
-                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Région</label>
-                    <select id="filter-region" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white">
-                        <option value="ALL">Toutes les régions</option>
-                        <option value="Auvergne-Rhône-Alpes">Auvergne-Rhône-Alpes</option>
-                        <option value="PAC">PAC</option>
-                        <option value="Occitanie">Occitanie</option>
-                        <option value="Île-de-France">Île-de-France</option>
-                    </select>
+                    <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">Distance Max :</span><span id="slider-dist-val" class="text-emerald-400 font-bold">200 km</span></div>
+                    <input type="range" id="filter-distance" min="5" max="200" step="5" value="200" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">D+ Max :</span><span id="slider-elev-val" class="text-emerald-400 font-bold">10 000 m</span></div>
+                    <input type="range" id="filter-elevation" min="0" max="10000" step="250" value="10000" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">Tension Max (DDI) :</span><span id="slider-ddi-val" class="text-amber-400 font-bold">Score 5</span></div>
+                    <input type="range" id="filter-ddi" min="1" max="5" step="1" value="5" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-amber-500 bg-darkBg h-2 rounded-lg cursor-pointer">
                 </div>
             </div>
         </section>
@@ -215,7 +209,8 @@
 
         let racesData = [];
         let filteredRaces = [];
-        let userAlerts = new Set();
+        let favorites = JSON.parse(localStorage.getItem('pacepulse_favs') || '[]');
+        let onlyShowFavorites = false;
         let leafletMap = null;
         let markerClusterGroup = null;
         let currentDisplayLimit = 50;
@@ -230,30 +225,40 @@
             }).addTo(leafletMap);
         }
 
-        async function fetchUserAlerts() {
-            const { data, error } = await window.dbClient.from('user_alerts').select('race_title, race_date');
-            if (!error && data) {
-                userAlerts = new Set(data.map(a => `${a.race_title}_${a.race_date}`));
+        function toggleFavorite(title, raceDate) {
+            const key = `${title}_${raceDate}`;
+            const index = favorites.indexOf(key);
+            if (index > -1) {
+                favorites.splice(index, 1);
+            } else {
+                favorites.push(key);
             }
+            localStorage.setItem('pacepulse_favs', JSON.stringify(favorites));
+            updateFavoritesUI();
+            applyFilters();
         }
 
-        async function toggleAlert(title, raceDate, openingDate) {
-            const key = `${title}_${raceDate}`;
-            if (userAlerts.has(key)) {
-                // Supprimer l'alerte
-                await window.dbClient.from('user_alerts').delete().match({ race_title: title, race_date: raceDate });
-                userAlerts.delete(key);
-            } else {
-                // Ajouter l'alerte
-                await window.dbClient.from('user_alerts').insert({ race_title: title, race_date: raceDate, opening_date: openingDate });
-                userAlerts.add(key);
-            }
-            renderListView();
-            updateMapMarkers();
+        function updateFavoritesUI() {
+            const countElem = document.getElementById('fav-count');
+            if (countElem) countElem.innerText = favorites.length;
+
+            let totalBudget = 0;
+            favorites.forEach(favKey => {
+                const race = racesData.find(r => `${r.title}_${r.raceDate}` === favKey);
+                if (race && race.price > 0) {
+                    totalBudget += race.price;
+                }
+            });
+            const budgetElem = document.getElementById('stat-total-budget');
+            if (budgetElem) budgetElem.innerText = `${totalBudget} €`;
+        }
+
+        function filterByFavoriteSelection(val) {
+            onlyShowFavorites = (val === 'ONLY_FAV');
+            applyFilters();
         }
 
         async function fetchRacesFromSupabase() {
-            await fetchUserAlerts();
             const { data: races, error } = await window.dbClient
                 .from('races')
                 .select('*')
@@ -283,23 +288,25 @@
                     url: r.organizer_url
                 }));
 
+                updateFavoritesUI();
                 applyFilters();
-                updateDashboardStats();
             }
         }
 
         function applyFilters() {
             const keyword = (document.getElementById('filter-keyword')?.value || '').toLowerCase();
-            const category = document.getElementById('filter-category')?.value || 'ALL';
             const status = document.getElementById('filter-status')?.value || 'ALL';
-            const region = document.getElementById('filter-region')?.value || 'ALL';
+            const maxDist = parseInt(document.getElementById('filter-distance')?.value || 200);
+            const maxElev = parseInt(document.getElementById('filter-elevation')?.value || 10000);
+            const maxDdi = parseInt(document.getElementById('filter-ddi')?.value || 5);
 
             filteredRaces = racesData.filter(r => {
+                const favKey = `${r.title}_${r.raceDate}`;
+                if (onlyShowFavorites && !favorites.includes(favKey)) return false;
+
                 const matchKw = !keyword || r.title.toLowerCase().includes(keyword) || r.location.toLowerCase().includes(keyword);
-                const matchCat = category === 'ALL' || r.category === category;
                 const matchStat = status === 'ALL' || r.status === status;
-                const matchReg = region === 'ALL' || r.region === region;
-                return matchKw && matchCat && matchStat && matchReg;
+                return matchKw && matchStat && r.distance <= maxDist && r.elevation <= maxElev && r.ddi <= maxDdi;
             });
 
             const countElem = document.getElementById('filtered-count');
@@ -349,20 +356,24 @@
                 let popupHtml = `<div style="max-height: 220px; overflow-y: auto; padding: 2px; color: #f3f4f6;">`;
                 racesAtLocation.forEach((r, idx) => {
                     const formattedDate = formatDateFR(r.raceDate || r.race_date);
-                    const statusBadge = r.status === 'Open' ? '<span style="color: #34d399; font-weight: bold;">• OUVERTE</span>' : '<span style="color: #f59e0b; font-weight: bold;">• FERMÉE</span>';
-                    const isAlerted = userAlerts.has(`${r.title}_${r.raceDate}`);
+                    const isOpen = r.status === 'Open';
+                    const statusText = isOpen ? '<span style="color: #34d399; font-weight: bold;">• OUVERTE</span>' : (r.openingDate ? `<span style="color: #f59e0b;">• Ouverture : ${formatDateFR(r.openingDate)}</span>` : '<span style="color: #f59e0b;">• Bientôt</span>');
+                    const isFav = favorites.includes(`${r.title}_${r.raceDate}`);
+                    const emailSubject = encodeURIComponent(`Alerte Inscription Course : ${r.title}`);
+                    const emailBody = encodeURIComponent(`Bonjour,\n\nJe souhaite être prévenu de l'ouverture des inscriptions pour la course "${r.title}" prévue le ${formattedDate}.\n\nLien de la course : ${r.url || 'N/C'}`);
 
                     popupHtml += `
                         <div style="padding-bottom: 8px; margin-bottom: 8px; ${idx < racesAtLocation.length - 1 ? 'border-bottom: 1px solid rgba(255,255,255,0.1);' : ''}">
-                            <strong style="color: #fff; font-size: 13px;">${r.title}</strong>
-                            <div style="color: #9ca3af; font-size: 11px; margin-top: 3px;">
-                                📅 ${formattedDate} | ${statusBadge}
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <strong style="color: #fff; font-size: 13px;">${r.title}</strong>
+                                <button onclick="toggleFavorite('${r.title.replace(/'/g, "\\'")}', '${r.raceDate}')" style="background:none; border:none; color: ${isFav ? '#ef4444' : '#9ca3af'}; cursor:pointer; font-size: 14px;">♥</button>
                             </div>
-                            <div style="margin-top: 5px; display: flex; gap: 8px;">
-                                ${r.url ? `<a href="${r.url}" target="_blank" style="color: #34d399; text-decoration: underline; font-size: 11px;">Voir / S'inscrire</a>` : ''}
-                                <button onclick="toggleAlert('${r.title.replace(/'/g, "\\'")}', '${r.raceDate}', '${r.openingDate}')" style="background: none; border: none; color: ${isAlerted ? '#f59e0b' : '#9ca3af'}; cursor: pointer; font-size: 11px;">
-                                    <i class="fa-solid fa-bell"></i> ${isAlerted ? 'Alerte active' : 'Être prévenu'}
-                                </button>
+                            <div style="color: #9ca3af; font-size: 11px; margin-top: 3px;">
+                                📅 ${formattedDate} | ${statusText}
+                            </div>
+                            <div style="margin-top: 5px; display: flex; gap: 8px; align-items: center;">
+                                ${r.url ? `<a href="${r.url}" target="_blank" style="color: #34d399; text-decoration: underline; font-size: 11px;">S'inscrire</a>` : ''}
+                                <a href="mailto:?subject=${emailSubject}&body=${emailBody}" style="color: #9ca3af; text-decoration: none; font-size: 11px;"><i class="fa-solid fa-bell"></i> Être prévenu (Mail)</a>
                             </div>
                         </div>
                     `;
@@ -392,12 +403,12 @@
             racesToRender.forEach(race => {
                 const formattedDate = formatDateFR(race.raceDate);
                 const displayPrice = race.price > 0 ? `${race.price} €` : 'N/C';
-                const isAlerted = userAlerts.has(`${race.title}_${race.raceDate}`);
+                const isFav = favorites.includes(`${race.title}_${race.raceDate}`);
                 const isOpen = race.status === 'Open';
 
-                const statusBadge = isOpen
+                let statusBadge = isOpen
                     ? '<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-bold"><i class="fa-solid fa-circle-check mr-1"></i>OUVERTES</span>'
-                    : '<span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-bold"><i class="fa-solid fa-clock mr-1"></i>FERMÉES (Bientôt)</span>';
+                    : (race.openingDate ? `<span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-bold"><i class="fa-solid fa-clock mr-1"></i>Ouverture le ${formatDateFR(race.openingDate)}</span>` : '<span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-bold">FERMÉES</span>');
 
                 const linkBtn = race.url ? `
                     <a href="${race.url}" target="_blank" class="flex-1 text-center bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold py-2 rounded-xl text-xs transition duration-200 flex items-center justify-center">
@@ -405,9 +416,18 @@
                     </a>
                 ` : '';
 
+                const emailSubject = encodeURIComponent(`Alerte Inscription Course : ${race.title}`);
+                const emailBody = encodeURIComponent(`Bonjour,\n\nJe souhaite être prévenu de l'ouverture des inscriptions pour la course "${race.title}" prévue le ${formattedDate}.\n\nLien de la course : ${race.url || 'N/C'}`);
+
                 const alertBtn = `
-                    <button onclick="toggleAlert('${race.title.replace(/'/g, "\\'")}', '${race.raceDate}', '${race.openingDate}')" class="px-3 py-2 rounded-xl text-xs font-semibold border transition duration-200 flex items-center justify-center ${isAlerted ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'bg-darkBg text-gray-400 border-borderBg hover:text-white'}">
-                        <i class="fa-solid fa-bell mr-1.5"></i> ${isAlerted ? 'Alerte active' : 'Être prévenu'}
+                    <a href="mailto:?subject=${emailSubject}&body=${emailBody}" class="px-3 py-2 rounded-xl text-xs font-semibold border transition duration-200 flex items-center justify-center bg-darkBg text-gray-400 border-borderBg hover:text-white" title="Recevoir un rappel par e-mail">
+                        <i class="fa-solid fa-bell"></i>
+                    </a>
+                `;
+
+                const favBtn = `
+                    <button onclick="toggleFavorite('${race.title.replace(/'/g, "\\'")}', '${race.raceDate}')" class="px-3 py-2 rounded-xl text-sm font-bold border transition duration-200 flex items-center justify-center ${isFav ? 'bg-red-500/20 text-red-400 border-red-500/40' : 'bg-darkBg text-gray-400 border-borderBg hover:text-red-400'}">
+                        ♥
                     </button>
                 `;
 
@@ -419,7 +439,7 @@
                                 ${statusBadge}
                             </div>
                             <h3 class="text-lg font-bold text-white">${race.title}</h3>
-                            <p class="text-xs text-gray-400 mt-1"><i class="fa-regular fa-calendar mr-1"></i>Course : ${formattedDate} ${race.openingDate ? `| Ouverture : ${formatDateFR(race.openingDate)}` : ''}</p>
+                            <p class="text-xs text-gray-400 mt-1"><i class="fa-regular fa-calendar mr-1"></i>Course : ${formattedDate}</p>
                           
                             <div class="grid grid-cols-4 gap-2 py-3 my-3 border-y border-borderBg text-center text-xs">
                                 <div><span class="block text-gray-500">Dist.</span><span class="font-bold text-white">${race.distance} km</span></div>
@@ -431,6 +451,7 @@
                         <div class="flex gap-2 mt-2">
                             ${linkBtn}
                             ${alertBtn}
+                            ${favBtn}
                         </div>
                     </div>
                 `;
@@ -440,9 +461,10 @@
 
         function resetFilters() {
             if (document.getElementById('filter-keyword')) document.getElementById('filter-keyword').value = '';
-            if (document.getElementById('filter-category')) document.getElementById('filter-category').value = 'ALL';
             if (document.getElementById('filter-status')) document.getElementById('filter-status').value = 'ALL';
-            if (document.getElementById('filter-region')) document.getElementById('filter-region').value = 'ALL';
+            if (document.getElementById('filter-distance')) document.getElementById('filter-distance').value = 200;
+            if (document.getElementById('filter-elevation')) document.getElementById('filter-elevation').value = 10000;
+            if (document.getElementById('filter-ddi')) document.getElementById('filter-ddi').value = 5;
             applyFilters();
         }
 
@@ -454,13 +476,6 @@
                 listV.classList.toggle('hidden', v !== 'list');
             }
             if (v === 'map' && leafletMap) setTimeout(() => leafletMap.invalidateSize(), 200);
-        }
-
-        function updateDashboardStats() {
-            const openMonth = document.getElementById('stat-opening-month');
-            const highDdi = document.getElementById('stat-high-ddi');
-            if (openMonth) openMonth.innerText = racesData.filter(r => r.status === 'Open').length;
-            if (highDdi) highDdi.innerText = racesData.filter(r => r.ddi === 5).length;
         }
 
         document.addEventListener('DOMContentLoaded', () => {
