@@ -194,7 +194,7 @@ async function runScraper() {
             let formattedOpeningDate = parseFrenchDate(regDateRaw);
             const raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
 
-            let status = isTBD ? 'TBD' : (subItem.status || trailObj.status || item.status || 'Upcoming');
+           
             if (formattedOpeningDate && !isTBD) {
                 status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
             }
