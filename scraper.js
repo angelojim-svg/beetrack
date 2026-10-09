@@ -182,15 +182,6 @@ async function runScraper() {
             let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
             // ... la suite de ton code reste identique
 
-
-            let isTBD = false;
-            // Si la date est absente ou correspond à une année passée/floue, on la positionne pour 2027 en mode "À planifier (?)"
-            if (!formattedRaceDate || formattedRaceDate < today) {
-                isTBD = true;
-                formattedRaceDate = `${currentYear + 1}-08-01`; // Valeur par défaut pour l'année prochaine
-            }
-
-            let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
             let regDateRaw = null;
             if (regRaw) {
                 if (typeof regRaw === 'object') {
