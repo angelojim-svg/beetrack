@@ -106,21 +106,9 @@ async function fetchWithRetry(url, retries = 3, delay = 3000) {
     throw new Error("❌ Échec de la récupération après plusieurs tentatives (ScraperAPI 500).");
 }
 
-// Fonction de secours pour tenter de récupérer la date d'ouverture via Finishers
+// Fonction de recherche Finishers mise en pause pour l'instant
 async function fetchOpeningDateFromFinishers(raceTitle, raceDate) {
-    try {
-        const year = raceDate ? raceDate.substring(0, 4) : new Date().getFullYear();
-        const searchQuery = encodeURIComponent(`${raceTitle} ${year}`);
-        const targetUrl = `https://www.finishers.com/recherche?q=${searchQuery}`;
-        const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&render=false&country_code=fr&url=${encodeURIComponent(targetUrl)}`;
-
-        const response = await fetch(scraperApiUrl);
-        if (!response.ok) return null;
-       
-        return null;
-    } catch (e) {
-        return null;
-    }
+    return null;
 }
 
 async function runScraper() {
