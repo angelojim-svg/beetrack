@@ -119,7 +119,6 @@ async function runScraper() {
 
     let rawRaces = [];
     try {
-        // Utilisation du paramètre predicted=1 pour récupérer tout le catalogue incluant les prévisions
         const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
         const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&render=false&country_code=fr&timeout=60000&url=${encodeURIComponent(targetUrl)}`;
 
@@ -163,7 +162,6 @@ async function runScraper() {
             let isTBD = false;
             let status = subItem.status || trailObj.status || item.status || 'Upcoming';
 
-            // Si la date est absente OU si elle est déjà passée, on la décale à l'année prochaine avec un statut TBD (??)
             if (!formattedRaceDate || formattedRaceDate < today) {
                 isTBD = true;
                 if (formattedRaceDate) {
@@ -186,7 +184,15 @@ async function runScraper() {
             }
 
             let formattedOpeningDate = parseFrenchDate(regDateRaw);
-            const raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
+           
+            // Mise à jour du titre avec l'année décalée et la mention explicite
+            let raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
+            if (isTBD) {
+                raceTitle = raceTitle.replace(String(currentYear), String(currentYear + 1));
+                if (!raceTitle.includes('Date à confirmer')) {
+                    raceTitle += " (Date à confirmer par l'organisateur)";
+                }
+            }
 
             if (formattedOpeningDate && !isTBD) {
                 status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
