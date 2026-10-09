@@ -106,7 +106,6 @@ async function fetchWithRetry(url, retries = 3, delay = 3000) {
     throw new Error("❌ Échec de la récupération après plusieurs tentatives (ScraperAPI 500).");
 }
 
-// Fonction de recherche Finishers mise en pause pour l'instant
 async function fetchOpeningDateFromFinishers(raceTitle, raceDate) {
     return null;
 }
@@ -115,11 +114,14 @@ async function runScraper() {
     console.log("🚀 Démarrage du scraper PacePulse via ScraperAPI...");
   
     const today = new Date().toISOString().split('T')[0];
-    console.log(`📅 Date de référence (Aujourd'hui) : ${today}`);
+    const currentYear = new Date().getFullYear();
+    // On élargit la recherche en partant du début de l'année en cours pour capter les événements sans date ou prévisionnels
+    const searchAfterDate = `${currentYear}-01-01`;
+    console.log(`📅 Fenêtre de recherche élargie à partir du : ${searchAfterDate}`);
 
     let rawRaces = [];
     try {
-        const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2027-10-08&scope=calendar&predicted=18&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
+        const targetUrl = `https://api.betrail.run/api/events-drizzle?after=${searchAfterDate}&before=2027-12-31&scope=calendar&predicted=18&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
         const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&render=false&country_code=fr&timeout=60000&url=${encodeURIComponent(targetUrl)}`;
 
         console.log(`📡 Connexion à l'API via ScraperAPI...`);
@@ -160,15 +162,11 @@ async function runScraper() {
             const rawDate = subItem.date || subItem.raceDate || subItem.start_date || subItem.time || trailObj.date || item.date;
             let formattedRaceDate = parseFrenchDate(rawDate);
 
-            // Gestion des courses sans date précise (ex: "?? Aout") pour ne pas les perdre
-            if (!formattedRaceDate) {
-                const currentYear = new Date().getFullYear();
-                formattedRaceDate = `${currentYear + 1}-08-01`;
-            }
-
-            if (formattedRaceDate < today && !rawDate) {
-                skippedPastCount++;
-                continue;
+            let isTBD = false;
+            // Si la date est absente ou correspond à une année passée/floue, on la positionne pour 2027 en mode "À planifier (?)"
+            if (!formattedRaceDate || formattedRaceDate < today) {
+                isTBD = true;
+                formattedRaceDate = `${currentYear + 1}-08-01`; // Valeur par défaut pour l'année prochaine
             }
 
             let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
@@ -182,14 +180,10 @@ async function runScraper() {
             }
 
             let formattedOpeningDate = parseFrenchDate(regDateRaw);
-
             const raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
-            if (!formattedOpeningDate) {
-                formattedOpeningDate = await fetchOpeningDateFromFinishers(raceTitle, formattedRaceDate);
-            }
 
-            let status = subItem.status || trailObj.status || item.status || 'Upcoming';
-            if (formattedOpeningDate) {
+            let status = isTBD ? 'TBD' : (subItem.status || trailObj.status || item.status || 'Upcoming');
+            if (formattedOpeningDate && !isTBD) {
                 status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
             }
 
@@ -224,7 +218,7 @@ async function runScraper() {
         }
     }
 
-    console.log(`✅ Fin du script ! ${savedCount} courses enregistrées. (${skippedPastCount} passées ignorées).`);
+    console.log(`✅ Fin du script ! ${savedCount} courses enregistrées.`);
 }
 
 runScraper().catch(err => {
