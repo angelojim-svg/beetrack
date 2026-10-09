@@ -162,6 +162,27 @@ async function runScraper() {
             const rawDate = subItem.date || subItem.raceDate || subItem.start_date || subItem.time || trailObj.date || item.date;
             let formattedRaceDate = parseFrenchDate(rawDate);
 
+            let status = subItem.status || trailObj.status || item.status || 'Upcoming';
+
+            // 📍 C'EST ICI QU'ON PLACE LE BLOC :
+            // Si la date est absente (cas des courses avec "?? Mois" sur Beetriail)
+            if (!formattedRaceDate) {
+                const rawMonth = subItem.month || trailObj.month || item.month || subItem.season;
+               
+                // Date de repli pour l'an prochain (gardée en base pour l'affichage)
+                formattedRaceDate = `${currentYear + 1}-08-01`;
+                status = 'TBD'; // Statut "To Be Determined" pour gérer l'affichage des ?? sur ton front-end
+            }
+
+            if (formattedRaceDate < today && !rawDate) {
+                skippedPastCount++;
+                continue;
+            }
+
+            let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
+            // ... la suite de ton code reste identique
+
+
             let isTBD = false;
             // Si la date est absente ou correspond à une année passée/floue, on la positionne pour 2027 en mode "À planifier (?)"
             if (!formattedRaceDate || formattedRaceDate < today) {
