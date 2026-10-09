@@ -117,8 +117,6 @@ async function fetchOpeningDateFromFinishers(raceTitle, raceDate) {
         const response = await fetch(scraperApiUrl);
         if (!response.ok) return null;
        
-        // La structure pourra être analysée plus finement si besoin via du parsing texte/regex
-        // Pour l'instant, cette fonction sert de point d'ancrage propre et non bloquant.
         return null;
     } catch (e) {
         return null;
@@ -172,9 +170,15 @@ async function runScraper() {
 
         for (const subItem of subItems) {
             const rawDate = subItem.date || subItem.raceDate || subItem.start_date || subItem.time || trailObj.date || item.date;
-            const formattedRaceDate = parseFrenchDate(rawDate);
+            let formattedRaceDate = parseFrenchDate(rawDate);
 
-            if (formattedRaceDate && formattedRaceDate < today) {
+            // Gestion des courses sans date précise (ex: "?? Aout") pour ne pas les perdre
+            if (!formattedRaceDate) {
+                const currentYear = new Date().getFullYear();
+                formattedRaceDate = `${currentYear + 1}-08-01`;
+            }
+
+            if (formattedRaceDate < today && !rawDate) {
                 skippedPastCount++;
                 continue;
             }
@@ -191,7 +195,6 @@ async function runScraper() {
 
             let formattedOpeningDate = parseFrenchDate(regDateRaw);
 
-            // Si aucune date d'ouverture n'est trouvée, on tente de l'interroger via Finishers
             const raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
             if (!formattedOpeningDate) {
                 formattedOpeningDate = await fetchOpeningDateFromFinishers(raceTitle, formattedRaceDate);
