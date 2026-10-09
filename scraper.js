@@ -41,7 +41,7 @@ function saveGeoCache() {
 
 function parseFrenchDate(dateStr) {
     if (!dateStr) return null;
-  
+ 
     if (typeof dateStr === 'number' || /^\d{10,13}$/.test(dateStr)) {
         const timestamp = Number(dateStr) > 1e11 ? Number(dateStr) : Number(dateStr) * 1000;
         const d = new Date(timestamp);
@@ -112,12 +112,10 @@ async function fetchOpeningDateFromFinishers(raceTitle, raceDate) {
 
 async function runScraper() {
     console.log("🚀 Démarrage du scraper PacePulse via ScraperAPI...");
-  
+ 
     const today = new Date().toISOString().split('T')[0];
     const currentYear = new Date().getFullYear();
-    // On élargit la recherche en partant du début de l'année en cours pour capter les événements sans date ou prévisionnels
-    const searchAfterDate = `${currentYear}-01-01`;
-    console.log(`📅 Fenêtre de recherche élargie à partir du : ${searchAfterDate}`);
+    console.log(`📅 Date de référence (Aujourd'hui) : ${today}`);
 
     let rawRaces = [];
     try {
@@ -126,7 +124,7 @@ async function runScraper() {
 
         console.log(`📡 Connexion à l'API via ScraperAPI...`);
         const json = await fetchWithRetry(scraperApiUrl);
-      
+     
         const dataContainer = json.body || json;
         rawRaces = Array.isArray(dataContainer) ? dataContainer : (dataContainer.events || dataContainer.races || dataContainer.data || dataContainer.results || []);
 
@@ -144,7 +142,7 @@ async function runScraper() {
                          (item.trail && typeof item.trail === 'object') ? item.trail : {};
 
         const location = trailObj.place || trailObj.location || item.place || item.location || item.city || 'France';
-      
+     
         let lat = Number(trailObj.geo_lat || trailObj.lat || item.geo_lat || item.lat || item.latitude) || null;
         let lng = Number(trailObj.geo_lon || trailObj.lng || item.geo_lon || item.lon || item.longitude) || null;
 
@@ -162,26 +160,17 @@ async function runScraper() {
             const rawDate = subItem.date || subItem.raceDate || subItem.start_date || subItem.time || trailObj.date || item.date;
             let formattedRaceDate = parseFrenchDate(rawDate);
 
+            let isTBD = false;
             let status = subItem.status || trailObj.status || item.status || 'Upcoming';
 
-            // 📍 C'EST ICI QU'ON PLACE LE BLOC :
-            // Si la date est absente (cas des courses avec "?? Mois" sur Beetriail)
+            // Si la date est absente ou invalide, on la force en mode TBD pour l'an prochain
             if (!formattedRaceDate) {
-                const rawMonth = subItem.month || trailObj.month || item.month || subItem.season;
-               
-                // Date de repli pour l'an prochain (gardée en base pour l'affichage)
+                isTBD = true;
                 formattedRaceDate = `${currentYear + 1}-08-01`;
-                status = 'TBD'; // Statut "To Be Determined" pour gérer l'affichage des ?? sur ton front-end
-            }
-
-            if (formattedRaceDate < today && !rawDate) {
-                skippedPastCount++;
-                continue;
+                status = 'TBD';
             }
 
             let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
-            // ... la suite de ton code reste identique
-
             let regDateRaw = null;
             if (regRaw) {
                 if (typeof regRaw === 'object') {
@@ -194,7 +183,6 @@ async function runScraper() {
             let formattedOpeningDate = parseFrenchDate(regDateRaw);
             const raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
 
-           
             if (formattedOpeningDate && !isTBD) {
                 status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
             }
