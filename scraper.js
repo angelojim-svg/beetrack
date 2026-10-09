@@ -119,6 +119,7 @@ async function runScraper() {
 
     let rawRaces = [];
     try {
+        // Utilisation du paramètre predicted=1 pour récupérer tout le catalogue incluant les prévisions
         const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
         const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&render=false&country_code=fr&timeout=60000&url=${encodeURIComponent(targetUrl)}`;
 
@@ -135,7 +136,6 @@ async function runScraper() {
     }
 
     let savedCount = 0;
-    let skippedPastCount = 0;
 
     for (const item of rawRaces) {
         const trailObj = (item.trail && Array.isArray(item.trail) && item.trail.length > 0) ? item.trail[0] :
@@ -163,10 +163,15 @@ async function runScraper() {
             let isTBD = false;
             let status = subItem.status || trailObj.status || item.status || 'Upcoming';
 
-            // Si la date est absente ou invalide, on la force en mode TBD pour l'an prochain
-            if (!formattedRaceDate) {
+            // Si la date est absente OU si elle est déjà passée, on la décale à l'année prochaine avec un statut TBD (??)
+            if (!formattedRaceDate || formattedRaceDate < today) {
                 isTBD = true;
-                formattedRaceDate = `${currentYear + 1}-08-01`;
+                if (formattedRaceDate) {
+                    const parts = formattedRaceDate.split('-');
+                    formattedRaceDate = `${currentYear + 1}-${parts[1]}-${parts[2]}`;
+                } else {
+                    formattedRaceDate = `${currentYear + 1}-08-01`;
+                }
                 status = 'TBD';
             }
 
