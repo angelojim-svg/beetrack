@@ -102,22 +102,23 @@ async function fetchWithPuppeteer(targetUrl) {
         const page = await browser.newPage();
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
 
-        // Récupération directe de la réponse HTTP brute
-        const response = await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
-       
-        let jsonData;
-        try {
-            jsonData = await response.json();
-        } catch (e) {
-            const textContent = await page.evaluate(() => document.body.innerText || document.body.textContent);
-            // Extraction sécurisée si du texte entoure le JSON
-            const jsonMatch = textContent.match(/[\{\[\"].*[\}\]\"]/s);
-            if (jsonMatch) {
-                jsonData = JSON.parse(jsonMatch[0]);
-            } else {
-                throw new Error("Impossible de découper le contenu JSON.");
+        // 1. Charger d'abord la page d'accueil pour obtenir les cookies et contourner la sécurité Cloudflare
+        console.log("🔑 Connexion à l'accueil BeTrail pour initialiser la session...");
+        await page.goto('https://www.betrail.run/', { waitUntil: 'networkidle2', timeout: 60000 });
+
+        // 2. Exécuter le fetch de l'API directement depuis la session Chrome active
+        console.log("📡 Récupération des données API via le navigateur...");
+        const jsonData = await page.evaluate(async (apiUrl) => {
+            const res = await fetch(apiUrl, {
+                headers: {
+                    'Accept': 'application/json, text/plain, */*'
+                }
+            });
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status} - ${res.statusText}`);
             }
-        }
+            return await res.json();
+        }, targetUrl);
 
         await browser.close();
         return jsonData;
