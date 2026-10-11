@@ -92,9 +92,10 @@ async function runScraper() {
 
     let rawRaces = [];
     try {
+        // URL adaptée au compte gratuit de ScraperAPI (sans &premium=true)
         const targetUrl = `https://www.betrail.run/api/events?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
-        const scraperApiUrl = `http://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(targetUrl)}&render=true&premium=true`;
-
+        const scraperApiUrl = `http://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(targetUrl)}&render=true`;
+ 
         console.log(`📡 Connexion à l'API BeTrail via ScraperAPI (contournement Cloudflare)...`);
         const response = await fetch(scraperApiUrl);
         if (!response.ok) {
