@@ -92,11 +92,10 @@ async function runScraper() {
 
     let rawRaces = [];
     try {
-        // URL adaptée au compte gratuit de ScraperAPI (sans &premium=true)
         const targetUrl = `https://www.betrail.run/api/events?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
-        const scraperApiUrl = `http://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(targetUrl)}&render=true`;
- 
-        console.log(`📡 Connexion à l'API BeTrail via ScraperAPI (contournement Cloudflare)...`);
+        const scraperApiUrl = `http://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(targetUrl)}`;
+
+        console.log(`📡 Connexion à l'API BeTrail via ScraperAPI...`);
         const response = await fetch(scraperApiUrl);
         if (!response.ok) {
             throw new Error(`Erreur HTTP ScraperAPI: ${response.status}`);
@@ -121,7 +120,7 @@ async function runScraper() {
         const location = trailObj.place || trailObj.location || item.place || item.location || item.city || 'France';
      
         let lat = Number(trailObj.geo_lat || trailObj.lat || item.geo_lat || item.lat || item.latitude) || null;
-        let lng = Number(trailObj.geo_lon || trailObj.lng || item.geo_lon || item.lng || item.longitude) || null;
+        let lng = Number(trailObj.geo_lon || trailObj.lng || item.geo_lon || item.lon || item.longitude) || null;
 
         if (!lat || !lng) {
             const coords = await getCachedCoordinates(location);
