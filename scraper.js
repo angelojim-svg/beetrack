@@ -104,22 +104,22 @@ async function fetchRacesFromUI() {
         console.log("🔑 Navigation vers le calendrier public BeTrail...");
         await page.goto('https://www.betrail.run/calendar', { waitUntil: 'networkidle2', timeout: 60000 });
 
-        // Attendre que les éléments de course s'affichent dans la page
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        // Attendre que les éléments dynamiques se chargent
+        await new Promise(resolve => setTimeout(resolve, 6000));
 
         console.log("📦 Extraction des courses depuis l'interface...");
         const races = await page.evaluate(() => {
             const items = [];
-            // Sélection des éléments de course sur la page (liens ou cartes du calendrier)
-            const cards = document.querySelectorAll('a[href*="/race/"], .event-item, tr');
+            // Recherche tous les liens pointant vers des courses ou des événements
+            const links = document.querySelectorAll('a[href*="/race/"], a[href*="/event/"], div[class*="event"], article');
            
-            cards.forEach(card => {
-                const title = card.innerText ? card.innerText.split('\n')[0] : '';
-                const href = card.href || card.querySelector('a')?.href || '';
-                if (title && title.length > 3) {
+            links.forEach(el => {
+                const title = el.innerText ? el.innerText.split('\n')[0].trim() : '';
+                const href = el.href || el.querySelector('a')?.href || '';
+                if (title && title.length > 3 && !items.some(i => i.title === title)) {
                     items.push({
-                        title: title.trim(),
-                        organizer_url: href,
+                        title: title,
+                        organizer_url: href.startsWith('http') ? href : `https://www.betrail.run${href}`,
                         location: 'France',
                         race_date: new Date().toISOString().split('T')[0]
                     });
@@ -135,6 +135,7 @@ async function fetchRacesFromUI() {
         throw new Error(`Échec Puppeteer UI: ${err.message}`);
     }
 }
+
 
 async function runScraper() {
     console.log("🚀 Démarrage du scraper PacePulse (Extraction UI Puppeteer)...");
