@@ -130,6 +130,21 @@ async function runScraper() {
         return;
     }
 
+    // Étape 1 : Récupération de la liste des titres déjà confirmés pour l'année à venir
+    const confirmedTitlesNextYear = new Set();
+    for (const item of rawRaces) {
+        const trailObj = (item.trail && Array.isArray(item.trail) && item.trail.length > 0) ? item.trail[0] : (item.trail || {});
+        const subItems = (trailObj.races && trailObj.races.length > 0) ? trailObj.races : [trailObj];
+        for (const subItem of subItems) {
+            const rawDate = subItem.date || subItem.raceDate || subItem.start_date || subItem.time || trailObj.date || item.date;
+            const parsed = parseFrenchDate(rawDate);
+            if (parsed && parsed >= today) {
+                const title = (subItem.title || trailObj.title || item.event_name || item.title || '').trim().toLowerCase();
+                if (title) confirmedTitlesNextYear.add(title);
+            }
+        }
+    }
+
     let savedCount = 0;
 
     for (const item of rawRaces) {
@@ -154,11 +169,26 @@ async function runScraper() {
         for (const subItem of subItems) {
             const rawDate = subItem.date || subItem.raceDate || subItem.start_date || subItem.time || trailObj.date || item.date;
             let formattedRaceDate = parseFrenchDate(rawDate);
+            const raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
+            const cleanTitle = raceTitle.trim().toLowerCase();
 
             let isTBD = false;
             let status = subItem.status || trailObj.status || item.status || 'Upcoming';
 
             if (!formattedRaceDate || formattedRaceDate < today) {
+                // Exclusion stricte : Si la date est antérieure à l'année en cours (ex: 2025 ou avant), on l'ignore complètement
+                if (formattedRaceDate) {
+                    const raceYear = parseInt(formattedRaceDate.split('-')[0]);
+                    if (raceYear < currentYear) {
+                        continue; // On passe la course 2025
+                    }
+                }
+
+                // Déduplication : Si la course a déjà une date officielle/confirmée pour l'année à venir, on n'ajoute pas de version TBD
+                if (confirmedTitlesNextYear.has(cleanTitle)) {
+                    continue;
+                }
+
                 isTBD = true;
                 if (formattedRaceDate) {
                     const parts = formattedRaceDate.split('-');
@@ -180,7 +210,6 @@ async function runScraper() {
             }
 
             let formattedOpeningDate = parseFrenchDate(regDateRaw);
-            const raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
 
             if (formattedOpeningDate && !isTBD) {
                 status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
