@@ -18,7 +18,8 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm install @supabase/supabase-js
+        run: |
+          npm install @supabase/supabase-js puppeteer puppeteer-extra puppeteer-extra-plugin-stealth
 
       - name: Run Scraper
         env:
