@@ -101,18 +101,32 @@ async function fetchWithPuppeteer(targetUrl) {
     try {
         const page = await browser.newPage();
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
+
+        // Récupération directe de la réponse HTTP brute
+        const response = await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
        
-        await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+        let jsonData;
+        try {
+            jsonData = await response.json();
+        } catch (e) {
+            const textContent = await page.evaluate(() => document.body.innerText || document.body.textContent);
+            // Extraction sécurisée si du texte entoure le JSON
+            const jsonMatch = textContent.match(/[\{\[\"].*[\}\]\"]/s);
+            if (jsonMatch) {
+                jsonData = JSON.parse(jsonMatch[0]);
+            } else {
+                throw new Error("Impossible de découper le contenu JSON.");
+            }
+        }
 
-        const content = await page.evaluate(() => document.body.innerText);
         await browser.close();
-
-        return JSON.parse(content);
+        return jsonData;
     } catch (err) {
         await browser.close();
         throw new Error(`Échec Puppeteer: ${err.message}`);
     }
 }
+
 
 async function runScraper() {
     console.log("🚀 Démarrage du scraper PacePulse (Puppeteer Stealth 100% Gratuit)...");
