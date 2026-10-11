@@ -95,9 +95,9 @@ async function fetchWithRetry(url, retries = 3, delay = 3000) {
             if (response.ok) {
                 return await response.json();
             }
-            console.warn(`⚠️ Tentative ${i + 1}/${retries} échouée (Statut ${response.status}). Nouvelle tentative...`);
+            console.warn(`⚠️ Tentative ${i + 1}/${retries} échouée (Statut ${response.status})....`);
         } catch (err) {
-            console.warn(`⚠️ Tentative ${i + 1}/${retries} erreur réseau : ${err.message}`);
+            console.warn(`⚠️ Erreur réseau : ${err.message}`);
         }
         if (i < retries - 1) {
             await new Promise(resolve => setTimeout(resolve, delay));
@@ -156,39 +156,38 @@ async function runScraper() {
             let formattedRaceDate = parseFrenchDate(rawDate);
             let raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
 
-            let status = subItem.status || trailObj.status || item.status || 'Upcoming';
+            let rawStatusStr = String(subItem.status || trailObj.status || item.status || '').toLowerCase();
+            let finalStatus = 'Open';
 
-            // CAS 1 : Date absente ou passée (ex: 2026 passée) -> Décalage vers 2027 + Statut TBD
+            // CAS 1 : Date absente ou passée (2026 passée) -> Report en 2027 + Statut TBD
             if (!formattedRaceDate || formattedRaceDate < today) {
                 if (formattedRaceDate) {
                     const raceYear = parseInt(formattedRaceDate.split('-')[0]);
-                    // On filtre pour exclure les vieilles éditions (2025 et antérieures)
                     if (raceYear < currentYear) {
-                        continue;
+                        continue; // Exclut 2025
                     }
                     const parts = formattedRaceDate.split('-');
-                    // Bascule la date exacte sur l'année N+1 (2027)
                     formattedRaceDate = `${currentYear + 1}-${parts[1]}-${parts[2]}`;
                 } else {
                     formattedRaceDate = `${currentYear + 1}-08-01`;
                 }
 
-                // Mise à jour de l'année dans le titre
                 raceTitle = raceTitle.replace(String(currentYear), String(currentYear + 1));
-                status = 'TBD';
+                finalStatus = 'TBD';
             }
-            // CAS 2 : Date confirmée dans le futur
+            // CAS 2 : Date future à venir -> Détermination exacte du statut d'ouverture
             else {
                 let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
                 let regDateRaw = regRaw && typeof regRaw === 'object' ? (regRaw.openingDate || regRaw.date || regRaw.opens_at || regRaw.opening_date) : regRaw;
                 let formattedOpeningDate = parseFrenchDate(regDateRaw);
 
-                if (formattedOpeningDate && formattedOpeningDate <= today) {
-                    status = 'Open';
-                } else if (formattedOpeningDate && formattedOpeningDate > today) {
-                    status = 'Opening Soon';
+                if (formattedOpeningDate && formattedOpeningDate > today) {
+                    finalStatus = 'Opening Soon';
+                } else if (rawStatusStr.includes('soon') || rawStatusStr.includes('prochain')) {
+                    finalStatus = 'Opening Soon';
                 } else {
-                    status = 'Open';
+                    // Par défaut, toute course future confirmée est marquée comme 'Open'
+                    finalStatus = 'Open';
                 }
             }
 
@@ -211,7 +210,7 @@ async function runScraper() {
                 ddi: Number(item.ddi || trailObj.ddi || subItem.ddi) || 3,
                 opening_date: formattedOpeningDate || formattedRaceDate || today,
                 race_date: formattedRaceDate || today,
-                status: status,
+                status: finalStatus,
                 organizer_url: organizerUrl
             };
 
