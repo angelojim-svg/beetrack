@@ -103,7 +103,7 @@ async function fetchWithRetry(url, retries = 3, delay = 3000) {
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
-    throw new Error("❌ Échec de la récupération après plusieurs tentatives (ScraperAPI 500).");
+    throw new Error("❌ Échec de la récupération après plusieurs tentatives.");
 }
 
 async function runScraper() {
@@ -115,7 +115,6 @@ async function runScraper() {
 
     let rawRaces = [];
     try {
-        // Retour à l'URL d'origine stable avec predicted=1
         const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
         const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&render=false&country_code=fr&timeout=60000&url=${encodeURIComponent(targetUrl)}`;
 
@@ -129,20 +128,6 @@ async function runScraper() {
     } catch (e) {
         console.error("❌ Erreur lors de la récupération des données source :", e.message);
         return;
-    }
-
-    const confirmedTitlesFuture = new Set();
-    for (const item of rawRaces) {
-        const trailObj = (item.trail && Array.isArray(item.trail) && item.trail.length > 0) ? item.trail[0] : (item.trail || {});
-        const subItems = (trailObj.races && trailObj.races.length > 0) ? trailObj.races : [trailObj];
-        for (const subItem of subItems) {
-            const rawDate = subItem.date || subItem.raceDate || subItem.start_date || subItem.time || trailObj.date || item.date;
-            const parsed = parseFrenchDate(rawDate);
-            if (parsed && parsed >= today) {
-                const title = (subItem.title || trailObj.title || item.event_name || item.title || '').trim().toLowerCase();
-                if (title) confirmedTitlesFuture.add(title);
-            }
-        }
     }
 
     let savedCount = 0;
@@ -169,28 +154,31 @@ async function runScraper() {
         for (const subItem of subItems) {
             const rawDate = subItem.date || subItem.raceDate || subItem.start_date || subItem.time || trailObj.date || item.date;
             let formattedRaceDate = parseFrenchDate(rawDate);
-            const raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
-            const cleanTitle = raceTitle.trim().toLowerCase();
+            let raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
 
             let status = subItem.status || trailObj.status || item.status || 'Upcoming';
 
+            // CAS 1 : Date absente ou passée (ex: 2026 passée) -> Décalage vers 2027 + Statut TBD
             if (!formattedRaceDate || formattedRaceDate < today) {
-                if (confirmedTitlesFuture.has(cleanTitle)) {
-                    continue;
-                }
-
                 if (formattedRaceDate) {
                     const raceYear = parseInt(formattedRaceDate.split('-')[0]);
+                    // On filtre pour exclure les vieilles éditions (2025 et antérieures)
                     if (raceYear < currentYear) {
                         continue;
                     }
                     const parts = formattedRaceDate.split('-');
+                    // Bascule la date exacte sur l'année N+1 (2027)
                     formattedRaceDate = `${currentYear + 1}-${parts[1]}-${parts[2]}`;
                 } else {
                     formattedRaceDate = `${currentYear + 1}-08-01`;
                 }
+
+                // Mise à jour de l'année dans le titre
+                raceTitle = raceTitle.replace(String(currentYear), String(currentYear + 1));
                 status = 'TBD';
-            } else {
+            }
+            // CAS 2 : Date confirmée dans le futur
+            else {
                 let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
                 let regDateRaw = regRaw && typeof regRaw === 'object' ? (regRaw.openingDate || regRaw.date || regRaw.opens_at || regRaw.opening_date) : regRaw;
                 let formattedOpeningDate = parseFrenchDate(regDateRaw);
