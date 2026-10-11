@@ -156,6 +156,12 @@ async function runScraper() {
             let formattedRaceDate = parseFrenchDate(rawDate);
             let raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
 
+            const organizerUrl = subItem.url || trailObj.website || trailObj.url || item.url || (subItem.alias ? `https://www.betrail.run/race/${subItem.alias}` : '');
+
+            let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
+            let regDateRaw = regRaw && typeof regRaw === 'object' ? (regRaw.openingDate || regRaw.date || regRaw.opens_at || regRaw.opening_date) : regRaw;
+            let formattedOpeningDate = parseFrenchDate(regDateRaw);
+
             let status = 'Open';
 
             // 1. CAS DES DATES PASSÉES OU MANQUANTES (Report N+1 et statut TBD)
@@ -175,28 +181,20 @@ async function runScraper() {
             }
             // 2. CAS DES DATES CONFIRMÉES DANS LE FUTUR
             else {
-                let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
-                let regDateRaw = regRaw && typeof regRaw === 'object' ? (regRaw.openingDate || regRaw.date || regRaw.opens_at || regRaw.opening_date) : regRaw;
-                let formattedOpeningDate = parseFrenchDate(regDateRaw);
-
+                // Si une date d'ouverture future existe OU si l'URL d'inscription est absente/fermée
                 if (formattedOpeningDate && formattedOpeningDate > today) {
+                    status = 'Opening Soon';
+                } else if (!organizerUrl || subItem.status === 'Opening Soon' || subItem.status === 'Upcoming') {
                     status = 'Opening Soon';
                 } else {
                     status = 'Open';
                 }
             }
 
-            let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
-            let regDateRaw = regRaw && typeof regRaw === 'object' ? (regRaw.openingDate || regRaw.date || regRaw.opens_at || regRaw.opening_date) : regRaw;
-            let formattedOpeningDate = parseFrenchDate(regDateRaw);
-
-            // Extraction exhaustive du prix
             const extractedPrice = Number(
                 subItem.price || subItem.tarif || subItem.registration_price || subItem.entry_fee || subItem.amount ||
                 trailObj.price || trailObj.tarif || item.price || item.tarif || 0
             );
-
-            const organizerUrl = subItem.url || trailObj.website || trailObj.url || item.url || (subItem.alias ? `https://www.betrail.run/race/${subItem.alias}` : '');
 
             const raceRecord = {
                 title: raceTitle,
