@@ -102,26 +102,32 @@ async function fetchWithPuppeteer(targetUrl) {
         const page = await browser.newPage();
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
 
-        // 1. Charger d'abord la page d'accueil pour obtenir les cookies et contourner la sécurité Cloudflare
-        console.log("🔑 Connexion à l'accueil BeTrail pour initialiser la session...");
-        await page.goto('https://www.betrail.run/', { waitUntil: 'networkidle2', timeout: 60000 });
+        let apiData = null;
 
-        // 2. Exécuter le fetch de l'API directement depuis la session Chrome active
-        console.log("📡 Récupération des données API via le navigateur...");
-        const jsonData = await page.evaluate(async (apiUrl) => {
-            const res = await fetch(apiUrl, {
-                headers: {
-                    'Accept': 'application/json, text/plain, */*'
+        // Écoute de toutes les réponses réseau du navigateur
+        page.on('response', async (response) => {
+            const url = response.url();
+            if (url.includes('/api/events') && response.status() === 200) {
+                try {
+                    apiData = await response.json();
+                } catch (e) {
+                    // Ignorer si la réponse n'est pas du JSON
                 }
-            });
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status} - ${res.statusText}`);
             }
-            return await res.json();
-        }, targetUrl);
+        });
+
+        console.log("🔑 Navigation vers l'API via le navigateur...");
+        // On navigue directement vers l'URL d'API ou de calendrier
+        await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+
+        // Si la réponse n'a pas été capturée via l'écouteur, lire le contenu de la page
+        if (!apiData) {
+            const content = await page.evaluate(() => document.body.innerText || document.body.textContent);
+            apiData = JSON.parse(content);
+        }
 
         await browser.close();
-        return jsonData;
+        return apiData;
     } catch (err) {
         await browser.close();
         throw new Error(`Échec Puppeteer: ${err.message}`);
