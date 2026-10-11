@@ -1,230 +1,523 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { createClient } from '@supabase/supabase-js';
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeeTrack - Gestion de saison Trail & Route</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+    <!-- Leaflet CSS & JS for Interactive Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const scraperApiKey = process.env.SCRAPER_API_KEY;
+    <!-- CSS de MarkerCluster -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
 
-if (!supabaseUrl || !supabaseKey) {
-    console.error("❌ Erreur : Les clés Supabase sont manquantes dans les variables d'environnement.");
-    process.exit(1);
-}
+    <!-- JS de MarkerCluster -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
-if (!scraperApiKey) {
-    console.error("❌ Erreur : La clé SCRAPER_API_KEY est manquante dans les secrets GitHub.");
-    process.exit(1);
-}
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 
-const CACHE_FILE = path.join(__dirname, 'geocode_cache.json');
-let geoCache = {};
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-if (fs.existsSync(CACHE_FILE)) {
-    try {
-        geoCache = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'));
-    } catch (e) {
-        geoCache = {};
-    }
-}
-
-function saveGeoCache() {
-    try {
-        fs.writeFileSync(CACHE_FILE, JSON.stringify(geoCache, null, 2));
-    } catch (e) {}
-}
-
-function parseFrenchDate(dateStr) {
-    if (!dateStr) return null;
- 
-    if (typeof dateStr === 'number' || /^\d{10,13}$/.test(dateStr)) {
-        const timestamp = Number(dateStr) > 1e11 ? Number(dateStr) : Number(dateStr) * 1000;
-        const d = new Date(timestamp);
-        if (!isNaN(d.getTime())) {
-            return d.toISOString().split('T')[0];
-        }
-    }
-
-    let str = String(dateStr).trim();
-
-    if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-        return str.substring(0, 10);
-    }
-
-    const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-    if (dmyMatch) {
-        return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
-    }
-
-    return null;
-}
-
-async function getCachedCoordinates(locationName) {
-    if (!locationName || locationName === 'France') return { lat: null, lng: null };
-    const cleanLocation = locationName.trim().toLowerCase();
-
-    if (geoCache[cleanLocation]) return geoCache[cleanLocation];
-
-    try {
-        const encodedQuery = encodeURIComponent(locationName + ", France");
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&limit=1`, {
-            headers: { 'User-Agent': 'PacePulseScraper/1.0' }
-        });
-        const data = await response.json();
-
-        if (data && data.length > 0) {
-            const coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-            geoCache[cleanLocation] = coords;
-            saveGeoCache();
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            return coords;
-        }
-    } catch (err) {}
-    return { lat: null, lng: null };
-}
-
-async function fetchWithRetry(url, retries = 3, delay = 3000) {
-    for (let i = 0; i < retries; i++) {
-        try {
-            const response = await fetch(url);
-            if (response.ok) {
-                return await response.json();
-            }
-            console.warn(`⚠️ Tentative ${i + 1}/${retries} échouée (Statut ${response.status})....`);
-        } catch (err) {
-            console.warn(`⚠️ Erreur réseau : ${err.message}`);
-        }
-        if (i < retries - 1) {
-            await new Promise(resolve => setTimeout(resolve, delay));
-        }
-    }
-    throw new Error("❌ Échec de la récupération après plusieurs tentatives.");
-}
-
-async function runScraper() {
-    console.log("🚀 Démarrage du scraper PacePulse...");
- 
-    const today = new Date().toISOString().split('T')[0];
-    const currentYear = new Date().getFullYear();
-    console.log(`📅 Date de référence (Aujourd'hui) : ${today}`);
-
-    let rawRaces = [];
-    try {
-        const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
-        const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&render=false&country_code=fr&timeout=60000&url=${encodeURIComponent(targetUrl)}`;
-
-        console.log(`📡 Connexion à l'API via ScraperAPI...`);
-        const json = await fetchWithRetry(scraperApiUrl);
-     
-        const dataContainer = json.body || json;
-        rawRaces = Array.isArray(dataContainer) ? dataContainer : (dataContainer.events || dataContainer.races || dataContainer.data || dataContainer.results || []);
-
-        console.log(`🔍 ${rawRaces.length} événements bruts récupérés.`);
-    } catch (e) {
-        console.error("❌ Erreur lors de la récupération des données source :", e.message);
-        return;
-    }
-
-    let savedCount = 0;
-
-    for (const item of rawRaces) {
-        const trailObj = (item.trail && Array.isArray(item.trail) && item.trail.length > 0) ? item.trail[0] :
-                         (item.trail && typeof item.trail === 'object') ? item.trail : {};
-
-        const location = trailObj.place || trailObj.location || item.place || item.location || item.city || 'France';
-     
-        let lat = Number(trailObj.geo_lat || trailObj.lat || item.geo_lat || item.lat || item.latitude) || null;
-        let lng = Number(trailObj.geo_lon || trailObj.lng || item.geo_lon || item.lon || item.longitude) || null;
-
-        if (!lat || !lng) {
-            const coords = await getCachedCoordinates(location);
-            lat = coords.lat;
-            lng = coords.lng;
-        }
-
-        const subItems = (trailObj.races && Array.isArray(trailObj.races) && trailObj.races.length > 0) ? trailObj.races :
-                         (trailObj.distances && Array.isArray(trailObj.distances) && trailObj.distances.length > 0) ? trailObj.distances :
-                         (item.races && Array.isArray(item.races) && item.races.length > 0) ? item.races : [trailObj];
-
-        for (const subItem of subItems) {
-            const rawDate = subItem.date || subItem.raceDate || subItem.start_date || subItem.time || trailObj.date || item.date;
-            let formattedRaceDate = parseFrenchDate(rawDate);
-            let raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
-
-            let status = 'Open';
-
-            // 1. CAS DES DATES PASSÉES OU MANQUANTES (Report N+1 et statut TBD)
-            if (!formattedRaceDate || formattedRaceDate < today) {
-                if (formattedRaceDate) {
-                    const raceYear = parseInt(formattedRaceDate.split('-')[0]);
-                    if (raceYear < currentYear) {
-                        continue; // Ne conserve pas 2025 ou antérieur
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        emerald: {
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                            900: '#064e3b',
+                        },
+                        darkBg: '#0b0f17',
+                        cardBg: '#131b2e',
+                        borderBg: '#1f293d',
+                        neonYellow: '#eab308'
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
                     }
-                    const parts = formattedRaceDate.split('-');
-                    formattedRaceDate = `${currentYear + 1}-${parts[1]}-${parts[2]}`;
-                } else {
-                    formattedRaceDate = `${currentYear + 1}-08-01`;
                 }
-                raceTitle = raceTitle.replace(String(currentYear), String(currentYear + 1));
-                status = 'TBD';
-            }
-            // 2. CAS DES DATES CONFIRMÉES DANS LE FUTUR
-            else {
-                let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
-                let regDateRaw = regRaw && typeof regRaw === 'object' ? (regRaw.openingDate || regRaw.date || regRaw.opens_at || regRaw.opening_date) : regRaw;
-                let formattedOpeningDate = parseFrenchDate(regDateRaw);
-
-                if (formattedOpeningDate && formattedOpeningDate > today) {
-                    status = 'Opening Soon';
-                } else {
-                    status = 'Open'; // Les courses futures sans date d'ouverture différée sont OUVERTES
-                }
-            }
-
-            let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
-            let regDateRaw = regRaw && typeof regRaw === 'object' ? (regRaw.openingDate || regRaw.date || regRaw.opens_at || regRaw.opening_date) : regRaw;
-            let formattedOpeningDate = parseFrenchDate(regDateRaw);
-
-            const organizerUrl = subItem.url || trailObj.website || trailObj.url || item.url || (subItem.alias ? `https://www.betrail.run/race/${subItem.alias}` : '');
-
-            const raceRecord = {
-                title: raceTitle,
-                category: subItem.category || trailObj.category || item.category || 'Trail',
-                distance: Number(subItem.distance || subItem.length || subItem.km || 0),
-                elevation: Number(subItem.elevation || subItem.denivele || subItem.dplus || 0),
-                location: location,
-                region: item.region || item.state || 'France',
-                lat: lat,
-                lng: lng,
-                price: Number(subItem.price || subItem.tarif || 0),
-                ddi: Number(item.ddi || trailObj.ddi || subItem.ddi) || 3,
-                opening_date: formattedOpeningDate || formattedRaceDate || today,
-                race_date: formattedRaceDate || today,
-                status: status,
-                organizer_url: organizerUrl
-            };
-
-            const { error } = await supabase
-                .from('races')
-                .upsert(raceRecord, { onConflict: 'title,race_date' });
-
-            if (!error) {
-                savedCount++;
-            } else {
-                console.error(`Erreur d'insertion pour "${raceRecord.title}" :`, error.message);
             }
         }
-    }
+    </script>
 
-    console.log(`✅ Fin du script ! ${savedCount} courses enregistrées.`);
-}
+    <style>
+        body {
+            background-color: #0b0f17;
+            color: #f3f4f6;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-image:
+                radial-gradient(circle at 15% 15%, rgba(16, 185, 129, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(234, 179, 8, 0.03) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
 
-runScraper().catch(err => {
-    console.error("❌ Erreur fatale :", err);
-    process.exit(1);
-});
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0b0f17; }
+        ::-webkit-scrollbar-thumb { background: #1f293d; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #10b981; }
+
+        .leaflet-popup-content-wrapper {
+            background-color: #131b2e !important;
+            color: #f3f4f6 !important;
+            border: 1px solid #1f293d;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+        .leaflet-popup-tip { background-color: #131b2e !important; }
+        .leaflet-container { background-color: #0b0f17 !important; font-family: inherit; }
+
+        .glass-panel {
+            background: rgba(19, 27, 46, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- HEADER / NAVIGATION -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-borderBg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-darkBg font-black text-xl shadow-lg shadow-emerald-500/20">
+                    <i class="fa-solid font-bold fa-stopwatch"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-gray-200 to-amber-400 bg-clip-text text-transparent">BeeTrack</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">SEASON COCKPIT</span>
+                    </div>
+                    <p class="text-xs text-gray-400 hidden sm:block">Pilote tes inscriptions, ton budget et ta saison</p>
+                </div>
+            </div>
+
+            <div class="hidden lg:flex items-center space-x-6 text-sm">
+                <div class="flex items-center space-x-2 bg-darkBg/60 px-3 py-1.5 rounded-lg border border-borderBg">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span class="text-gray-400">Budget Favoris :</span>
+                    <span class="font-bold text-amber-400" id="stat-total-budget">0 €</span>
+                </div>
+            </div>
+
+            <!-- MENU DÉROULANT FAVORIS -->
+            <div class="flex items-center space-x-3">
+                <div class="relative">
+                    <select id="favorites-dropdown" onchange="filterByFavoriteSelection(this.value)" class="bg-cardBg hover:bg-borderBg text-gray-200 border border-borderBg px-4 py-2.5 rounded-xl transition duration-200 text-sm focus:outline-none cursor-pointer">
+                        <option value="ALL">♥ Mes Favoris (<span id="fav-count">0</span>)</option>
+                        <option value="ONLY_FAV">Afficher uniquement mes favoris</option>
+                        <option value="ALL">Afficher toutes les courses</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+        <!-- SEARCH & FILTER PANEL -->
+        <section class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-borderBg pb-4">
+                <div>
+                    <h2 class="text-xl font-extrabold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-filter text-emerald-400"></i>
+                        Recherche & Radar
+                    </h2>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="resetFilters()" class="text-xs text-gray-400 hover:text-white underline">Réinitialiser</button>
+                    <span class="text-xs bg-darkBg px-3 py-1.5 rounded-lg border border-borderBg text-gray-300 font-mono">
+                        <span id="filtered-count" class="text-emerald-400 font-bold">0</span> épreuve(s)
+                    </span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Recherche par nom ou ville</label>
+                    <input type="text" id="filter-keyword" oninput="applyFilters()" placeholder="Ex: Saint-Victoire, Chamonix..." class="w-full px-4 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Statut d'ouverture</label>
+                    <select id="filter-status" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white">
+                        <option value="ALL">Tous les statuts</option>
+                        <option value="Open">Ouvertes</option>
+                        <option value="Opening Soon">Prochaines (Bientôt)</option>
+                        <option value="TBD">Date à confirmer par l'organisateur</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Curseurs homogènes -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2 border-t border-borderBg/50">
+                <div>
+                    <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">Distance Max :</span><span id="slider-dist-val" class="text-emerald-400 font-bold">200 km</span></div>
+                    <input type="range" id="filter-distance" min="5" max="200" step="5" value="200" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">D+ Max :</span><span id="slider-elev-val" class="text-emerald-400 font-bold">10 000 m</span></div>
+                    <input type="range" id="filter-elevation" min="0" max="10000" step="250" value="10000" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">Échéance Max :</span><span id="slider-horizon-val" class="text-emerald-400 font-bold">24 mois</span></div>
+                    <input type="range" id="filter-horizon" min="1" max="24" step="1" value="24" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
+                </div>
+            </div>
+        </section>
+
+        <!-- MAP & LIST SECTION -->
+        <section class="space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div class="flex items-center space-x-2 bg-darkBg p-1.5 rounded-xl border border-borderBg">
+                    <button id="btn-view-map" onclick="switchMainView('map')" class="px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-500 text-darkBg shadow">
+                        <i class="fa-solid fa-map-location-dot mr-1"></i> Carte Interactive
+                    </button>
+                    <button id="btn-view-list" onclick="switchMainView('list')" class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-400 hover:text-white">
+                        <i class="fa-solid fa-list-ul mr-1"></i> Liste des Courses
+                    </button>
+                </div>
+            </div>
+
+            <!-- MAP CONTAINER -->
+            <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden">
+                <div id="map" class="w-full h-[500px] rounded-xl z-10"></div>
+            </div>
+
+            <!-- CARDS GRID LIST -->
+            <div id="container-list-view" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden"></div>
+        </section>
+
+    </main>
+
+    <!-- SCRIPT JAVASCRIPT PRINCIPAL -->
+    <script>
+        const SUPABASE_URL = 'https://rjfykmedcxgasduebvbn.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqZnlrbWVkY3hnYXNkdWVidmJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNDI3NjEsImV4cCI6MjEwNjgxODc2MX0.4N9LkjjLno-z_o7NEGQjGdJDFXpzvBzRfzs-vRwv1GA';
+
+        window.dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let racesData = [];
+        let filteredRaces = [];
+        let favorites = JSON.parse(localStorage.getItem('pacepulse_favs') || '[]');
+        let onlyShowFavorites = false;
+        let leafletMap = null;
+        let markerClusterGroup = null;
+        let currentDisplayLimit = 50;
+
+        function initLeafletMap() {
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer) return;
+            leafletMap = L.map('map').setView([46.603354, 1.888334], 6);
+       
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(leafletMap);
+        }
+
+        function toggleFavorite(title, raceDate) {
+            const key = `${title}_${raceDate}`;
+            const index = favorites.indexOf(key);
+            if (index > -1) {
+                favorites.splice(index, 1);
+            } else {
+                favorites.push(key);
+            }
+            localStorage.setItem('pacepulse_favs', JSON.stringify(favorites));
+            updateFavoritesUI();
+            applyFilters();
+        }
+
+        function updateFavoritesUI() {
+            const countElem = document.getElementById('fav-count');
+            if (countElem) countElem.innerText = favorites.length;
+
+            let totalBudget = 0;
+            favorites.forEach(favKey => {
+                const race = racesData.find(r => `${r.title}_${r.raceDate}` === favKey);
+                if (race && race.price > 0) {
+                    totalBudget += race.price;
+                }
+            });
+            const budgetElem = document.getElementById('stat-total-budget');
+            if (budgetElem) budgetElem.innerText = `${totalBudget} €`;
+        }
+
+        function filterByFavoriteSelection(val) {
+            onlyShowFavorites = (val === 'ONLY_FAV');
+            applyFilters();
+        }
+
+        async function fetchRacesFromSupabase() {
+            const { data: races, error } = await window.dbClient
+                .from('races')
+                .select('*')
+                .limit(15000);
+
+            if (error) {
+                console.error("Erreur Supabase :", error.message);
+                return;
+            }
+
+            if (races) {
+                racesData = races.map(r => ({
+                    id: r.id,
+                    title: r.title,
+                    category: r.category || 'Trail',
+                    distance: Number(r.distance) || 0,
+                    elevation: Number(r.elevation) || 0,
+                    location: r.location || 'France',
+                    region: r.region || 'France',
+                    lat: r.lat !== null ? parseFloat(r.lat) : null,
+                    lng: r.lng !== null ? parseFloat(r.lng) : null,
+                    price: parseFloat(r.price) || 0,
+                    openingDate: r.opening_date,
+                    raceDate: r.race_date,
+                    status: r.status,
+                    url: r.organizer_url
+                }));
+
+                updateFavoritesUI();
+                applyFilters();
+            }
+        }
+
+        function updateSliderLabels() {
+            const dist = document.getElementById('filter-distance');
+            const elev = document.getElementById('filter-elevation');
+            const horizon = document.getElementById('filter-horizon');
+
+            if (dist) document.getElementById('slider-dist-val').innerText = dist.value + ' km';
+            if (elev) document.getElementById('slider-elev-val').innerText = elev.value + ' m';
+            if (horizon) document.getElementById('slider-horizon-val').innerText = horizon.value + ' mois';
+        }
+
+        function renderOpeningStatus(raceStatus) {
+            if (raceStatus === 'TBD') {
+                return '<span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-bold">Date à confirmer par l\'organisateur</span>';
+            } else if (raceStatus === 'Open') {
+                return '<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-bold"><i class="fa-solid fa-circle-check mr-1"></i>Ouverte</span>';
+            } else {
+                return '<span class="bg-blue-500/10 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded text-[10px] font-bold"><i class="fa-solid fa-bell mr-1"></i>Prochaines (Bientôt)</span>';
+            }
+        }
+
+        function applyFilters() {
+            const keyword = (document.getElementById('filter-keyword')?.value || '').toLowerCase();
+            const status = document.getElementById('filter-status')?.value || 'ALL';
+            const maxDist = parseInt(document.getElementById('filter-distance')?.value || 200);
+            const maxElev = parseInt(document.getElementById('filter-elevation')?.value || 10000);
+            const maxMonths = parseInt(document.getElementById('filter-horizon')?.value || 24);
+
+            const now = new Date();
+
+            filteredRaces = racesData.filter(r => {
+                const favKey = `${r.title}_${r.raceDate}`;
+                if (onlyShowFavorites && !favorites.includes(favKey)) return false;
+
+                const matchKw = !keyword || r.title.toLowerCase().includes(keyword) || r.location.toLowerCase().includes(keyword);
+               
+                let matchStat = true;
+                if (status !== 'ALL') {
+                    if (status === 'Opening Soon') {
+                        // Inclut à la fois Opening Soon, Upcoming et TBD (toutes les épreuves nécessitant une alerte)
+                        matchStat = (r.status === 'Opening Soon' || r.status === 'Upcoming' || r.status === 'TBD');
+                    } else {
+                        matchStat = (r.status === status);
+                    }
+                }
+             
+                let matchDate = true;
+                if (r.raceDate) {
+                    const rDate = new Date(r.raceDate);
+                    const diffMonths = (rDate.getFullYear() - now.getFullYear()) * 12 + (rDate.getMonth() - now.getMonth());
+                    matchDate = diffMonths >= 0 && diffMonths <= maxMonths;
+                }
+
+                return matchKw && matchStat && matchDate && r.distance <= maxDist && r.elevation <= maxElev;
+            });
+
+            const countElem = document.getElementById('filtered-count');
+            if (countElem) countElem.innerText = filteredRaces.length;
+       
+            renderListView();
+            updateMapMarkers();
+        }
+
+        function updateMapMarkers() {
+            if (!leafletMap) return;
+
+            if (markerClusterGroup) {
+                leafletMap.removeLayer(markerClusterGroup);
+            }
+
+            markerClusterGroup = L.markerClusterGroup({
+                chunkedLoading: true,
+                maxClusterRadius: 35
+            });
+
+            const groupedRaces = {};
+
+            filteredRaces.forEach(race => {
+                const lat = parseFloat(race.lat);
+                const lng = parseFloat(race.lng);
+                if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
+
+                const geoKey = `${lat.toFixed(3)}_${lng.toFixed(3)}`;
+                if (!groupedRaces[geoKey]) groupedRaces[geoKey] = [];
+                groupedRaces[geoKey].push({ ...race, lat, lng });
+            });
+
+            Object.values(groupedRaces).forEach(racesAtLocation => {
+                const mainRace = racesAtLocation[0];
+                let color = mainRace.status === 'Open' ? '#10b981' : (mainRace.status === 'TBD' ? '#f59e0b' : '#3b82f6');
+
+                const customIcon = L.divIcon({
+                    className: 'custom-pin',
+                    html: `<div style="background:${color}; width:14px; height:14px; border-radius:50%; border:2px solid white; box-shadow:0 0 4px rgba(0,0,0,0.5);"></div>`,
+                    iconSize: [14, 14],
+                    iconAnchor: [7, 7]
+                });
+
+                const marker = L.marker([mainRace.lat, mainRace.lng], { icon: customIcon });
+
+                let popupHtml = `<div style="max-height: 220px; overflow-y: auto; padding: 2px; color: #f3f4f6;">`;
+                racesAtLocation.forEach((r, idx) => {
+                    const formattedDate = formatDateFR(r.raceDate || r.race_date);
+                    const statusBadgeHtml = renderOpeningStatus(r.status);
+                    const isFav = favorites.includes(`${r.title}_${r.raceDate}`);
+                    const emailSubject = encodeURIComponent(`Alerte Inscription Course : ${r.title}`);
+                    const emailBody = encodeURIComponent(`Bonjour,\n\nJe souhaite être prévenu de l'ouverture des inscriptions pour la course "${r.title}".\n\nLien de la course : ${r.url || 'N/C'}`);
+
+                    popupHtml += `
+                        <div style="padding-bottom: 8px; margin-bottom: 8px; ${idx < racesAtLocation.length - 1 ? 'border-bottom: 1px solid rgba(255,255,255,0.1);' : ''}">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <strong style="color: #fff; font-size: 13px;">${r.title}</strong>
+                                <button onclick="toggleFavorite('${r.title.replace(/'/g, "\\'")}', '${r.raceDate}')" style="background:none; border:none; color: ${isFav ? '#ef4444' : '#9ca3af'}; cursor:pointer; font-size: 14px;">♥</button>
+                            </div>
+                            <div style="color: #9ca3af; font-size: 11px; margin-top: 3px;">
+                                📅 ${formattedDate} | ${statusBadgeHtml}
+                            </div>
+                            <div style="margin-top: 5px; display: flex; gap: 8px; align-items: center;">
+                                ${r.url ? `<a href="${r.url}" target="_blank" style="color: #34d399; text-decoration: underline; font-size: 11px;">S'inscrire</a>` : ''}
+                                <a href="mailto:?subject=${emailSubject}&body=${emailBody}" style="color: #9ca3af; text-decoration: none; font-size: 11px;"><i class="fa-solid fa-bell"></i> Préviens-moi</a>
+                            </div>
+                        </div>
+                    `;
+                });
+                popupHtml += `</div>`;
+
+                marker.bindPopup(popupHtml);
+                markerClusterGroup.addLayer(marker);
+            });
+
+            leafletMap.addLayer(markerClusterGroup);
+        }
+
+        function formatDateFR(dateStr) {
+            if (!dateStr) return 'Date non communiquée';
+            const d = new Date(dateStr);
+            return isNaN(d.getTime()) ? dateStr : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function renderListView() {
+            const container = document.getElementById('container-list-view');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const racesToRender = filteredRaces.slice(0, currentDisplayLimit);
+
+            racesToRender.forEach(race => {
+                const formattedDate = formatDateFR(race.raceDate);
+                const displayPrice = race.price > 0 ? `${race.price} €` : 'N/C';
+                const isFav = favorites.includes(`${race.title}_${race.raceDate}`);
+                const statusBadge = renderOpeningStatus(race.status);
+
+                const linkBtn = race.url ? `
+                    <a href="${race.url}" target="_blank" class="flex-1 text-center bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold py-2 rounded-xl text-xs transition duration-200 flex items-center justify-center">
+                        <i class="fa-solid fa-arrow-up-right-from-square mr-1.5"></i> S'inscrire
+                    </a>
+                ` : '';
+
+                const emailSubject = encodeURIComponent(`Alerte Inscription Course : ${race.title}`);
+                const emailBody = encodeURIComponent(`Bonjour,\n\nJe souhaite être prévenu de l'ouverture des inscriptions pour la course "${race.title}".\n\nLien de la course : ${race.url || 'N/C'}`);
+
+                const alertBtn = `
+                    <a href="mailto:?subject=${emailSubject}&body=${emailBody}" class="px-3 py-2 rounded-xl text-xs font-semibold border transition duration-200 flex items-center justify-center bg-darkBg text-gray-400 border-borderBg hover:text-white" title="Recevoir un rappel par e-mail">
+                        <i class="fa-solid fa-bell mr-1"></i> Préviens-moi
+                    </a>
+                `;
+
+                const favBtn = `
+                    <button onclick="toggleFavorite('${race.title.replace(/'/g, "\\'")}', '${race.raceDate}')" class="px-3 py-2 rounded-xl text-sm font-bold border transition duration-200 flex items-center justify-center ${isFav ? 'bg-red-500/20 text-red-400 border-red-500/40' : 'bg-darkBg text-gray-400 border-borderBg hover:text-red-400'}">
+                        ♥
+                    </button>
+                `;
+
+                const card = `
+                    <div class="glass-panel p-5 rounded-2xl border border-borderBg flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center text-[10px] font-mono text-gray-400 mb-2">
+                                <span>${race.category}</span>
+                                ${statusBadge}
+                            </div>
+                            <h3 class="text-lg font-bold text-white">${race.title}</h3>
+                            <p class="text-xs text-gray-400 mt-1"><i class="fa-regular fa-calendar mr-1"></i>Course : ${formattedDate}</p>
+                        
+                            <div class="grid grid-cols-3 gap-2 py-3 my-3 border-y border-borderBg text-center text-xs">
+                                <div><span class="block text-gray-500">Dist.</span><span class="font-bold text-white">${race.distance} km</span></div>
+                                <div><span class="block text-gray-500">D+</span><span class="font-bold text-emerald-400">+${race.elevation}m</span></div>
+                                <div><span class="block text-gray-500">Prix</span><span class="font-bold text-amber-400">${displayPrice}</span></div>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 mt-2">
+                            ${linkBtn}
+                            ${alertBtn}
+                            ${favBtn}
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', card);
+            });
+        }
+
+        function resetFilters() {
+            if (document.getElementById('filter-keyword')) document.getElementById('filter-keyword').value = '';
+            if (document.getElementById('filter-status')) document.getElementById('filter-status').value = 'ALL';
+            if (document.getElementById('filter-distance')) document.getElementById('filter-distance').value = 200;
+            if (document.getElementById('filter-elevation')) document.getElementById('filter-elevation').value = 10000;
+            if (document.getElementById('filter-horizon')) document.getElementById('filter-horizon').value = 24;
+            updateSliderLabels();
+            applyFilters();
+        }
+
+        function switchMainView(v) {
+            const mapV = document.getElementById('container-map-view');
+            const listV = document.getElementById('container-list-view');
+            if (mapV && listV) {
+                mapV.classList.toggle('hidden', v !== 'map');
+                listV.classList.toggle('hidden', v !== 'list');
+            }
+            if (v === 'map' && leafletMap) setTimeout(() => leafletMap.invalidateSize(), 200);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initLeafletMap();
+            updateSliderLabels();
+            fetchRacesFromSupabase();
+        });
+    </script>
+</body>
+</html>
