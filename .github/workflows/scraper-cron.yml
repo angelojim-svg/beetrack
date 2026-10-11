@@ -18,11 +18,11 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: |
-          npm install @supabase/supabase-js puppeteer puppeteer-extra puppeteer-extra-plugin-stealth
+        run: npm install axios @supabase/supabase-js
 
       - name: Run Scraper
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SCRAPER_API_KEY: ${{ secrets.SCRAPER_API_KEY }}
         run: node scraper.js
