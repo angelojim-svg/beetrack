@@ -133,10 +133,6 @@ async function runScraper() {
     let savedCount = 0;
 
     for (const item of rawRaces) {
-        // Affiche la structure complète du 1er événement récupéré
-    if (rawRaces.length > 0) {
-        console.log("🔍 STRUCTURE BRUTE D'UN ÉVÉNEMENT BETRAIL :", JSON.stringify(rawRaces[0], null, 2));
-    }
         const trailObj = (item.trail && Array.isArray(item.trail) && item.trail.length > 0) ? item.trail[0] :
                          (item.trail && typeof item.trail === 'object') ? item.trail : {};
 
@@ -160,16 +156,13 @@ async function runScraper() {
             let formattedRaceDate = parseFrenchDate(rawDate);
             let raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
 
-            const organizerUrl = subItem.url || trailObj.website || trailObj.url || item.url || (subItem.alias ? `https://www.betrail.run/race/${subItem.alias}` : '');
-
-            let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
-            let regDateRaw = regRaw && typeof regRaw === 'object' ? (regRaw.openingDate || regRaw.date || regRaw.opens_at || regRaw.opening_date) : regRaw;
-            let formattedOpeningDate = parseFrenchDate(regDateRaw);
+            // Lien direct vers l'inscription si fourni par l'organisateur
+            const directRegistrationUrl = item.registration_url || subItem.registration_url || trailObj.website || null;
 
             let status = 'Open';
 
-            // 1. CAS DES DATES PASSÉES OU MANQUANTES (Report N+1 et statut TBD)
-            if (!formattedRaceDate || formattedRaceDate < today) {
+            // 1. ÉVÉNEMENT PRÉDIT / REPORTÉ -> TBD
+            if (item.predicted === true || item.prediction_status === 'predicted' || !formattedRaceDate || formattedRaceDate < today) {
                 if (formattedRaceDate) {
                     const raceYear = parseInt(formattedRaceDate.split('-')[0]);
                     if (raceYear < currentYear) {
@@ -183,12 +176,10 @@ async function runScraper() {
                 raceTitle = raceTitle.replace(String(currentYear), String(currentYear + 1));
                 status = 'TBD';
             }
-            // 2. CAS DES DATES CONFIRMÉES DANS LE FUTUR
+            // 2. ÉVÉNEMENT CONFIRMÉ DANS LE FUTUR
             else {
-                // Si une date d'ouverture future existe OU si l'URL d'inscription est absente/fermée
-                if (formattedOpeningDate && formattedOpeningDate > today) {
-                    status = 'Opening Soon';
-                } else if (!organizerUrl || subItem.status === 'Opening Soon' || subItem.status === 'Upcoming') {
+                // Si pas de lien d'inscription direct ou betrail_registration à 0 -> 'Opening Soon'
+                if (!directRegistrationUrl || subItem.betrail_registration === 0) {
                     status = 'Opening Soon';
                 } else {
                     status = 'Open';
@@ -211,10 +202,10 @@ async function runScraper() {
                 lng: lng,
                 price: extractedPrice,
                 ddi: Number(item.ddi || trailObj.ddi || subItem.ddi) || 3,
-                opening_date: formattedOpeningDate || formattedRaceDate || today,
+                opening_date: formattedRaceDate || today,
                 race_date: formattedRaceDate || today,
                 status: status,
-                organizer_url: organizerUrl
+                organizer_url: directRegistrationUrl || trailObj.website || (subItem.alias ? `https://www.betrail.run/race/${subItem.alias}` : '')
             };
 
             const { error } = await supabase
