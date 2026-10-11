@@ -314,6 +314,20 @@
             }
         }
 
+        function formatDateFR(dateStr, status = '') {
+            if (!dateStr) return 'Date non communiquée';
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+
+            // Si la date est à confirmer par l'organisateur (TBD), on affiche uniquement le mois et l'année
+            if (status === 'TBD') {
+                return d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+            }
+
+            // Pour les dates confirmées, on garde le jour précis
+            return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
         function applyFilters() {
             const keyword = (document.getElementById('filter-keyword')?.value || '').toLowerCase();
             const status = document.getElementById('filter-status')?.value || 'ALL';
@@ -394,7 +408,7 @@
 
                 let popupHtml = `<div style="max-height: 240px; overflow-y: auto; padding: 2px; color: #f3f4f6;">`;
                 racesAtLocation.forEach((r, idx) => {
-                    const formattedDate = formatDateFR(r.raceDate || r.race_date);
+                    const formattedDate = formatDateFR(r.raceDate || r.race_date, r.status);
                     const statusBadgeHtml = renderOpeningStatus(r.status);
                     const isFav = favorites.includes(`${r.title}_${r.raceDate}`);
                     const displayPrice = r.price > 0 ? `${r.price} €` : 'N/C';
@@ -402,7 +416,6 @@
                     const emailSubject = encodeURIComponent(`Alerte Inscription Course : ${r.title}`);
                     const emailBody = encodeURIComponent(`Bonjour,\n\nJe souhaite être prévenu de l'ouverture des inscriptions pour la course "${r.title}".\n\nLien de la course : ${r.url || 'N/C'}`);
 
-                    // Masquer le bouton "Préviens-moi" si la course est déjà ouverte
                     const showNotifyBtn = r.status !== 'Open';
 
                     popupHtml += `
@@ -433,12 +446,6 @@
             leafletMap.addLayer(markerClusterGroup);
         }
 
-        function formatDateFR(dateStr) {
-            if (!dateStr) return 'Date non communiquée';
-            const d = new Date(dateStr);
-            return isNaN(d.getTime()) ? dateStr : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
-        }
-
         function renderListView() {
             const container = document.getElementById('container-list-view');
             if (!container) return;
@@ -447,7 +454,7 @@
             const racesToRender = filteredRaces.slice(0, currentDisplayLimit);
 
             racesToRender.forEach(race => {
-                const formattedDate = formatDateFR(race.raceDate);
+                const formattedDate = formatDateFR(race.raceDate, race.status);
                 const displayPrice = race.price > 0 ? `${race.price} €` : 'N/C';
                 const isFav = favorites.includes(`${race.title}_${race.raceDate}`);
                 const statusBadge = renderOpeningStatus(race.status);
@@ -461,7 +468,6 @@
                 const emailSubject = encodeURIComponent(`Alerte Inscription Course : ${race.title}`);
                 const emailBody = encodeURIComponent(`Bonjour,\n\nJe souhaite être prévenu de l'ouverture des inscriptions pour la course "${race.title}".\n\nLien de la course : ${race.url || 'N/C'}`);
 
-                // Masquer le bouton "Préviens-moi" si la course est déjà ouverte
                 const alertBtn = race.status !== 'Open' ? `
                     <a href="mailto:?subject=${emailSubject}&body=${emailBody}" class="px-3 py-2 rounded-xl text-xs font-semibold border transition duration-200 flex items-center justify-center bg-darkBg text-gray-400 border-borderBg hover:text-white" title="Recevoir un rappel par e-mail">
                         <i class="fa-solid fa-bell mr-1"></i> Préviens-moi
