@@ -106,10 +106,6 @@ async function fetchWithRetry(url, retries = 3, delay = 3000) {
     throw new Error("❌ Échec de la récupération après plusieurs tentatives (ScraperAPI 500).");
 }
 
-async function fetchOpeningDateFromFinishers(raceTitle, raceDate) {
-    return null;
-}
-
 async function runScraper() {
     console.log("🚀 Démarrage du scraper PacePulse via ScraperAPI...");
  
@@ -184,15 +180,7 @@ async function runScraper() {
             }
 
             let formattedOpeningDate = parseFrenchDate(regDateRaw);
-           
-            // Mise à jour du titre avec l'année décalée et la mention explicite
-            let raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
-            if (isTBD) {
-                raceTitle = raceTitle.replace(String(currentYear), String(currentYear + 1));
-                if (!raceTitle.includes('Date à confirmer')) {
-                    raceTitle += " (Date à confirmer par l'organisateur)";
-                }
-            }
+            const raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
 
             if (formattedOpeningDate && !isTBD) {
                 status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
