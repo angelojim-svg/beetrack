@@ -2,19 +2,16 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
-import puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-
-puppeteer.use(StealthPlugin());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const scraperApiKey = process.env.SCRAPER_API_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-    console.error("❌ Erreur : Les clés Supabase sont manquantes dans les variables d'environnement.");
+if (!supabaseUrl || !supabaseKey || !scraperApiKey) {
+    console.error("❌ Erreur : Les clés Supabase ou la SCRAPER_API_KEY sont manquantes dans les variables d'environnement.");
     process.exit(1);
 }
 
@@ -86,80 +83,8 @@ async function getCachedCoordinates(locationName) {
     return { lat: null, lng: null };
 }
 
-async function fetchWithPuppeteer() {
-    console.log("🌐 Lancement de Chrome Stealth...");
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-blink-features=AutomationControlled'
-        ]
-    });
-
-    try {
-        const page = await browser.newPage();
-       
-        // Configuration d'un User-Agent et de la taille d'écran d'un vrai PC
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
-        await page.setViewport({ width: 1280, height: 800 });
-
-        let apiData = null;
-
-        // 1. Interception automatique de la réponse API de l'application
-        page.on('response', async (response) => {
-            const url = response.url();
-            if ((url.includes('/api/') || url.includes('events')) && response.status() === 200) {
-                try {
-                    const json = await response.json();
-                    if (json && (Array.isArray(json) || json.events || json.body || json.races || json.data)) {
-                        apiData = json;
-                    }
-                } catch (e) {}
-            }
-        });
-
-        console.log("🔑 Navigation vers la page d'accueil BeTrail...");
-        await page.goto('https://www.betrail.run/', { waitUntil: 'networkidle2', timeout: 60000 });
-
-        console.log("📅 Navigation vers le calendrier...");
-        await page.goto('https://www.betrail.run/calendar', { waitUntil: 'networkidle2', timeout: 60000 });
-
-        // Simuler un léger défilement vers le bas pour déclencher le chargement dynamique des cartes de courses
-        await page.evaluate(() => window.scrollBy(0, 400));
-        await new Promise(resolve => setTimeout(resolve, 4000));
-
-        // 2. Si l'API XHR n'est pas interceptée, extraire les données injectées directement dans l'état Next.js
-        if (!apiData) {
-            console.log("📦 Extraction depuis le state DOM de l'application...");
-            apiData = await page.evaluate(() => {
-                const nextScript = document.getElementById('__NEXT_DATA__');
-                if (nextScript) {
-                    try {
-                        const parsed = JSON.parse(nextScript.textContent);
-                        return parsed.props?.pageProps?.events || parsed.props?.pageProps || null;
-                    } catch (e) {}
-                }
-                return null;
-            });
-        }
-
-        if (!apiData) {
-            throw new Error("Impossible d'extraire les données : la protection Cloudflare bloque l'accès IP.");
-        }
-
-        await browser.close();
-        return apiData;
-    } catch (err) {
-        await browser.close();
-        throw new Error(`Échec Puppeteer: ${err.message}`);
-    }
-}
-
-
-
 async function runScraper() {
-    console.log("🚀 Démarrage du scraper PacePulse (Puppeteer Stealth 100% Gratuit)...");
+    console.log("🚀 Démarrage du scraper PacePulse via ScraperAPI...");
  
     const today = new Date().toISOString().split('T')[0];
     const currentYear = new Date().getFullYear();
@@ -167,9 +92,16 @@ async function runScraper() {
 
     let rawRaces = [];
     try {
-        console.log(`📡 Connexion à BeTrail via navigateur Chrome...`);
-        const json = await fetchWithPuppeteer();
-     
+        const targetUrl = `https://www.betrail.run/api/events?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
+        const scraperApiUrl = `http://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(targetUrl)}&render=true&premium=true`;
+
+        console.log(`📡 Connexion à l'API BeTrail via ScraperAPI (contournement Cloudflare)...`);
+        const response = await fetch(scraperApiUrl);
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP ScraperAPI: ${response.status}`);
+        }
+
+        const json = await response.json();
         const dataContainer = json.body || json;
         rawRaces = Array.isArray(dataContainer) ? dataContainer : (dataContainer.events || dataContainer.races || dataContainer.data || dataContainer.results || []);
 
@@ -264,7 +196,7 @@ async function runScraper() {
         }
     }
 
-    console.log(`✅ Succès ! ${savedCount} courses enregistrées dans Supabase.`);
+    console.log(`✅ Fin du script ! ${savedCount} courses enregistrées dans Supabase.`);
 }
 
 runScraper().catch(err => {
