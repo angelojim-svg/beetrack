@@ -133,6 +133,10 @@ async function runScraper() {
     let savedCount = 0;
 
     for (const item of rawRaces) {
+        // Affiche la structure complète du 1er événement récupéré
+    if (rawRaces.length > 0) {
+        console.log("🔍 STRUCTURE BRUTE D'UN ÉVÉNEMENT BETRAIL :", JSON.stringify(rawRaces[0], null, 2));
+    }
         const trailObj = (item.trail && Array.isArray(item.trail) && item.trail.length > 0) ? item.trail[0] :
                          (item.trail && typeof item.trail === 'object') ? item.trail : {};
 
