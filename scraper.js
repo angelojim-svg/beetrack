@@ -2,12 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+
+puppeteer.use(StealthPlugin());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// URL de ton proxy Cloudflare Worker gratuit
-const CLOUDFLARE_PROXY_URL = "https://soft-queen-da71.angelo-jim.workers.dev";
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -85,53 +86,36 @@ async function getCachedCoordinates(locationName) {
     return { lat: null, lng: null };
 }
 
-async function fetchWithRetry(url, retries = 3, delay = 3000) {
-    for (let i = 0; i < retries; i++) {
-        try {
-            const response = await fetch(url);
-            if (response.ok) {
-                return await response.json();
-            }
-            console.warn(`⚠️ Tentative ${i + 1}/${retries} échouée (Statut ${response.status})...`);
-        } catch (err) {
-            console.warn(`⚠️ Erreur réseau : ${err.message}`);
-        }
-        if (i < retries - 1) {
-            await new Promise(resolve => setTimeout(resolve, delay));
-        }
-    }
-    throw new Error("❌ Échec de la récupération après plusieurs tentatives.");
-}
+// Fonction Puppeteer pour charger l'URL avec un vrai navigateur
+async function fetchWithPuppeteer(targetUrl) {
+    console.log("🌐 Lancement de Chrome Stealth...");
+    const browser = await puppeteer.launch({
+        headless: true,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-blink-features=AutomationControlled'
+        ]
+    });
 
-// Rech. complémentaire sur Finishers via proxy
-async function fetchFinishersData(raceTitle) {
-    if (!raceTitle) return null;
-    const cleanName = raceTitle.split('-')[0].replace(/\d{4}/g, '').trim();
-   
     try {
-        const targetUrl = `https://www.finishers.com/api/search?q=${encodeURIComponent(cleanName)}`;
-        const proxyUrl = `${CLOUDFLARE_PROXY_URL}?url=${encodeURIComponent(targetUrl)}`;
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
        
-        const response = await fetch(proxyUrl);
-        if (!response.ok) return null;
-       
-        const data = await response.json();
-        const results = data.results || data.events || data || [];
-       
-        if (Array.isArray(results) && results.length > 0) {
-            const match = results[0];
-            return {
-                openingDate: parseFrenchDate(match.registration_opening_date || match.opening_date || match.registration_starts_at),
-                isOpen: match.is_registration_open || match.isOpen || false,
-                registrationUrl: match.registration_url || match.url || null
-            };
-        }
-    } catch (err) {}
-    return null;
+        await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+
+        const content = await page.evaluate(() => document.body.innerText);
+        await browser.close();
+
+        return JSON.parse(content);
+    } catch (err) {
+        await browser.close();
+        throw new Error(`Échec Puppeteer: ${err.message}`);
+    }
 }
 
 async function runScraper() {
-    console.log("🚀 Démarrage du scraper PacePulse (Node.js 22 + Cloudflare Proxy)...");
+    console.log("🚀 Démarrage du scraper PacePulse (Puppeteer Stealth 100% Gratuit)...");
  
     const today = new Date().toISOString().split('T')[0];
     const currentYear = new Date().getFullYear();
@@ -140,10 +124,9 @@ async function runScraper() {
     let rawRaces = [];
     try {
         const targetUrl = `https://www.betrail.run/api/events?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
-        const proxyUrl = `${CLOUDFLARE_PROXY_URL}?url=${encodeURIComponent(targetUrl)}`;
 
-        console.log(`📡 Connexion à l'API BeTrail via Cloudflare Proxy...`);
-        const json = await fetchWithRetry(proxyUrl);
+        console.log(`📡 Navigation vers l'API BeTrail via navigateur Chrome réel...`);
+        const json = await fetchWithPuppeteer(targetUrl);
      
         const dataContainer = json.body || json;
         rawRaces = Array.isArray(dataContainer) ? dataContainer : (dataContainer.events || dataContainer.races || dataContainer.data || dataContainer.results || []);
@@ -201,25 +184,10 @@ async function runScraper() {
             }
             // 2. ÉVÉNEMENT CONFIRMÉ DANS LE FUTUR
             else {
-                const finisherData = await fetchFinishersData(raceTitle);
-               
-                if (finisherData) {
-                    if (finisherData.openingDate) formattedOpeningDate = finisherData.openingDate;
-                    if (finisherData.registrationUrl) directRegistrationUrl = finisherData.registrationUrl;
-                   
-                    if (finisherData.isOpen) {
-                        status = 'Open';
-                    } else if (formattedOpeningDate && formattedOpeningDate > today) {
-                        status = 'Opening Soon';
-                    } else {
-                        status = directRegistrationUrl ? 'Open' : 'Opening Soon';
-                    }
+                if (directRegistrationUrl || subItem.betrail_registration === 1) {
+                    status = 'Open';
                 } else {
-                    if (directRegistrationUrl || subItem.betrail_registration === 1) {
-                        status = 'Open';
-                    } else {
-                        status = 'Opening Soon';
-                    }
+                    status = 'Opening Soon';
                 }
             }
 
@@ -257,7 +225,7 @@ async function runScraper() {
         }
     }
 
-    console.log(`✅ Fin du script ! ${savedCount} courses enregistrées dans Supabase.`);
+    console.log(`✅ Succès ! ${savedCount} courses enregistrées dans Supabase.`);
 }
 
 runScraper().catch(err => {
