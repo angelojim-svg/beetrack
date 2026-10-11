@@ -99,14 +99,17 @@ async function fetchWithPuppeteer() {
 
     try {
         const page = await browser.newPage();
+       
+        // Configuration d'un User-Agent et de la taille d'écran d'un vrai PC
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
+        await page.setViewport({ width: 1280, height: 800 });
 
         let apiData = null;
 
-        // 1. Écouteur réseau pour intercepter automatiquement les requêtes /api/events
+        // 1. Interception automatique de la réponse API de l'application
         page.on('response', async (response) => {
             const url = response.url();
-            if ((url.includes('/api/events') || url.includes('/api/events-drizzle')) && response.status() === 200) {
+            if ((url.includes('/api/') || url.includes('events')) && response.status() === 200) {
                 try {
                     const json = await response.json();
                     if (json && (Array.isArray(json) || json.events || json.body || json.races || json.data)) {
@@ -116,31 +119,33 @@ async function fetchWithPuppeteer() {
             }
         });
 
-        console.log("🔑 Navigation vers le calendrier BeTrail...");
-        await page.goto('https://www.betrail.run/calendar', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        console.log("🔑 Navigation vers la page d'accueil BeTrail...");
+        await page.goto('https://www.betrail.run/', { waitUntil: 'networkidle2', timeout: 60000 });
 
-        // Attente de 5 secondes pour laisser charger les scripts de session
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        console.log("📅 Navigation vers le calendrier...");
+        await page.goto('https://www.betrail.run/calendar', { waitUntil: 'networkidle2', timeout: 60000 });
 
-        // 2. Si non intercepté, effectuer le fetch directement depuis la session Chrome établie
+        // Simuler un léger défilement vers le bas pour déclencher le chargement dynamique des cartes de courses
+        await page.evaluate(() => window.scrollBy(0, 400));
+        await new Promise(resolve => setTimeout(resolve, 4000));
+
+        // 2. Si l'API XHR n'est pas interceptée, extraire les données injectées directement dans l'état Next.js
         if (!apiData) {
-            console.log("📡 Exécution du fetch depuis le contexte utilisateur authentifié...");
-            apiData = await page.evaluate(async () => {
-                const today = new Date().toISOString().split('T')[0];
-                const apiUrl = `https://www.betrail.run/api/events?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
-               
-                const response = await fetch(apiUrl, {
-                    headers: {
-                        'Accept': 'application/json, text/plain, */*',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP Error ${response.status}`);
+            console.log("📦 Extraction depuis le state DOM de l'application...");
+            apiData = await page.evaluate(() => {
+                const nextScript = document.getElementById('__NEXT_DATA__');
+                if (nextScript) {
+                    try {
+                        const parsed = JSON.parse(nextScript.textContent);
+                        return parsed.props?.pageProps?.events || parsed.props?.pageProps || null;
+                    } catch (e) {}
                 }
-                return await response.json();
+                return null;
             });
+        }
+
+        if (!apiData) {
+            throw new Error("Impossible d'extraire les données : la protection Cloudflare bloque l'accès IP.");
         }
 
         await browser.close();
@@ -150,6 +155,7 @@ async function fetchWithPuppeteer() {
         throw new Error(`Échec Puppeteer: ${err.message}`);
     }
 }
+
 
 
 async function runScraper() {
