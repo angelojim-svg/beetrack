@@ -103,7 +103,7 @@ async function fetchWithPuppeteer() {
 
         let apiData = null;
 
-        // 1. Écoute passive des requêtes API interceptées pendant le chargement
+        // 1. Écouteur réseau pour intercepter automatiquement les requêtes /api/events
         page.on('response', async (response) => {
             const url = response.url();
             if ((url.includes('/api/events') || url.includes('/api/events-drizzle')) && response.status() === 200) {
@@ -117,32 +117,30 @@ async function fetchWithPuppeteer() {
         });
 
         console.log("🔑 Navigation vers le calendrier BeTrail...");
-        await page.goto('https://www.betrail.run/calendar', { waitUntil: 'networkidle2', timeout: 60000 });
+        await page.goto('https://www.betrail.run/calendar', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-        // Attente active pour laisser le temps aux requêtes asynchrones de se terminer
-        let attempts = 0;
-        while (!apiData && attempts < 10) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            attempts++;
-        }
+        // Attente de 5 secondes pour laisser charger les scripts de session
+        await new Promise(resolve => setTimeout(resolve, 5000));
 
-        // 2. Extraction de secours depuis la balise __NEXT_DATA__
+        // 2. Si non intercepté, effectuer le fetch directement depuis la session Chrome établie
         if (!apiData) {
-            console.log("📦 Extraction des données depuis le DOM (__NEXT_DATA__)...");
-            apiData = await page.evaluate(() => {
-                const script = document.getElementById('__NEXT_DATA__');
-                if (script) {
-                    try {
-                        const parsed = JSON.parse(script.textContent);
-                        return parsed.props?.pageProps?.events || parsed.props?.pageProps || null;
-                    } catch (e) {}
+            console.log("📡 Exécution du fetch depuis le contexte utilisateur authentifié...");
+            apiData = await page.evaluate(async () => {
+                const today = new Date().toISOString().split('T')[0];
+                const apiUrl = `https://www.betrail.run/api/events?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
+               
+                const response = await fetch(apiUrl, {
+                    headers: {
+                        'Accept': 'application/json, text/plain, */*',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP Error ${response.status}`);
                 }
-                return null;
+                return await response.json();
             });
-        }
-
-        if (!apiData) {
-            throw new Error("Impossible d'extraire les données JSON de BeTrail.");
         }
 
         await browser.close();
@@ -152,6 +150,7 @@ async function fetchWithPuppeteer() {
         throw new Error(`Échec Puppeteer: ${err.message}`);
     }
 }
+
 
 async function runScraper() {
     console.log("🚀 Démarrage du scraper PacePulse (Puppeteer Stealth 100% Gratuit)...");
