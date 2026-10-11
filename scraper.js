@@ -103,7 +103,7 @@ async function fetchWithRetry(url, retries = 3, delay = 3000) {
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
-    throw new Error("❌ Échec de la récupération après plusieurs tentatives.");
+    throw new Error("❌ Échec de la récupération après plusieurs tentatives (ScraperAPI 500).");
 }
 
 async function runScraper() {
@@ -115,7 +115,8 @@ async function runScraper() {
 
     let rawRaces = [];
     try {
-        const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2027-12-31&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
+        // Retour à l'URL d'origine stable avec predicted=1
+        const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
         const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&render=false&country_code=fr&timeout=60000&url=${encodeURIComponent(targetUrl)}`;
 
         console.log(`📡 Connexion à l'API via ScraperAPI...`);
@@ -130,7 +131,6 @@ async function runScraper() {
         return;
     }
 
-    // Récupérer les titres de courses qui ont déjà une date future confirmée
     const confirmedTitlesFuture = new Set();
     for (const item of rawRaces) {
         const trailObj = (item.trail && Array.isArray(item.trail) && item.trail.length > 0) ? item.trail[0] : (item.trail || {});
@@ -172,41 +172,27 @@ async function runScraper() {
             const raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
             const cleanTitle = raceTitle.trim().toLowerCase();
 
-            let isTBD = false;
             let status = subItem.status || trailObj.status || item.status || 'Upcoming';
 
-            // CAS 1 : La date est absente ou déjà passée
             if (!formattedRaceDate || formattedRaceDate < today) {
-                // Si la course a déjà une version future confirmée, on évite le doublon TBD
                 if (confirmedTitlesFuture.has(cleanTitle)) {
                     continue;
                 }
 
-                // Si l'année est antérieure à l'année courante (ex: 2025), on ignore
                 if (formattedRaceDate) {
                     const raceYear = parseInt(formattedRaceDate.split('-')[0]);
                     if (raceYear < currentYear) {
                         continue;
                     }
-                }
-
-                isTBD = true;
-                if (formattedRaceDate) {
                     const parts = formattedRaceDate.split('-');
-                    // Décale la date de 2026 à 2027
                     formattedRaceDate = `${currentYear + 1}-${parts[1]}-${parts[2]}`;
                 } else {
                     formattedRaceDate = `${currentYear + 1}-08-01`;
                 }
                 status = 'TBD';
-            }
-            // CAS 2 : La date est connue et à venir
-            else {
+            } else {
                 let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
-                let regDateRaw = null;
-                if (regRaw) {
-                    regDateRaw = typeof regRaw === 'object' ? (regRaw.openingDate || regRaw.date || regRaw.opens_at || regRaw.opening_date) : regRaw;
-                }
+                let regDateRaw = regRaw && typeof regRaw === 'object' ? (regRaw.openingDate || regRaw.date || regRaw.opens_at || regRaw.opening_date) : regRaw;
                 let formattedOpeningDate = parseFrenchDate(regDateRaw);
 
                 if (formattedOpeningDate && formattedOpeningDate <= today) {
@@ -214,7 +200,7 @@ async function runScraper() {
                 } else if (formattedOpeningDate && formattedOpeningDate > today) {
                     status = 'Opening Soon';
                 } else {
-                    status = 'Open'; // Statut par défaut pour les courses futures enregistrées sans date d'ouverture spécifique
+                    status = 'Open';
                 }
             }
 
