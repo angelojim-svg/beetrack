@@ -17,14 +17,11 @@ jobs:
         with:
           node-version: '22'
 
-      # C'est cette ligne qu'il faut corriger pour ajouter axios :
       - name: Install dependencies
-        run: npm install axios @supabase/supabase-js
+        run: npm install @supabase/supabase-js
 
       - name: Run Scraper
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          SCRAPER_API_KEY: ${{ secrets.SCRAPER_API_KEY }}
         run: node scraper.js
-
