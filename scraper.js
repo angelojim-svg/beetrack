@@ -103,7 +103,7 @@ async function fetchWithPuppeteer() {
 
         let apiData = null;
 
-        // Écouteur de réponses réseau pour intercepter les requêtes API réelles
+        // 1. Écoute passive des requêtes API interceptées pendant le chargement
         page.on('response', async (response) => {
             const url = response.url();
             if ((url.includes('/api/events') || url.includes('/api/events-drizzle')) && response.status() === 200) {
@@ -112,27 +112,37 @@ async function fetchWithPuppeteer() {
                     if (json && (Array.isArray(json) || json.events || json.body || json.races || json.data)) {
                         apiData = json;
                     }
-                } catch (e) {
-                    // Ignorer les réponses non-JSON
-                }
+                } catch (e) {}
             }
         });
 
         console.log("🔑 Navigation vers le calendrier BeTrail...");
         await page.goto('https://www.betrail.run/calendar', { waitUntil: 'networkidle2', timeout: 60000 });
 
-        // Attente courte au cas où la requête réseau met un peu de temps à arriver
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // Attente active pour laisser le temps aux requêtes asynchrones de se terminer
+        let attempts = 0;
+        while (!apiData && attempts < 10) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            attempts++;
+        }
 
-        // Si la réponse n'a pas été capturée automatiquement, tenter un fetch direct depuis le contexte actif
+        // 2. Extraction de secours depuis la balise __NEXT_DATA__
         if (!apiData) {
-            console.log("📡 Récupération manuelle des données depuis le contexte actif...");
-            apiData = await page.evaluate(async () => {
-                const today = new Date().toISOString().split('T')[0];
-                const target = `https://www.betrail.run/api/events?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
-                const res = await fetch(target);
-                return await res.json();
+            console.log("📦 Extraction des données depuis le DOM (__NEXT_DATA__)...");
+            apiData = await page.evaluate(() => {
+                const script = document.getElementById('__NEXT_DATA__');
+                if (script) {
+                    try {
+                        const parsed = JSON.parse(script.textContent);
+                        return parsed.props?.pageProps?.events || parsed.props?.pageProps || null;
+                    } catch (e) {}
+                }
+                return null;
             });
+        }
+
+        if (!apiData) {
+            throw new Error("Impossible d'extraire les données JSON de BeTrail.");
         }
 
         await browser.close();
@@ -194,7 +204,6 @@ async function runScraper() {
             let formattedOpeningDate = null;
             let status = 'Open';
 
-            // 1. ÉVÉNEMENT PRÉDIT / REPORTÉ -> TBD
             if (item.predicted === true || item.prediction_status === 'predicted' || !formattedRaceDate || formattedRaceDate < today) {
                 if (formattedRaceDate) {
                     const raceYear = parseInt(formattedRaceDate.split('-')[0]);
@@ -208,9 +217,7 @@ async function runScraper() {
                 }
                 raceTitle = raceTitle.replace(String(currentYear), String(currentYear + 1));
                 status = 'TBD';
-            }
-            // 2. ÉVÉNEMENT CONFIRMÉ DANS LE FUTUR
-            else {
+            } else {
                 if (directRegistrationUrl || subItem.betrail_registration === 1) {
                     status = 'Open';
                 } else {
