@@ -8,15 +8,9 @@ const __dirname = path.dirname(__filename);
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const scraperApiKey = process.env.SCRAPER_API_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
     console.error("❌ Erreur : Les clés Supabase sont manquantes dans les variables d'environnement.");
-    process.exit(1);
-}
-
-if (!scraperApiKey) {
-    console.error("❌ Erreur : La clé SCRAPER_API_KEY est manquante dans les secrets GitHub.");
     process.exit(1);
 }
 
@@ -88,14 +82,20 @@ async function getCachedCoordinates(locationName) {
     return { lat: null, lng: null };
 }
 
-async function fetchWithRetry(url, retries = 3, delay = 3000) {
+async function fetchDirect(url, retries = 3, delay = 3000) {
     for (let i = 0; i < retries; i++) {
         try {
-            const response = await fetch(url);
+            const response = await fetch(url, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/json',
+                    'Referer': 'https://www.betrail.run/'
+                }
+            });
             if (response.ok) {
                 return await response.json();
             }
-            console.warn(`⚠️ Tentative ${i + 1}/${retries} échouée (Statut ${response.status})....`);
+            console.warn(`⚠️ Tentative ${i + 1}/${retries} échouée (Statut ${response.status})...`);
         } catch (err) {
             console.warn(`⚠️ Erreur réseau : ${err.message}`);
         }
@@ -103,41 +103,11 @@ async function fetchWithRetry(url, retries = 3, delay = 3000) {
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
-    throw new Error("❌ Échec de la récupération après plusieurs tentatives.");
-}
-
-// FUNCTION DE TEST D'ANALYSE FINISHERS
-async function testFinishersLog() {
-    console.log("🧪 --- TEST D'ANALYSE DE L'API FINISHERS ---");
-    const testQuery = "Trail de Sainte Victoire";
-   
-    const targetUrl = `https://www.finishers.com/api/search?q=${encodeURIComponent(testQuery)}`;
-    const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&render=false&country_code=fr&timeout=20000&url=${encodeURIComponent(targetUrl)}`;
-   
-    console.log(`📡 Appel de : ${targetUrl}`);
-    try {
-        const res = await fetch(scraperApiUrl);
-        console.log(`📊 Statut HTTP : ${res.status}`);
-        const text = await res.text();
-        console.log("📝 Réponse brute (500 premiers caractères) :", text.substring(0, 500));
-       
-        try {
-            const json = JSON.parse(text);
-            console.log("🔍 Structure JSON complète :", JSON.stringify(json, null, 2));
-        } catch (e) {
-            console.error("❌ La réponse n'est pas un JSON valide !");
-        }
-    } catch (err) {
-        console.error("❌ Erreur réseau lors du test Finishers :", err.message);
-    }
-    console.log("------------------------------------------");
+    throw new Error("❌ Échec de la récupération directe après plusieurs tentatives.");
 }
 
 async function runScraper() {
-    // Exécution du test au lancement
-    await testFinishersLog();
-
-    console.log("🚀 Démarrage du scraper PacePulse...");
+    console.log("🚀 Démarrage du scraper PacePulse (100% Gratuit / Direct)...");
  
     const today = new Date().toISOString().split('T')[0];
     const currentYear = new Date().getFullYear();
@@ -146,10 +116,9 @@ async function runScraper() {
     let rawRaces = [];
     try {
         const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
-        const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&render=false&country_code=fr&timeout=60000&url=${encodeURIComponent(targetUrl)}`;
 
-        console.log(`📡 Connexion à l'API via ScraperAPI...`);
-        const json = await fetchWithRetry(scraperApiUrl);
+        console.log(`📡 Connexion directe à l'API BeTrail...`);
+        const json = await fetchDirect(targetUrl);
      
         const dataContainer = json.body || json;
         rawRaces = Array.isArray(dataContainer) ? dataContainer : (dataContainer.events || dataContainer.races || dataContainer.data || dataContainer.results || []);
@@ -190,6 +159,7 @@ async function runScraper() {
 
             let status = 'Open';
 
+            // 1. ÉVÉNEMENT PRÉDIT / REPORTÉ -> TBD
             if (item.predicted === true || item.prediction_status === 'predicted' || !formattedRaceDate || formattedRaceDate < today) {
                 if (formattedRaceDate) {
                     const raceYear = parseInt(formattedRaceDate.split('-')[0]);
@@ -204,6 +174,7 @@ async function runScraper() {
                 raceTitle = raceTitle.replace(String(currentYear), String(currentYear + 1));
                 status = 'TBD';
             }
+            // 2. ÉVÉNEMENT CONFIRMÉ DANS LE FUTUR
             else {
                 if (!item.registration_url && subItem.betrail_registration === 0) {
                     status = 'Opening Soon';
