@@ -6,6 +6,9 @@ import { createClient } from '@supabase/supabase-js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// URL de ton proxy Cloudflare Worker gratuit
+const CLOUDFLARE_PROXY_URL = "https://soft-queen-da71.angelo-jim.workers.dev";
+
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -82,16 +85,10 @@ async function getCachedCoordinates(locationName) {
     return { lat: null, lng: null };
 }
 
-async function fetchDirect(url, retries = 3, delay = 3000) {
+async function fetchWithRetry(url, retries = 3, delay = 3000) {
     for (let i = 0; i < retries; i++) {
         try {
-            const response = await fetch(url, {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept': 'application/json',
-                    'Referer': 'https://www.betrail.run/'
-                }
-            });
+            const response = await fetch(url);
             if (response.ok) {
                 return await response.json();
             }
@@ -103,11 +100,38 @@ async function fetchDirect(url, retries = 3, delay = 3000) {
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
-    throw new Error("❌ Échec de la récupération directe après plusieurs tentatives.");
+    throw new Error("❌ Échec de la récupération après plusieurs tentatives.");
+}
+
+// Recherche complémentaire sur Finishers via proxy
+async function fetchFinishersData(raceTitle) {
+    if (!raceTitle) return null;
+    const cleanName = raceTitle.split('-')[0].replace(/\d{4}/g, '').trim();
+   
+    try {
+        const targetUrl = `https://www.finishers.com/api/search?q=${encodeURIComponent(cleanName)}`;
+        const proxyUrl = `${CLOUDFLARE_PROXY_URL}?url=${encodeURIComponent(targetUrl)}`;
+       
+        const response = await fetch(proxyUrl);
+        if (!response.ok) return null;
+       
+        const data = await response.json();
+        const results = data.results || data.events || data || [];
+       
+        if (Array.isArray(results) && results.length > 0) {
+            const match = results[0];
+            return {
+                openingDate: parseFrenchDate(match.registration_opening_date || match.opening_date || match.registration_starts_at),
+                isOpen: match.is_registration_open || match.isOpen || false,
+                registrationUrl: match.registration_url || match.url || null
+            };
+        }
+    } catch (err) {}
+    return null;
 }
 
 async function runScraper() {
-    console.log("🚀 Démarrage du scraper PacePulse (100% Gratuit / Direct)...");
+    console.log("🚀 Démarrage du scraper PacePulse (Proxy Cloudflare 100% Gratuit)...");
  
     const today = new Date().toISOString().split('T')[0];
     const currentYear = new Date().getFullYear();
@@ -116,9 +140,10 @@ async function runScraper() {
     let rawRaces = [];
     try {
         const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
+        const proxyUrl = `${CLOUDFLARE_PROXY_URL}?url=${encodeURIComponent(targetUrl)}`;
 
-        console.log(`📡 Connexion directe à l'API BeTrail...`);
-        const json = await fetchDirect(targetUrl);
+        console.log(`📡 Connexion à l'API BeTrail via Cloudflare Proxy...`);
+        const json = await fetchWithRetry(proxyUrl);
      
         const dataContainer = json.body || json;
         rawRaces = Array.isArray(dataContainer) ? dataContainer : (dataContainer.events || dataContainer.races || dataContainer.data || dataContainer.results || []);
@@ -155,8 +180,8 @@ async function runScraper() {
             let formattedRaceDate = parseFrenchDate(rawDate);
             let raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
 
-            const organizerUrl = item.registration_url || subItem.registration_url || trailObj.website || item.url || (subItem.alias ? `https://www.betrail.run/race/${subItem.alias}` : '');
-
+            let directRegistrationUrl = item.registration_url || subItem.registration_url || trailObj.website || null;
+            let formattedOpeningDate = null;
             let status = 'Open';
 
             // 1. ÉVÉNEMENT PRÉDIT / REPORTÉ -> TBD
@@ -176,10 +201,27 @@ async function runScraper() {
             }
             // 2. ÉVÉNEMENT CONFIRMÉ DANS LE FUTUR
             else {
-                if (!item.registration_url && subItem.betrail_registration === 0) {
-                    status = 'Opening Soon';
+                // Tente l'enrichissement par Finishers pour récupérer les vraies dates si non présentes
+                const finisherData = await fetchFinishersData(raceTitle);
+               
+                if (finisherData) {
+                    if (finisherData.openingDate) formattedOpeningDate = finisherData.openingDate;
+                    if (finisherData.registrationUrl) directRegistrationUrl = finisherData.registrationUrl;
+                   
+                    if (finisherData.isOpen) {
+                        status = 'Open';
+                    } else if (formattedOpeningDate && formattedOpeningDate > today) {
+                        status = 'Opening Soon';
+                    } else {
+                        status = directRegistrationUrl ? 'Open' : 'Opening Soon';
+                    }
                 } else {
-                    status = 'Open';
+                    // Fallback sur métadonnées BeTrail
+                    if (directRegistrationUrl || subItem.betrail_registration === 1) {
+                        status = 'Open';
+                    } else {
+                        status = 'Opening Soon';
+                    }
                 }
             }
 
@@ -199,10 +241,10 @@ async function runScraper() {
                 lng: lng,
                 price: extractedPrice,
                 ddi: Number(item.ddi || trailObj.ddi || subItem.ddi) || 3,
-                opening_date: formattedRaceDate || today,
+                opening_date: formattedOpeningDate || formattedRaceDate || today,
                 race_date: formattedRaceDate || today,
                 status: status,
-                organizer_url: organizerUrl
+                organizer_url: directRegistrationUrl || trailObj.website || (subItem.alias ? `https://www.betrail.run/race/${subItem.alias}` : '')
             };
 
             const { error } = await supabase
