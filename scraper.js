@@ -2,19 +2,16 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
-import puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-
-puppeteer.use(StealthPlugin());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const scraperApiKey = process.env.SCRAPER_API_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-    console.error("❌ Erreur : Les clés Supabase sont manquantes dans les variables d'environnement.");
+if (!supabaseUrl || !supabaseKey || !scraperApiKey) {
+    console.error("❌ Erreur : Les clés Supabase ou la SCRAPER_API_KEY sont manquantes dans les variables d'environnement.");
     process.exit(1);
 }
 
@@ -86,68 +83,8 @@ async function getCachedCoordinates(locationName) {
     return { lat: null, lng: null };
 }
 
-async function fetchRacesFromUI() {
-    console.log("🌐 Lancement de Chrome Stealth...");
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-blink-features=AutomationControlled'
-        ]
-    });
-
-    try {
-        const page = await browser.newPage();
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
-
-        console.log("🔑 Navigation vers le calendrier public BeTrail...");
-        await page.goto('https://www.betrail.run/calendar', { waitUntil: 'networkidle2', timeout: 60000 });
-
-        // Attendre que la page charge ses composants dynamiques
-        await new Promise(resolve => setTimeout(resolve, 8000));
-
-        // Afficher le titre de la page pour vérifier si Cloudflare bloque ou si la page charge
-        const pageTitle = await page.title();
-        console.log(`📌 Titre de la page active : ${pageTitle}`);
-
-        console.log("📦 Extraction de tous les textes et liens de la page...");
-        const races = await page.evaluate(() => {
-            const items = [];
-            // Sélectionner tous les éléments contenant potentiellement des courses
-            const elements = document.querySelectorAll('a, div, span');
-           
-            elements.forEach(el => {
-                const text = el.innerText ? el.innerText.trim() : '';
-                const href = el.href || '';
-               
-                // Filtrer les textes qui ressemblent à des titres de courses
-                if (text.length > 5 && text.length < 100 && (href.includes('/race/') || href.includes('/event/'))) {
-                    if (!items.some(i => i.title === text)) {
-                        items.push({
-                            title: text.split('\n')[0],
-                            organizer_url: href.startsWith('http') ? href : `https://www.betrail.run${href}`,
-                            location: 'France',
-                            race_date: new Date().toISOString().split('T')[0]
-                        });
-                    }
-                }
-            });
-            return items;
-        });
-
-        await browser.close();
-        return races;
-    } catch (err) {
-        await browser.close();
-        throw new Error(`Échec Puppeteer UI: ${err.message}`);
-    }
-}
-
-
-
 async function runScraper() {
-    console.log("🚀 Démarrage du scraper PacePulse (Extraction UI Puppeteer)...");
+    console.log("🚀 Démarrage du scraper PacePulse via ScraperAPI...");
  
     const today = new Date().toISOString().split('T')[0];
     const currentYear = new Date().getFullYear();
@@ -155,8 +92,20 @@ async function runScraper() {
 
     let rawRaces = [];
     try {
-        rawRaces = await fetchRacesFromUI();
-        console.log(`🔍 ${rawRaces.length} éléments extraits de la page.`);
+        const targetUrl = `https://www.betrail.run/api/events?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
+        const scraperApiUrl = `http://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(targetUrl)}&render=true&premium=true`;
+
+        console.log(`📡 Connexion à l'API BeTrail via ScraperAPI (contournement Cloudflare)...`);
+        const response = await fetch(scraperApiUrl);
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP ScraperAPI: ${response.status}`);
+        }
+
+        const json = await response.json();
+        const dataContainer = json.body || json;
+        rawRaces = Array.isArray(dataContainer) ? dataContainer : (dataContainer.events || dataContainer.races || dataContainer.data || dataContainer.results || []);
+
+        console.log(`🔍 ${rawRaces.length} événements bruts récupérés.`);
     } catch (e) {
         console.error("❌ Erreur lors de la récupération des données source :", e.message);
         return;
@@ -165,38 +114,85 @@ async function runScraper() {
     let savedCount = 0;
 
     for (const item of rawRaces) {
-        let lat = null;
-        let lng = null;
+        const trailObj = (item.trail && Array.isArray(item.trail) && item.trail.length > 0) ? item.trail[0] :
+                         (item.trail && typeof item.trail === 'object') ? item.trail : {};
 
-        const coords = await getCachedCoordinates(item.location);
-        lat = coords.lat;
-        lng = coords.lng;
+        const location = trailObj.place || trailObj.location || item.place || item.location || item.city || 'France';
+     
+        let lat = Number(trailObj.geo_lat || trailObj.lat || item.geo_lat || item.lat || item.latitude) || null;
+        let lng = Number(trailObj.geo_lon || trailObj.lng || item.geo_lon || item.lng || item.longitude) || null;
 
-        const raceRecord = {
-            title: item.title,
-            category: 'Trail',
-            distance: 15,
-            elevation: 500,
-            location: item.location,
-            region: 'France',
-            lat: lat,
-            lng: lng,
-            price: 0,
-            ddi: 3,
-            opening_date: today,
-            race_date: item.race_date,
-            status: 'Open',
-            organizer_url: item.organizer_url
-        };
+        if (!lat || !lng) {
+            const coords = await getCachedCoordinates(location);
+            lat = coords.lat;
+            lng = coords.lng;
+        }
 
-        const { error } = await supabase
-            .from('races')
-            .upsert(raceRecord, { onConflict: 'title,race_date' });
+        const subItems = (trailObj.races && Array.isArray(trailObj.races) && trailObj.races.length > 0) ? trailObj.races :
+                         (trailObj.distances && Array.isArray(trailObj.distances) && trailObj.distances.length > 0) ? trailObj.distances :
+                         (item.races && Array.isArray(item.races) && item.races.length > 0) ? item.races : [trailObj];
 
-        if (!error) {
-            savedCount++;
-        } else {
-            console.error(`Erreur d'insertion pour "${raceRecord.title}" :`, error.message);
+        for (const subItem of subItems) {
+            const rawDate = subItem.date || subItem.raceDate || subItem.start_date || subItem.time || trailObj.date || item.date;
+            let formattedRaceDate = parseFrenchDate(rawDate);
+            let raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
+
+            let directRegistrationUrl = item.registration_url || subItem.registration_url || trailObj.website || null;
+            let formattedOpeningDate = null;
+            let status = 'Open';
+
+            if (item.predicted === true || item.prediction_status === 'predicted' || !formattedRaceDate || formattedRaceDate < today) {
+                if (formattedRaceDate) {
+                    const raceYear = parseInt(formattedRaceDate.split('-')[0]);
+                    if (raceYear < currentYear) {
+                        continue;
+                    }
+                    const parts = formattedRaceDate.split('-');
+                    formattedRaceDate = `${currentYear + 1}-${parts[1]}-${parts[2]}`;
+                } else {
+                    formattedRaceDate = `${currentYear + 1}-08-01`;
+                }
+                raceTitle = raceTitle.replace(String(currentYear), String(currentYear + 1));
+                status = 'TBD';
+            } else {
+                if (directRegistrationUrl || subItem.betrail_registration === 1) {
+                    status = 'Open';
+                } else {
+                    status = 'Opening Soon';
+                }
+            }
+
+            const extractedPrice = Number(
+                subItem.price || subItem.tarif || subItem.registration_price || subItem.entry_fee || subItem.amount ||
+                trailObj.price || trailObj.tarif || item.price || item.tarif || 0
+            );
+
+            const raceRecord = {
+                title: raceTitle,
+                category: subItem.category || trailObj.category || item.category || 'Trail',
+                distance: Number(subItem.distance || subItem.length || subItem.km || 0),
+                elevation: Number(subItem.elevation || subItem.denivele || subItem.dplus || 0),
+                location: location,
+                region: item.region || item.state || 'France',
+                lat: lat,
+                lng: lng,
+                price: extractedPrice,
+                ddi: Number(item.ddi || trailObj.ddi || subItem.ddi) || 3,
+                opening_date: formattedOpeningDate || formattedRaceDate || today,
+                race_date: formattedRaceDate || today,
+                status: status,
+                organizer_url: directRegistrationUrl || trailObj.website || (subItem.alias ? `https://www.betrail.run/race/${subItem.alias}` : '')
+            };
+
+            const { error } = await supabase
+                .from('races')
+                .upsert(raceRecord, { onConflict: 'title,race_date' });
+
+            if (!error) {
+                savedCount++;
+            } else {
+                console.error(`Erreur d'insertion pour "${raceRecord.title}" :`, error.message);
+            }
         }
     }
 
