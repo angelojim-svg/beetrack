@@ -104,25 +104,33 @@ async function fetchRacesFromUI() {
         console.log("🔑 Navigation vers le calendrier public BeTrail...");
         await page.goto('https://www.betrail.run/calendar', { waitUntil: 'networkidle2', timeout: 60000 });
 
-        // Attendre que les éléments dynamiques se chargent
-        await new Promise(resolve => setTimeout(resolve, 6000));
+        // Attendre que la page charge ses composants dynamiques
+        await new Promise(resolve => setTimeout(resolve, 8000));
 
-        console.log("📦 Extraction des courses depuis l'interface...");
+        // Afficher le titre de la page pour vérifier si Cloudflare bloque ou si la page charge
+        const pageTitle = await page.title();
+        console.log(`📌 Titre de la page active : ${pageTitle}`);
+
+        console.log("📦 Extraction de tous les textes et liens de la page...");
         const races = await page.evaluate(() => {
             const items = [];
-            // Recherche tous les liens pointant vers des courses ou des événements
-            const links = document.querySelectorAll('a[href*="/race/"], a[href*="/event/"], div[class*="event"], article');
+            // Sélectionner tous les éléments contenant potentiellement des courses
+            const elements = document.querySelectorAll('a, div, span');
            
-            links.forEach(el => {
-                const title = el.innerText ? el.innerText.split('\n')[0].trim() : '';
-                const href = el.href || el.querySelector('a')?.href || '';
-                if (title && title.length > 3 && !items.some(i => i.title === title)) {
-                    items.push({
-                        title: title,
-                        organizer_url: href.startsWith('http') ? href : `https://www.betrail.run${href}`,
-                        location: 'France',
-                        race_date: new Date().toISOString().split('T')[0]
-                    });
+            elements.forEach(el => {
+                const text = el.innerText ? el.innerText.trim() : '';
+                const href = el.href || '';
+               
+                // Filtrer les textes qui ressemblent à des titres de courses
+                if (text.length > 5 && text.length < 100 && (href.includes('/race/') || href.includes('/event/'))) {
+                    if (!items.some(i => i.title === text)) {
+                        items.push({
+                            title: text.split('\n')[0],
+                            organizer_url: href.startsWith('http') ? href : `https://www.betrail.run${href}`,
+                            location: 'France',
+                            race_date: new Date().toISOString().split('T')[0]
+                        });
+                    }
                 }
             });
             return items;
@@ -135,6 +143,7 @@ async function fetchRacesFromUI() {
         throw new Error(`Échec Puppeteer UI: ${err.message}`);
     }
 }
+
 
 
 async function runScraper() {
