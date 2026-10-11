@@ -86,8 +86,7 @@ async function getCachedCoordinates(locationName) {
     return { lat: null, lng: null };
 }
 
-// Fonction Puppeteer pour charger l'URL avec un vrai navigateur
-async function fetchWithPuppeteer(targetUrl) {
+async function fetchWithPuppeteer() {
     console.log("🌐 Lancement de Chrome Stealth...");
     const browser = await puppeteer.launch({
         headless: true,
@@ -104,26 +103,36 @@ async function fetchWithPuppeteer(targetUrl) {
 
         let apiData = null;
 
-        // Écoute de toutes les réponses réseau du navigateur
+        // Écouteur de réponses réseau pour intercepter les requêtes API réelles
         page.on('response', async (response) => {
             const url = response.url();
-            if (url.includes('/api/events') && response.status() === 200) {
+            if ((url.includes('/api/events') || url.includes('/api/events-drizzle')) && response.status() === 200) {
                 try {
-                    apiData = await response.json();
+                    const json = await response.json();
+                    if (json && (Array.isArray(json) || json.events || json.body || json.races || json.data)) {
+                        apiData = json;
+                    }
                 } catch (e) {
-                    // Ignorer si la réponse n'est pas du JSON
+                    // Ignorer les réponses non-JSON
                 }
             }
         });
 
-        console.log("🔑 Navigation vers l'API via le navigateur...");
-        // On navigue directement vers l'URL d'API ou de calendrier
-        await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+        console.log("🔑 Navigation vers le calendrier BeTrail...");
+        await page.goto('https://www.betrail.run/calendar', { waitUntil: 'networkidle2', timeout: 60000 });
 
-        // Si la réponse n'a pas été capturée via l'écouteur, lire le contenu de la page
+        // Attente courte au cas où la requête réseau met un peu de temps à arriver
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        // Si la réponse n'a pas été capturée automatiquement, tenter un fetch direct depuis le contexte actif
         if (!apiData) {
-            const content = await page.evaluate(() => document.body.innerText || document.body.textContent);
-            apiData = JSON.parse(content);
+            console.log("📡 Récupération manuelle des données depuis le contexte actif...");
+            apiData = await page.evaluate(async () => {
+                const today = new Date().toISOString().split('T')[0];
+                const target = `https://www.betrail.run/api/events?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
+                const res = await fetch(target);
+                return await res.json();
+            });
         }
 
         await browser.close();
@@ -134,7 +143,6 @@ async function fetchWithPuppeteer(targetUrl) {
     }
 }
 
-
 async function runScraper() {
     console.log("🚀 Démarrage du scraper PacePulse (Puppeteer Stealth 100% Gratuit)...");
  
@@ -144,10 +152,8 @@ async function runScraper() {
 
     let rawRaces = [];
     try {
-        const targetUrl = `https://www.betrail.run/api/events?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
-
-        console.log(`📡 Navigation vers l'API BeTrail via navigateur Chrome réel...`);
-        const json = await fetchWithPuppeteer(targetUrl);
+        console.log(`📡 Connexion à BeTrail via navigateur Chrome...`);
+        const json = await fetchWithPuppeteer();
      
         const dataContainer = json.body || json;
         rawRaces = Array.isArray(dataContainer) ? dataContainer : (dataContainer.events || dataContainer.races || dataContainer.data || dataContainer.results || []);
