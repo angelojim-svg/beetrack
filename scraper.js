@@ -103,13 +103,13 @@ async function fetchWithRetry(url, retries = 3, delay = 3000) {
     throw new Error("❌ Échec de la récupération après plusieurs tentatives.");
 }
 
-// Recherche complémentaire sur Finishers via proxy
+// Rech. complémentaire sur Finishers via proxy
 async function fetchFinishersData(raceTitle) {
     if (!raceTitle) return null;
     const cleanName = raceTitle.split('-')[0].replace(/\d{4}/g, '').trim();
    
     try {
-        const targetUrl = `https://www.betrail.run/api/events?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
+        const targetUrl = `https://www.finishers.com/api/search?q=${encodeURIComponent(cleanName)}`;
         const proxyUrl = `${CLOUDFLARE_PROXY_URL}?url=${encodeURIComponent(targetUrl)}`;
        
         const response = await fetch(proxyUrl);
@@ -131,7 +131,7 @@ async function fetchFinishersData(raceTitle) {
 }
 
 async function runScraper() {
-    console.log("🚀 Démarrage du scraper PacePulse (Proxy Cloudflare 100% Gratuit)...");
+    console.log("🚀 Démarrage du scraper PacePulse (Node.js 22 + Cloudflare Proxy)...");
  
     const today = new Date().toISOString().split('T')[0];
     const currentYear = new Date().getFullYear();
@@ -139,7 +139,7 @@ async function runScraper() {
 
     let rawRaces = [];
     try {
-        const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
+        const targetUrl = `https://www.betrail.run/api/events?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
         const proxyUrl = `${CLOUDFLARE_PROXY_URL}?url=${encodeURIComponent(targetUrl)}`;
 
         console.log(`📡 Connexion à l'API BeTrail via Cloudflare Proxy...`);
@@ -201,7 +201,6 @@ async function runScraper() {
             }
             // 2. ÉVÉNEMENT CONFIRMÉ DANS LE FUTUR
             else {
-                // Tente l'enrichissement par Finishers pour récupérer les vraies dates si non présentes
                 const finisherData = await fetchFinishersData(raceTitle);
                
                 if (finisherData) {
@@ -216,7 +215,6 @@ async function runScraper() {
                         status = directRegistrationUrl ? 'Open' : 'Opening Soon';
                     }
                 } else {
-                    // Fallback sur métadonnées BeTrail
                     if (directRegistrationUrl || subItem.betrail_registration === 1) {
                         status = 'Open';
                     } else {
@@ -259,7 +257,7 @@ async function runScraper() {
         }
     }
 
-    console.log(`✅ Fin du script ! ${savedCount} courses enregistrées.`);
+    console.log(`✅ Fin du script ! ${savedCount} courses enregistrées dans Supabase.`);
 }
 
 runScraper().catch(err => {
