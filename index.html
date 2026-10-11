@@ -161,7 +161,7 @@
                 </div>
             </div>
 
-            <!-- Curseurs homogènes pour distance, D+ et échéance -->
+            <!-- Curseurs homogènes pour distance, D+ et échéance (Horizon étendu à 24 mois) -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2 border-t border-borderBg/50">
                 <div>
                     <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">Distance Max :</span><span id="slider-dist-val" class="text-emerald-400 font-bold">200 km</span></div>
@@ -172,8 +172,8 @@
                     <input type="range" id="filter-elevation" min="0" max="10000" step="250" value="10000" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
                 </div>
                 <div>
-                    <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">Échéance Max :</span><span id="slider-horizon-val" class="text-emerald-400 font-bold">12 mois</span></div>
-                    <input type="range" id="filter-horizon" min="1" max="12" step="1" value="12" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
+                    <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">Échéance Max :</span><span id="slider-horizon-val" class="text-emerald-400 font-bold">24 mois</span></div>
+                    <input type="range" id="filter-horizon" min="1" max="24" step="1" value="24" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
                 </div>
             </div>
         </section>
@@ -304,7 +304,7 @@
             if (horizon) document.getElementById('slider-horizon-val').innerText = horizon.value + ' mois';
         }
 
-        // Rendu du statut d'ouverture (prend en compte TBD / Date à confirmer)
+        // Rendu du badge de statut d'ouverture
         function renderOpeningStatus(raceStatus) {
             if (raceStatus === 'TBD') {
                 return '<span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-bold">Date à confirmer par l\'organisateur</span>';
@@ -320,7 +320,7 @@
             const status = document.getElementById('filter-status')?.value || 'ALL';
             const maxDist = parseInt(document.getElementById('filter-distance')?.value || 200);
             const maxElev = parseInt(document.getElementById('filter-elevation')?.value || 10000);
-            const maxMonths = parseInt(document.getElementById('filter-horizon')?.value || 12);
+            const maxMonths = parseInt(document.getElementById('filter-horizon')?.value || 24);
 
             const now = new Date();
 
@@ -330,7 +330,6 @@
 
                 const matchKw = !keyword || r.title.toLowerCase().includes(keyword) || r.location.toLowerCase().includes(keyword);
                
-                // Correction du filtrage par statut exact (Open, Opening Soon / Upcoming, TBD)
                 let matchStat = true;
                 if (status !== 'ALL') {
                     if (status === 'Opening Soon') {
@@ -396,7 +395,8 @@
 
                 let popupHtml = `<div style="max-height: 220px; overflow-y: auto; padding: 2px; color: #f3f4f6;">`;
                 racesAtLocation.forEach((r, idx) => {
-                    const formattedDate = r.status === 'TBD' ? "Date à confirmer par l'organisateur" : formatDateFR(r.raceDate || r.race_date);
+                    // Utilisation de la vraie date formatée (ex: 11 oct. 2027) même pour les TBD
+                    const formattedDate = formatDateFR(r.raceDate || r.race_date);
                     const statusBadgeHtml = renderOpeningStatus(r.status);
                     const isFav = favorites.includes(`${r.title}_${r.raceDate}`);
                     const emailSubject = encodeURIComponent(`Alerte Inscription Course : ${r.title}`);
@@ -441,7 +441,7 @@
             const racesToRender = filteredRaces.slice(0, currentDisplayLimit);
 
             racesToRender.forEach(race => {
-                const formattedDate = race.status === 'TBD' ? "Date à confirmer par l'organisateur" : formatDateFR(race.raceDate);
+                const formattedDate = formatDateFR(race.raceDate);
                 const displayPrice = race.price > 0 ? `${race.price} €` : 'N/C';
                 const isFav = favorites.includes(`${race.title}_${race.raceDate}`);
                 const statusBadge = renderOpeningStatus(race.status);
@@ -499,7 +499,7 @@
             if (document.getElementById('filter-status')) document.getElementById('filter-status').value = 'ALL';
             if (document.getElementById('filter-distance')) document.getElementById('filter-distance').value = 200;
             if (document.getElementById('filter-elevation')) document.getElementById('filter-elevation').value = 10000;
-            if (document.getElementById('filter-horizon')) document.getElementById('filter-horizon').value = 12;
+            if (document.getElementById('filter-horizon')) document.getElementById('filter-horizon').value = 24;
             updateSliderLabels();
             applyFilters();
         }
