@@ -156,38 +156,33 @@ async function runScraper() {
             let formattedRaceDate = parseFrenchDate(rawDate);
             let raceTitle = subItem.title || trailObj.title || item.event_name || item.title || 'Course sans nom';
 
-            let rawStatusStr = String(subItem.status || trailObj.status || item.status || '').toLowerCase();
-            let finalStatus = 'Open';
+            let status = 'Open';
 
-            // CAS 1 : Date absente ou passée (2026 passée) -> Report en 2027 + Statut TBD
+            // 1. CAS DES DATES PASSÉES OU MANQUANTES (Report N+1 et statut TBD)
             if (!formattedRaceDate || formattedRaceDate < today) {
                 if (formattedRaceDate) {
                     const raceYear = parseInt(formattedRaceDate.split('-')[0]);
                     if (raceYear < currentYear) {
-                        continue; // Exclut 2025
+                        continue; // Ne conserve pas 2025 ou antérieur
                     }
                     const parts = formattedRaceDate.split('-');
                     formattedRaceDate = `${currentYear + 1}-${parts[1]}-${parts[2]}`;
                 } else {
                     formattedRaceDate = `${currentYear + 1}-08-01`;
                 }
-
                 raceTitle = raceTitle.replace(String(currentYear), String(currentYear + 1));
-                finalStatus = 'TBD';
+                status = 'TBD';
             }
-            // CAS 2 : Date future à venir -> Détermination exacte du statut d'ouverture
+            // 2. CAS DES DATES CONFIRMÉES DANS LE FUTUR
             else {
                 let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
                 let regDateRaw = regRaw && typeof regRaw === 'object' ? (regRaw.openingDate || regRaw.date || regRaw.opens_at || regRaw.opening_date) : regRaw;
                 let formattedOpeningDate = parseFrenchDate(regDateRaw);
 
                 if (formattedOpeningDate && formattedOpeningDate > today) {
-                    finalStatus = 'Opening Soon';
-                } else if (rawStatusStr.includes('soon') || rawStatusStr.includes('prochain')) {
-                    finalStatus = 'Opening Soon';
+                    status = 'Opening Soon';
                 } else {
-                    // Par défaut, toute course future confirmée est marquée comme 'Open'
-                    finalStatus = 'Open';
+                    status = 'Open'; // Les courses futures sans date d'ouverture différée sont OUVERTES
                 }
             }
 
@@ -210,7 +205,7 @@ async function runScraper() {
                 ddi: Number(item.ddi || trailObj.ddi || subItem.ddi) || 3,
                 opening_date: formattedOpeningDate || formattedRaceDate || today,
                 race_date: formattedRaceDate || today,
-                status: finalStatus,
+                status: status,
                 organizer_url: organizerUrl
             };
 
