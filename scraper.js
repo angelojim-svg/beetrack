@@ -109,7 +109,7 @@ async function fetchFinishersData(raceTitle) {
     const cleanName = raceTitle.split('-')[0].replace(/\d{4}/g, '').trim();
    
     try {
-        const targetUrl = `https://www.finishers.com/api/search?q=${encodeURIComponent(cleanName)}`;
+        const targetUrl = `https://www.betrail.run/api/events?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
         const proxyUrl = `${CLOUDFLARE_PROXY_URL}?url=${encodeURIComponent(targetUrl)}`;
        
         const response = await fetch(proxyUrl);
