@@ -103,11 +103,11 @@ async function fetchWithRetry(url, retries = 3, delay = 3000) {
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
-    throw new Error("❌ Échec de la récupération après plusieurs tentatives (ScraperAPI 500).");
+    throw new Error("❌ Échec de la récupération après plusieurs tentatives.");
 }
 
 async function runScraper() {
-    console.log("🚀 Démarrage du scraper PacePulse via ScraperAPI...");
+    console.log("🚀 Démarrage du scraper PacePulse...");
  
     const today = new Date().toISOString().split('T')[0];
     const currentYear = new Date().getFullYear();
@@ -115,7 +115,7 @@ async function runScraper() {
 
     let rawRaces = [];
     try {
-        const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2027-10-08&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
+        const targetUrl = `https://www.betrail.run/api/events-drizzle?after=${today}&before=2027-12-31&scope=calendar&predicted=1&length=full&offset=0&country=FR&forAddition=false&overseas=0`;
         const scraperApiUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&render=false&country_code=fr&timeout=60000&url=${encodeURIComponent(targetUrl)}`;
 
         console.log(`📡 Connexion à l'API via ScraperAPI...`);
@@ -130,8 +130,8 @@ async function runScraper() {
         return;
     }
 
-    // Étape 1 : Récupération de la liste des titres déjà confirmés pour l'année à venir
-    const confirmedTitlesNextYear = new Set();
+    // Récupérer les titres de courses qui ont déjà une date future confirmée
+    const confirmedTitlesFuture = new Set();
     for (const item of rawRaces) {
         const trailObj = (item.trail && Array.isArray(item.trail) && item.trail.length > 0) ? item.trail[0] : (item.trail || {});
         const subItems = (trailObj.races && trailObj.races.length > 0) ? trailObj.races : [trailObj];
@@ -140,7 +140,7 @@ async function runScraper() {
             const parsed = parseFrenchDate(rawDate);
             if (parsed && parsed >= today) {
                 const title = (subItem.title || trailObj.title || item.event_name || item.title || '').trim().toLowerCase();
-                if (title) confirmedTitlesNextYear.add(title);
+                if (title) confirmedTitlesFuture.add(title);
             }
         }
     }
@@ -175,45 +175,52 @@ async function runScraper() {
             let isTBD = false;
             let status = subItem.status || trailObj.status || item.status || 'Upcoming';
 
+            // CAS 1 : La date est absente ou déjà passée
             if (!formattedRaceDate || formattedRaceDate < today) {
-                // Exclusion stricte : Si la date est antérieure à l'année en cours (ex: 2025 ou avant), on l'ignore complètement
+                // Si la course a déjà une version future confirmée, on évite le doublon TBD
+                if (confirmedTitlesFuture.has(cleanTitle)) {
+                    continue;
+                }
+
+                // Si l'année est antérieure à l'année courante (ex: 2025), on ignore
                 if (formattedRaceDate) {
                     const raceYear = parseInt(formattedRaceDate.split('-')[0]);
                     if (raceYear < currentYear) {
-                        continue; // On passe la course 2025
+                        continue;
                     }
-                }
-
-                // Déduplication : Si la course a déjà une date officielle/confirmée pour l'année à venir, on n'ajoute pas de version TBD
-                if (confirmedTitlesNextYear.has(cleanTitle)) {
-                    continue;
                 }
 
                 isTBD = true;
                 if (formattedRaceDate) {
                     const parts = formattedRaceDate.split('-');
+                    // Décale la date de 2026 à 2027
                     formattedRaceDate = `${currentYear + 1}-${parts[1]}-${parts[2]}`;
                 } else {
                     formattedRaceDate = `${currentYear + 1}-08-01`;
                 }
                 status = 'TBD';
             }
+            // CAS 2 : La date est connue et à venir
+            else {
+                let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
+                let regDateRaw = null;
+                if (regRaw) {
+                    regDateRaw = typeof regRaw === 'object' ? (regRaw.openingDate || regRaw.date || regRaw.opens_at || regRaw.opening_date) : regRaw;
+                }
+                let formattedOpeningDate = parseFrenchDate(regDateRaw);
 
-            let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
-            let regDateRaw = null;
-            if (regRaw) {
-                if (typeof regRaw === 'object') {
-                    regDateRaw = regRaw.openingDate || regRaw.date || regRaw.opens_at || regRaw.opening_date;
+                if (formattedOpeningDate && formattedOpeningDate <= today) {
+                    status = 'Open';
+                } else if (formattedOpeningDate && formattedOpeningDate > today) {
+                    status = 'Opening Soon';
                 } else {
-                    regDateRaw = regRaw;
+                    status = 'Open'; // Statut par défaut pour les courses futures enregistrées sans date d'ouverture spécifique
                 }
             }
 
+            let regRaw = subItem.betrail_registration || trailObj.betrail_registration || item.betrail_registration;
+            let regDateRaw = regRaw && typeof regRaw === 'object' ? (regRaw.openingDate || regRaw.date || regRaw.opens_at || regRaw.opening_date) : regRaw;
             let formattedOpeningDate = parseFrenchDate(regDateRaw);
-
-            if (formattedOpeningDate && !isTBD) {
-                status = formattedOpeningDate > today ? 'Opening Soon' : 'Open';
-            }
 
             const organizerUrl = subItem.url || trailObj.website || trailObj.url || item.url || (subItem.alias ? `https://www.betrail.run/race/${subItem.alias}` : '');
 
@@ -229,7 +236,7 @@ async function runScraper() {
                 price: Number(subItem.price || subItem.tarif || 0),
                 ddi: Number(item.ddi || trailObj.ddi || subItem.ddi) || 3,
                 opening_date: formattedOpeningDate || formattedRaceDate || today,
-                race_date: formattedRaceDate || rawDate || today,
+                race_date: formattedRaceDate || today,
                 status: status,
                 organizer_url: organizerUrl
             };
