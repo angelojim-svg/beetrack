@@ -1,554 +1,263 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BeeTrack - Gestion de saison Trail & Route</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BeeTrack - Suivi des Courses de Trail</title>
+ 
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+ 
+  <!-- Leaflet.js CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <!-- Leaflet CSS & JS for Interactive Maps -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- CSS & JS de MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
-    <!-- CSS de MarkerCluster -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <!-- JS de MarkerCluster -->
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-
-    <!-- Supabase Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        emerald: {
-                            400: '#34d399',
-                            500: '#10b981',
-                            600: '#059669',
-                            900: '#064e3b',
-                        },
-                        darkBg: '#0b0f17',
-                        cardBg: '#131b2e',
-                        borderBg: '#1f293d',
-                        neonYellow: '#eab308'
-                    },
-                    fontFamily: {
-                        sans: ['Plus Jakarta Sans', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'monospace'],
-                    }
-                }
-            }
-        }
-    </script>
-
-    <style>
-        body {
-            background-color: #0b0f17;
-            color: #f3f4f6;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-image:
-                radial-gradient(circle at 15% 15%, rgba(16, 185, 129, 0.05) 0%, transparent 40%),
-                radial-gradient(circle at 85% 85%, rgba(234, 179, 8, 0.03) 0%, transparent 40%);
-            background-attachment: fixed;
-        }
-
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #0b0f17; }
-        ::-webkit-scrollbar-thumb { background: #1f293d; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #10b981; }
-
-        .leaflet-popup-content-wrapper {
-            background-color: #131b2e !important;
-            color: #f3f4f6 !important;
-            border: 1px solid #1f293d;
-            border-radius: 12px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-        }
-        .leaflet-popup-tip { background-color: #131b2e !important; }
-        .leaflet-container { background-color: #0b0f17 !important; font-family: inherit; }
-
-        .glass-panel {
-            background: rgba(19, 27, 46, 0.75);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.07);
-        }
-    </style>
+  <style>
+    #map {
+      height: 450px;
+      width: 100%;
+      border-radius: 0.75rem;
+    }
+  </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="bg-gray-900 text-gray-100 font-sans min-h-screen flex flex-col">
 
-    <!-- HEADER / NAVIGATION -->
-    <header class="sticky top-0 z-50 glass-panel border-b border-borderBg">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-darkBg font-black text-xl shadow-lg shadow-emerald-500/20">
-                    <i class="fa-solid font-bold fa-stopwatch"></i>
-                </div>
-                <div>
-                    <div class="flex items-center space-x-2">
-                        <span class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-gray-200 to-amber-400 bg-clip-text text-transparent">BeeTrack</span>
-                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">SEASON COCKPIT</span>
-                    </div>
-                    <p class="text-xs text-gray-400 hidden sm:block">Pilote tes inscriptions, ton budget et ta saison</p>
-                </div>
-            </div>
+  <!-- EN-TÊTE / NAVBAR -->
+  <header class="border-b border-gray-800 bg-gray-950/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl font-black bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
+          🐝 BeeTrack
+        </span>
+        <span class="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-medium">
+          Dashboard
+        </span>
+      </div>
+      <button onclick="loadRaces()" class="flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-gray-950 font-semibold px-4 py-2 rounded-lg text-sm transition-colors shadow-lg shadow-amber-500/10">
+        <span>🔄 Rafraîchir</span>
+      </button>
+    </div>
+  </header>
 
-            <div class="hidden lg:flex items-center space-x-6 text-sm">
-                <div class="flex items-center space-x-2 bg-darkBg/60 px-3 py-1.5 rounded-lg border border-borderBg">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span class="text-gray-400">Budget Favoris :</span>
-                    <span class="font-bold text-amber-400" id="stat-total-budget">0 €</span>
-                </div>
-            </div>
+  <!-- CONTENU PRINCIPAL -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
-            <!-- MENU DÉROULANT FAVORIS -->
-            <div class="flex items-center space-x-3">
-                <div class="relative">
-                    <select id="favorites-dropdown" onchange="filterByFavoriteSelection(this.value)" class="bg-cardBg hover:bg-borderBg text-gray-200 border border-borderBg px-4 py-2.5 rounded-xl transition duration-200 text-sm focus:outline-none cursor-pointer">
-                        <option value="ALL">♥ Mes Favoris (<span id="fav-count">0</span>)</option>
-                        <option value="ONLY_FAV">Afficher uniquement mes favoris</option>
-                        <option value="ALL">Afficher toutes les courses</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-    </header>
+    <!-- CARTES DE KPI -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 shadow-sm">
+        <div class="text-sm font-medium text-gray-400">Total Courses</div>
+        <div id="total-courses" class="text-3xl font-extrabold text-white mt-1">0</div>
+      </div>
+      <div class="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 shadow-sm">
+        <div class="text-sm font-medium text-gray-400">Inscriptions Ouvertes</div>
+        <div id="open-races" class="text-3xl font-extrabold text-emerald-400 mt-1">0</div>
+      </div>
+      <div class="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 shadow-sm">
+        <div class="text-sm font-medium text-gray-400">Ouverture Imminente</div>
+        <div id="soon-races" class="text-3xl font-extrabold text-amber-400 mt-1">0</div>
+      </div>
+    </div>
 
-    <!-- MAIN CONTAINER -->
-    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <!-- CARTE LEAFLET AVEC CLUSTERING -->
+    <section class="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6 shadow-sm space-y-4">
+      <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+        <span>🗺️</span>
+        <span>Carte des Événements</span>
+      </h2>
+      <div id="map"></div>
+    </section>
 
-        <!-- SEARCH & FILTER PANEL -->
-        <section class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-borderBg pb-4">
-                <div>
-                    <h2 class="text-xl font-extrabold text-white flex items-center gap-2">
-                        <i class="fa-solid fa-filter text-emerald-400"></i>
-                        Recherche & Radar
-                    </h2>
-                </div>
-                <div class="flex items-center space-x-3">
-                    <button onclick="resetFilters()" class="text-xs text-gray-400 hover:text-white underline">Réinitialiser</button>
-                    <span class="text-xs bg-darkBg px-3 py-1.5 rounded-lg border border-borderBg text-gray-300 font-mono">
-                        <span id="filtered-count" class="text-emerald-400 font-bold">0</span> épreuve(s)
-                    </span>
-                </div>
-            </div>
+    <!-- TABLEAU DES COURSES -->
+    <section class="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6 shadow-sm space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <input type="text" id="search-input" onkeyup="filterRaces()" placeholder="Rechercher une course, une ville..."
+               class="bg-gray-900 border border-gray-700 text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full sm:w-80 p-2.5 placeholder-gray-500">
+      </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Recherche par nom ou ville</label>
-                    <input type="text" id="filter-keyword" oninput="applyFilters()" placeholder="Ex: Saint-Victoire, Chamonix..." class="w-full px-4 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Statut d'ouverture</label>
-                    <select id="filter-status" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white">
-                        <option value="ALL">Tous les statuts</option>
-                        <option value="Open">Ouvertes</option>
-                        <option value="Opening Soon">Prochaines (Bientôt)</option>
-                        <option value="TBD">Date à confirmer par l'organisateur</option>
-                    </select>
-                </div>
-            </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left text-gray-300">
+          <thead class="text-xs uppercase bg-gray-900/60 text-gray-400 border-b border-gray-700">
+            <tr>
+              <th scope="col" class="px-4 py-3">Course</th>
+              <th scope="col" class="px-4 py-3">Lieu</th>
+              <th scope="col" class="px-4 py-3">Distance / D+</th>
+              <th scope="col" class="px-4 py-3">Date d'ouverture</th>
+              <th scope="col" class="px-4 py-3">Statut</th>
+              <th scope="col" class="px-4 py-3">Action</th>
+            </tr>
+          </thead>
+          <tbody id="races-table-body">
+            <tr>
+              <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                Chargement des données...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-            <!-- Curseurs homogènes -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2 border-t border-borderBg/50">
-                <div>
-                    <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">Distance Max :</span><span id="slider-dist-val" class="text-emerald-400 font-bold">200 km</span></div>
-                    <input type="range" id="filter-distance" min="5" max="200" step="5" value="200" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
-                </div>
-                <div>
-                    <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">D+ Max :</span><span id="slider-elev-val" class="text-emerald-400 font-bold">10 000 m</span></div>
-                    <input type="range" id="filter-elevation" min="0" max="10000" step="250" value="10000" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
-                </div>
-                <div>
-                    <div class="flex justify-between text-xs mb-2"><span class="text-gray-400">Échéance Max :</span><span id="slider-horizon-val" class="text-emerald-400 font-bold">24 mois</span></div>
-                    <input type="range" id="filter-horizon" min="1" max="24" step="1" value="24" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
-                </div>
-            </div>
-        </section>
+  </main>
 
-        <!-- MAP & LIST SECTION -->
-        <section class="space-y-6">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div class="flex items-center space-x-2 bg-darkBg p-1.5 rounded-xl border border-borderBg">
-                    <button id="btn-view-map" onclick="switchMainView('map')" class="px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-500 text-darkBg shadow">
-                        <i class="fa-solid fa-map-location-dot mr-1"></i> Carte Interactive
-                    </button>
-                    <button id="btn-view-list" onclick="switchMainView('list')" class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-400 hover:text-white">
-                        <i class="fa-solid fa-list-ul mr-1"></i> Liste des Courses
-                    </button>
-                </div>
-            </div>
+  <!-- SCRIPT JAVASCRIPT -->
+  <script>
+    // -------------------------------------------------------------
+    // 1. CONFIGURATION SUPABASE
+    // -------------------------------------------------------------
+    const SUPABASE_URL = "https://rjfykmedcxgasduebvbn.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqZnlrbWVkY3hnYXNkdWVidmJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNDI3NjEsImV4cCI6MjEwNjgxODc2MX0.4N9LkjjLno-z_o7NEGQjGdJDFXpzvBzRfzs-vRwv1GA";
+   
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-            <!-- MAP CONTAINER -->
-            <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden">
-                <div id="map" class="w-full h-[500px] rounded-xl z-10"></div>
-            </div>
+    // -------------------------------------------------------------
+    // 2. VARIABLES GLOBALES & INITIALISATION CARTE
+    // -------------------------------------------------------------
+    let map;
+    let markersLayer;
+    let allRaces = [];
 
-            <!-- CARDS GRID LIST -->
-            <div id="container-list-view" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden"></div>
-        </section>
+    function initMap() {
+      // Centrage initial sur la France
+      map = L.map('map').setView([46.603354, 1.888334], 6);
 
-    </main>
+      // Fond de carte OpenStreetMap standard
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
 
-    <!-- SCRIPT JAVASCRIPT PRINCIPAL -->
-    <script>
-        const SUPABASE_URL = 'https://rjfykmedcxgasduebvbn.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqZnlrbWVkY3hnYXNkdWVidmJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNDI3NjEsImV4cCI6MjEwNjgxODc2MX0.4N9LkjjLno-z_o7NEGQjGdJDFXpzvBzRfzs-vRwv1GA';
+      // Utilisation du MarkerCluster pour gérer les milliers de points sans ramer
+      markersLayer = L.markerClusterGroup({
+        chunkedLoading: true,
+        maxClusterRadius: 40
+      });
+      map.addLayer(markersLayer);
+    }
 
-        window.dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // -------------------------------------------------------------
+    // 3. CHARGEMENT DES DONNÉES DEPUIS SUPABASE
+    // -------------------------------------------------------------
+    async function loadRaces() {
+      try {
+        const tbody = document.getElementById('races-table-body');
+        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">Chargement des données...</td></tr>`;
 
-        let racesData = [];
-        let filteredRaces = [];
-        let favorites = JSON.parse(localStorage.getItem('pacepulse_favs') || '[]');
-        let onlyShowFavorites = false;
-        let leafletMap = null;
-        let markerClusterGroup = null;
-        let currentDisplayLimit = 50;
+        const { data: races, error } = await supabaseClient
+          .from('races')
+          .select('*')
+          .limit(10000);
 
-        function initLeafletMap() {
-            const mapContainer = document.getElementById('map');
-            if (!mapContainer) return;
-            leafletMap = L.map('map').setView([46.603354, 1.888334], 6);
-      
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(leafletMap);
+        if (error) throw error;
+
+        allRaces = races || [];
+
+        // Vider la carte
+        if (markersLayer) markersLayer.clearLayers();
+
+        // Mettre à jour les KPI
+        document.getElementById('total-courses').textContent = allRaces.length;
+        const openCount = allRaces.filter(r => r.status === 'Open' || r.status === 'Ouvert' || r.status === 'Inscriptions Ouvertes').length;
+        const soonCount = allRaces.filter(r => r.status === 'Opening Soon' || r.status === 'TBD' || r.status === 'Imminent').length;
+       
+        document.getElementById('open-races').textContent = openCount;
+        document.getElementById('soon-races').textContent = soonCount;
+
+        // Rendu
+        renderRaces(allRaces);
+
+      } catch (err) {
+        console.error("Erreur Supabase :", err.message);
+        document.getElementById('races-table-body').innerHTML = `
+          <tr>
+            <td colspan="6" class="px-4 py-8 text-center text-red-400">
+              Impossible de charger les données. Vérifiez votre connexion.
+            </td>
+          </tr>`;
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 4. RENDU DU TABLEAU ET DES MARQUEURS
+    // -------------------------------------------------------------
+    function renderRaces(races) {
+      const tbody = document.getElementById('races-table-body');
+      tbody.innerHTML = '';
+
+      if (races.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">Aucune course trouvée.</td></tr>`;
+        return;
+      }
+
+      if (markersLayer) markersLayer.clearLayers();
+
+      races.forEach(race => {
+        const title = race.title || 'Course sans nom';
+        const location = race.location || 'N/A';
+        const distance = race.distance || '-';
+        const elevation = race.elevation || '-';
+        const openingDate = race.opening_date ? new Date(race.opening_date).toLocaleDateString() : 'N/A';
+        const status = race.status || 'TBD';
+        const url = race.organizer_url || '#';
+
+        // Ajout du marqueur sur la carte
+        const lat = parseFloat(race.lat);
+        const lng = parseFloat(race.lng);
+        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0 && markersLayer) {
+          const marker = L.marker([lat, lng]);
+          marker.bindPopup(`<b>${title}</b><br>${location}<br><a href="${url}" target="_blank" style="color: #34d399; text-decoration: underline;">Lien organisateur</a>`);
+          markersLayer.addLayer(marker);
         }
 
-        function toggleFavorite(title, raceDate) {
-            const key = `${title}_${raceDate}`;
-            const index = favorites.indexOf(key);
-            if (index > -1) {
-                favorites.splice(index, 1);
-            } else {
-                favorites.push(key);
-            }
-            localStorage.setItem('pacepulse_favs', JSON.stringify(favorites));
-            updateFavoritesUI();
-            applyFilters();
-        }
+        // Ajout de la ligne dans le tableau
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-gray-800 hover:bg-gray-800/30 transition-colors';
+        tr.innerHTML = `
+          <td class="px-4 py-3 font-semibold text-white">${title}</td>
+          <td class="px-4 py-3">${location}</td>
+          <td class="px-4 py-3">${distance} km / +${elevation} m</td>
+          <td class="px-4 py-3">${openingDate}</td>
+          <td class="px-4 py-3">
+            <span class="px-2.5 py-1 text-xs rounded-full font-medium ${
+              status === 'Open' || status === 'Ouvert' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+            }">
+              ${status}
+            </span>
+          </td>
+          <td class="px-4 py-3">
+            ${url !== '#' ? `<a href="${url}" target="_blank" class="text-emerald-400 hover:underline text-xs font-semibold">S'inscrire ↗</a>` : '<span class="text-gray-500 text-xs">N/C</span>'}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
 
-        function updateFavoritesUI() {
-            const countElem = document.getElementById('fav-count');
-            if (countElem) countElem.innerText = favorites.length;
+    // -------------------------------------------------------------
+    // 5. FILTRE DE RECHERCHE
+    // -------------------------------------------------------------
+    function filterRaces() {
+      const query = document.getElementById('search-input').value.toLowerCase();
+      const filtered = allRaces.filter(race =>
+        (race.title && race.title.toLowerCase().includes(query)) ||
+        (race.location && race.location.toLowerCase().includes(query))
+      );
+      renderRaces(filtered);
+    }
 
-            let totalBudget = 0;
-            favorites.forEach(favKey => {
-                const race = racesData.find(r => `${r.title}_${r.raceDate}` === favKey);
-                if (race && race.price > 0) {
-                    totalBudget += race.price;
-                }
-            });
-            const budgetElem = document.getElementById('stat-total-budget');
-            if (budgetElem) budgetElem.innerText = `${totalBudget} €`;
-        }
-
-        function filterByFavoriteSelection(val) {
-            onlyShowFavorites = (val === 'ONLY_FAV');
-            applyFilters();
-        }
-
-        async function fetchRacesFromSupabase() {
-            const { data: races, error } = await window.dbClient
-                .from('races')
-                .select('*')
-                .limit(15000);
-
-            if (error) {
-                console.error("Erreur Supabase :", error.message);
-                return;
-            }
-
-            if (races) {
-                racesData = races.map(r =>[span_1](start_span)[span_1](end_span) => ({
-                    id: r.id,
-                    title: r.title,
-                    category: r.category || 'Trail',
-                    distance: Number(r.distance) || 0,
-                    elevation: Number(r.elevation) || 0,
-                    location: r.location || 'France',
-                    region: r.region || 'France',
-                    lat: r.lat !== null ? parseFloat(r.lat) : null,
-                    lng: r.lng !== null ? parseFloat(r.lng) : null,
-                    price: parseFloat(r.price) || 0,
-                    openingDate: r.opening_date,
-                    raceDate: r.race_date,
-                    status: r.status,
-                    url: r.organizer_url
-                }));
-
-                updateFavoritesUI();
-                applyFilters();
-            }
-        }
-
-        function updateSliderLabels() {
-            const dist = document.getElementById('filter-distance');
-            const elev = document.getElementById('filter-elevation');
-            const horizon = document.getElementById('filter-horizon');
-
-            if (dist) document.getElementById('slider-dist-val').innerText = dist.value + ' km';
-            if (elev) document.getElementById('slider-elev-val').innerText = elev.value + ' m';
-            if (horizon) document.getElementById('slider-horizon-val').innerText = horizon.value + ' mois';
-        }
-
-        function getCountdownBadge(openingDate) {
-            if (!openingDate) return null;
-            const now = new Date();
-            const openD = new Date(openingDate);
-            const diffTime = openD - now;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-            if (diffDays === 0) {
-                return '<span class="bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-0.5 rounded text-[10px] font-bold animate-pulse">🚨 Ouvre Aujourd\'hui !</span>';
-            } else if (diffDays > 0 && diffDays <= 30) {
-                return `<span class="bg-blue-500/20 text-blue-400 border border-blue-500/40 px-2 py-0.5 rounded text-[10px] font-bold animate-pulse">⏳ J-${diffDays} (Ouverture)</span>`;
-            }
-            return null;
-        }
-
-        function renderOpeningStatus(raceStatus, openingDate = null) {
-            if (raceStatus === 'TBD') {
-                return '<span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-bold">Date à confirmer par l\'organisateur</span>';
-            } else if (raceStatus === 'Open') {
-                return '<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-bold"><i class="fa-solid fa-circle-check mr-1"></i>Ouverte</span>';
-            } else {
-                const countdown = getCountdownBadge(openingDate);
-                if (countdown) return countdown;
-                return '<span class="bg-blue-500/10 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded text-[10px] font-bold"><i class="fa-solid fa-bell mr-1"></i>Prochaines (Bientôt)</span>';
-            }
-        }
-
-        function formatDateFR(dateStr, status = '') {
-            if (!dateStr) return 'Date non communiquée';
-            const d = new Date(dateStr);
-            if (isNaN(d.getTime())) return dateStr;
-
-            if (status === 'TBD') {
-                return d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
-            }
-
-            return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
-        }
-
-        function applyFilters() {
-            const keyword = (document.getElementById('filter-keyword')?.value || '').toLowerCase();
-            const status = document.getElementById('filter-status')?.value || 'ALL';
-            const maxDist = parseInt(document.getElementById('filter-distance')?.value || 200);
-            const maxElev = parseInt(document.getElementById('filter-elevation')?.value || 10000);
-            const maxMonths = parseInt(document.getElementById('filter-horizon')?.value || 24);
-
-            const now = new Date();
-
-            filteredRaces = racesData.filter(r => {
-                const favKey = `${r.title}_${r.raceDate}`;
-                if (onlyShowFavorites && !favorites.includes(favKey)) return false;
-
-                const matchKw = !keyword || r.title.toLowerCase().includes(keyword) || r.location.toLowerCase().includes(keyword);
-              
-                let matchStat = true;
-                if (status !== 'ALL') {
-                    if (status === 'Opening Soon') {
-                        matchStat = (r.status === 'Opening Soon' || r.status === 'Upcoming');
-                    } else if (status === 'TBD') {
-                        matchStat = (r.status === 'TBD');
-                    } else {
-                        matchStat = (r.status === status);
-                    }
-                }
-            
-                let matchDate = true;
-                if (r.raceDate) {
-                    const rDate = new Date(r.raceDate);
-                    const diffMonths = (rDate.getFullYear() - now.getFullYear()) * 12 + (rDate.getMonth() - now.getMonth());
-                    matchDate = diffMonths >= 0 && diffMonths <= maxMonths;
-                }
-
-                return matchKw && matchStat && matchDate && r.distance <= maxDist && r.elevation <= maxElev;
-            });
-
-            const countElem = document.getElementById('filtered-count');
-            if (countElem) countElem.innerText = filteredRaces.length;
-      
-            renderListView();
-            updateMapMarkers();
-        }
-
-        function updateMapMarkers() {
-            if (!leafletMap) return;
-
-            if (markerClusterGroup) {
-                leafletMap.removeLayer(markerClusterGroup);
-            }
-
-            markerClusterGroup = L.markerClusterGroup({
-                chunkedLoading: true,
-                maxClusterRadius: 35
-            });
-
-            const groupedRaces = {};
-
-            filteredRaces.forEach(race => {
-                const lat = parseFloat(race.lat);
-                const lng = parseFloat(race.lng);
-                if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
-
-                const geoKey = `${lat.toFixed(3)}_${lng.toFixed(3)}`;
-                if (!groupedRaces[geoKey]) groupedRaces[geoKey] = [];
-                groupedRaces[geoKey].push({ ...race, lat, lng });
-            });
-
-            Object.values(groupedRaces).forEach(racesAtLocation => {
-                const mainRace = racesAtLocation[0];
-                let color = mainRace.status === 'Open' ? '#10b981' : (mainRace.status === 'TBD' ? '#f59e0b' : '#3b82f6');
-
-                const customIcon = L.divIcon({
-                    className: 'custom-pin',
-                    html: `<div style="background:${color}; width:14px; height:14px; border-radius:50%; border:2px solid white; box-shadow:0 0 4px rgba(0,0,0,0.5);"></div>`,
-                    iconSize: [14, 14],
-                    iconAnchor: [7, 7]
-                });
-
-                const marker = L.marker([mainRace.lat, mainRace.lng], { icon: customIcon });
-
-                let popupHtml = `<div style="max-height: 240px; overflow-y: auto; padding: 2px; color: #f3f4f6;">`;
-                racesAtLocation.forEach((r, idx) => {
-                    const formattedDate = formatDateFR(r.raceDate || r.race_date, r.status);
-                    const statusBadgeHtml = renderOpeningStatus(r.status, r.openingDate);
-                    const isFav = favorites.includes(`${r.title}_${r.raceDate}`);
-                    const displayPrice = r.price > 0 ? `${r.price} €` : 'N/C';
-
-                    const emailSubject = encodeURIComponent(`Alerte Inscription Course : ${r.title}`);
-                    const emailBody = encodeURIComponent(`Bonjour,\n\nJe souhaite être prévenu de l'ouverture des inscriptions pour la course "${r.title}".\n\nLien de la course : ${r.url || 'N/C'}`);
-
-                    const showNotifyBtn = r.status !== 'Open';
-
-                    popupHtml += `
-                        <div style="padding-bottom: 8px; margin-bottom: 8px; ${idx < racesAtLocation.length - 1 ? 'border-bottom: 1px solid rgba(255,255,255,0.1);' : ''}">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <strong style="color: #fff; font-size: 13px;">${r.title}</strong>
-                                <button onclick="toggleFavorite('${r.title.replace(/'/g, "\\'")}', '${r.raceDate}')" style="background:none; border:none; color: ${isFav ? '#ef4444' : '#9ca3af'}; cursor:pointer; font-size: 14px;">♥</button>
-                            </div>
-                            <div style="color: #9ca3af; font-size: 11px; margin-top: 3px;">
-                                📅 ${formattedDate} | ${statusBadgeHtml}
-                            </div>
-                            <div style="color: #34d399; font-size: 11px; margin-top: 2px;">
-                                📏 ${r.distance}km | 📈 +${r.elevation}m | 💶 ${displayPrice}
-                            </div>
-                            <div style="margin-top: 6px; display: flex; gap: 8px; align-items: center;">
-                                ${r.url ? `<a href="${r.url}" target="_blank" style="color: #34d399; text-decoration: underline; font-size: 11px;">S'inscrire</a>` : ''}
-                                ${showNotifyBtn ? `<a href="mailto:?subject=${emailSubject}&body=${emailBody}" style="color: #9ca3af; text-decoration: none; font-size: 11px;"><i class="fa-solid fa-bell"></i> Préviens-moi</a>` : ''}
-                            </div>
-                        </div>
-                    `;
-                });
-                popupHtml += `</div>`;
-
-                marker.bindPopup(popupHtml);
-                markerClusterGroup.addLayer(marker);
-            });
-
-            leafletMap.addLayer(markerClusterGroup);
-        }
-
-        function renderListView() {
-            const container = document.getElementById('container-list-view');
-            if (!container) return;
-            container.innerHTML = '';
-
-            const racesToRender = filteredRaces.slice(0, currentDisplayLimit);
-
-            racesToRender.forEach(race => {
-                const formattedDate = formatDateFR(race.raceDate, race.status);
-                const displayPrice = race.price > 0 ? `${race.price} €` : 'N/C';
-                const isFav = favorites.includes(`${race.title}_${race.raceDate}`);
-                const statusBadge = renderOpeningStatus(race.status, race.openingDate);
-
-                const linkBtn = race.url ? `
-                    <a href="${race.url}" target="_blank" class="flex-1 text-center bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold py-2 rounded-xl text-xs transition duration-200 flex items-center justify-center">
-                        <i class="fa-solid fa-arrow-up-right-from-square mr-1.5"></i> S'inscrire
-                    </a>
-                ` : '';
-
-                const emailSubject = encodeURIComponent(`Alerte Inscription Course : ${race.title}`);
-                const emailBody = encodeURIComponent(`Bonjour,\n\nJe souhaite être prévenu de l'ouverture des inscriptions pour la course "${race.title}".\n\nLien de la course : ${race.url || 'N/C'}`);
-
-                const alertBtn = race.status !== 'Open' ? `
-                    <a href="mailto:?subject=${emailSubject}&body=${emailBody}" class="px-3 py-2 rounded-xl text-xs font-semibold border transition duration-200 flex items-center justify-center bg-darkBg text-gray-400 border-borderBg hover:text-white" title="Recevoir un rappel par e-mail">
-                        <i class="fa-solid fa-bell mr-1"></i> Préviens-moi
-                    </a>
-                ` : '';
-
-                const favBtn = `
-                    <button onclick="toggleFavorite('${race.title.replace(/'/g, "\\'")}', '${race.raceDate}')" class="px-3 py-2 rounded-xl text-sm font-bold border transition duration-200 flex items-center justify-center ${isFav ? 'bg-red-500/20 text-red-400 border-red-500/40' : 'bg-darkBg text-gray-400 border-borderBg hover:text-red-400'}">
-                        ♥
-                    </button>
-                `;
-
-                const card = `
-                    <div class="glass-panel p-5 rounded-2xl border border-borderBg flex flex-col justify-between">
-                        <div>
-                            <div class="flex justify-between items-center text-[10px] font-mono text-gray-400 mb-2">
-                                <span>${race.category}</span>
-                                ${statusBadge}
-                            </div>
-                            <h3 class="text-lg font-bold text-white">${race.title}</h3>
-                            <p class="text-xs text-gray-400 mt-1"><i class="fa-regular fa-calendar mr-1"></i>Course : ${formattedDate}</p>
-                       
-                            <div class="grid grid-cols-3 gap-2 py-3 my-3 border-y border-borderBg text-center text-xs">
-                                <div><span class="block text-gray-500">Dist.</span><span class="font-bold text-white">${race.distance} km</span></div>
-                                <div><span class="block text-gray-500">D+</span><span class="font-bold text-emerald-400">+${race.elevation}m</span></div>
-                                <div><span class="block text-gray-500">Prix</span><span class="font-bold text-amber-400">${displayPrice}</span></div>
-                            </div>
-                        </div>
-                        <div class="flex gap-2 mt-2">
-                            ${linkBtn}
-                            ${alertBtn}
-                            ${favBtn}
-                        </div>
-                    </div>
-                `;
-                container.insertAdjacentHTML('beforeend', card);
-            });
-        }
-
-        function resetFilters() {
-            if (document.getElementById('filter-keyword')) document.getElementById('filter-keyword').value = '';
-            if (document.getElementById('filter-status')) document.getElementById('filter-status').value = 'ALL';
-            if (document.getElementById('filter-distance')) document.getElementById('filter-distance').value = 200;
-            if (document.getElementById('filter-elevation')) document.getElementById('filter-elevation').value = 10000;
-            if (document.getElementById('filter-horizon')) document.getElementById('filter-horizon').value = 24;
-            updateSliderLabels();
-            applyFilters();
-        }
-
-        function switchMainView(v) {
-            const mapV = document.getElementById('container-map-view');
-            const listV = document.getElementById('container-list-view');
-            if (mapV && listV) {
-                mapV.classList.toggle('hidden', v !== 'map');
-                listV.classList.toggle('hidden', v !== 'list');
-            }
-            if (v === 'map' && leafletMap) setTimeout(() => leafletMap.invalidateSize(), 200);
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            initLeafletMap();
-            updateSliderLabels();
-            fetchRacesFromSupabase();
-        });
-    </script>
+    // -------------------------------------------------------------
+    // 6. DÉMARRAGE AUTOMATIQUE
+    // -------------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', () => {
+      initMap();
+      loadRaces();
+    });
+  </script>
 </body>
 </html>
