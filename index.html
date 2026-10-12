@@ -1,243 +1,234 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BeeTrack - Suivi des Courses de Trail</title>
  
-  <!-- Tailwind CSS -->
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
  
-  <!-- Leaflet CSS & JS (Carte interactive) -->
+  <!-- Leaflet.js CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
- 
+
   <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
- 
+
   <style>
-    /* Correction du style des popups Leaflet pour s'adapter au thème sombre */
-    .leaflet-popup-content-wrapper {
-      background: #1e293b !important; /* slate-800 */
-      color: #f8fafc !important; /* slate-50 */
-      border: 1px solid #334155; /* slate-700 */
+    #map {
+      height: 400px;
+      width: 100%;
       border-radius: 0.75rem;
-    }
-    .leaflet-popup-tip {
-      background: #1e293b !important;
     }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8">
+<body class="bg-gray-900 text-gray-100 font-sans min-h-screen flex flex-col">
 
-  <div class="max-w-7xl mx-auto space-y-6">
-   
-    <!-- En-tête -->
-    <header class="flex justify-between items-center pb-4 border-b border-slate-800">
-      <div>
-        <h1 class="text-3xl font-bold text-amber-400 flex items-center gap-2">
+  <!-- EN-TÊTE / NAVBAR -->
+  <header class="border-b border-gray-800 bg-gray-950/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl font-black bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
           🐝 BeeTrack
-        </h1>
-        <p class="text-slate-400 text-sm">Tableau de bord interactif & calendrier des trails</p>
+        </span>
+        <span class="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-medium">
+          Dashboard
+        </span>
       </div>
-      <button onclick="loadRaces()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold px-4 py-2 rounded-lg transition flex items-center gap-2">
-        🔄 <span>Rafraîchir</span>
+      <button onclick="loadRaces()" class="flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-gray-950 font-semibold px-4 py-2 rounded-lg text-sm transition-colors shadow-lg shadow-amber-500/10">
+        <span>🔄 Rafraîchir</span>
       </button>
-    </header>
+    </div>
+  </header>
 
-    <!-- Statistiques (KPIs) -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-        <span class="text-slate-400 text-sm font-medium">Total Courses</span>
-        <p id="kpi-total" class="text-3xl font-bold text-white mt-1">0</p>
+  <!-- CONTENU PRINCIPAL -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- CARTES DE KPI -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 shadow-sm">
+        <div class="text-sm font-medium text-gray-400">Total Courses</div>
+        <div id="total-courses" class="text-3xl font-extrabold text-white mt-1">0</div>
       </div>
-      <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-        <span class="text-slate-400 text-sm font-medium">Inscriptions Ouvertes</span>
-        <p id="kpi-open" class="text-3xl font-bold text-emerald-400 mt-1">0</p>
+      <div class="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 shadow-sm">
+        <div class="text-sm font-medium text-gray-400">Inscriptions Ouvertes</div>
+        <div id="open-races" class="text-3xl font-extrabold text-emerald-400 mt-1">0</div>
       </div>
-      <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-        <span class="text-slate-400 text-sm font-medium">Ouverture Imminente</span>
-        <p id="kpi-soon" class="text-3xl font-bold text-amber-400 mt-1">0</p>
+      <div class="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 shadow-sm">
+        <div class="text-sm font-medium text-gray-400">Ouverture Imminente</div>
+        <div id="soon-races" class="text-3xl font-extrabold text-amber-400 mt-1">0</div>
       </div>
     </div>
 
-    <!-- Carte Interactive Leaflet -->
-    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg">
-      <h2 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-        🗺️ <span>Carte des Événements</span>
+    <!-- CARTE LEAFLET -->
+    <section class="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6 shadow-sm space-y-4">
+      <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+        <span>🗺️</span>
+        <span>Carte des Événements</span>
       </h2>
-      <div id="map" class="w-full h-80 rounded-lg z-10"></div>
-    </div>
+      <div id="map"></div>
+    </section>
 
-    <!-- Filtres de Recherche -->
-    <div class="flex flex-wrap gap-4 bg-slate-800 p-4 rounded-xl border border-slate-700">
-      <input type="text" id="search-input" oninput="filterRaces()" placeholder="Rechercher une course, une ville..."
-             class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-amber-400 flex-1 min-w-[200px]">
-     
-      <select id="status-filter" onchange="filterRaces()" class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
-        <option value="ALL">Tous les statuts</option>
-        <option value="Open">Ouvertes (Open)</option>
-        <option value="Opening Soon">Bientôt ouvertes (Opening Soon)</option>
-        <option value="TBD">À venir (TBD)</option>
-      </select>
-    </div>
+    <!-- TABLEAU DES COURSES -->
+    <section class="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6 shadow-sm space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <input type="text" id="search-input" onkeyup="filterRaces()" placeholder="Rechercher une course, une ville..."
+               class="bg-gray-900 border border-gray-700 text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full sm:w-80 p-2.5 placeholder-gray-500">
+      </div>
 
-    <!-- Tableau des Résultats -->
-    <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
       <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead class="bg-slate-900/60 text-slate-400 text-xs uppercase tracking-wider">
+        <table class="w-full text-sm text-left text-gray-300">
+          <thead class="text-xs uppercase bg-gray-900/60 text-gray-400 border-b border-gray-700">
             <tr>
-              <th class="p-4">Course</th>
-              <th class="p-4">Lieu</th>
-              <th class="p-4">Distance / D+</th>
-              <th class="p-4">Date Épreuve</th>
-              <th class="p-4">Statut</th>
-              <th class="p-4 text-right">Lien Organisateur</th>
+              <th scope="col" class="px-4 py-3">Course</th>
+              <th scope="col" class="px-4 py-3">Lieu</th>
+              <th scope="col" class="px-4 py-3">Distance / D+</th>
+              <th scope="col" class="px-4 py-3">Date Épreuve</th>
+              <th scope="col" class="px-4 py-3">Statut</th>
             </tr>
           </thead>
-          <tbody id="races-table-body" class="divide-y divide-slate-700/50 text-sm">
+          <tbody id="races-table-body">
             <tr>
-              <td colspan="6" class="p-6 text-center text-slate-500">Chargement des données...</td>
+              <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                Chargement des données...
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
 
-  </div>
+  </main>
 
+  <!-- SCRIPT JAVASCRIPT -->
   <script>
     // -------------------------------------------------------------
     // 1. CONFIGURATION SUPABASE
     // -------------------------------------------------------------
-    const SUPABASE_URL = "https://rjfykmedcxgasduebvbn.supabase.co"; // Remplace par ton URL Supabase
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqZnlrbWVkY3hnYXNkdWVidmJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNDI3NjEsImV4cCI6MjEwNjgxODc2MX0.4N9LkjjLno-z_o7NEGQjGdJDFXpzvBzRfzs-vRwv1GA";       // Remplace par ta clé 'anon' publique
+    const SUPABASE_URL = "https://rjfykmedcxgasduebvbn.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqZnlrbWVkY3hnYXNkdWVidmJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNDI3NjEsImV4cCI6MjEwNjgxODc2MX0.4N9LkjjLno-z_o7NEGQjGdJDFXpzvBzRfzs-vRwv1GA"; // Coller la clé 'anon' récupérée dans Supabase -> Project Settings -> API
+   
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let allRaces = [];
+    // -------------------------------------------------------------
+    // 2. VARIABLES GLOBALES & INITIALISATION CARTE
+    // -------------------------------------------------------------
     let map;
-    let markersLayer = L.layerGroup();
+    let markersLayer;
+    let allRaces = [];
 
-    // -------------------------------------------------------------
-    // 2. INITIALISATION DE LA CARTE LEAFLET
-    // -------------------------------------------------------------
     function initMap() {
-      // Centré sur la France
+      // Centrage initial sur la France
       map = L.map('map').setView([46.603354, 1.888334], 6);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
 
-  markersLayer.addTo(map);
-}
+      // Fond de carte ESRI Topo (Option 2 - Stable, sans clé API requis)
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri',
+        maxZoom: 18
+      }).addTo(map);
 
-      markersLayer.addTo(map);
-    }
-
-    // Mise à jour des marqueurs sur la carte
-    function updateMap(races) {
-      markersLayer.clearLayers();
-
-      races.forEach(race => {
-        if (race.lat && race.lng) {
-          const marker = L.marker([race.lat, race.lng]);
-         
-          marker.bindPopup(`
-            <div class="p-1 space-y-1">
-              <h3 class="font-bold text-amber-400 text-sm">${race.title}</h3>
-              <p class="text-xs text-slate-300">📍 ${race.location || 'France'}</p>
-              <p class="text-xs text-slate-300">📏 ${race.distance} km | ${race.elevation}m D+</p>
-              <p class="text-xs text-slate-300">📅 ${race.race_date || 'Date N/C'}</p>
-              ${race.organizer_url ? `<a href="${race.organizer_url}" target="_blank" class="inline-block mt-2 text-xs font-semibold text-amber-400 hover:underline">S'inscrire / En savoir plus →</a>` : ''}
-            </div>
-          `);
-
-          markersLayer.addLayer(marker);
-        }
-      });
+      markersLayer = L.layerGroup().addTo(map);
     }
 
     // -------------------------------------------------------------
-    // 3. CHARGEMENT & FILTRAGE DES DONNÉES
+    // 3. CHARGEMENT SÉCURISÉ DES DONNÉES (ANTI-GEL)
     // -------------------------------------------------------------
     async function loadRaces() {
-      const { data, error } = await supabaseClient
-        .from('races')
-        .select('*')
-        .order('race_date', { ascending: true });
+      try {
+        const tbody = document.getElementById('races-table-body');
+        tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">Chargement des données...</td></tr>`;
 
-      if (error) {
-        console.error("Erreur de chargement Supabase :", error);
-        return;
+        // Récupération des données dans Supabase
+        const { data: races, error } = await supabaseClient
+          .from('races')
+          .select('*');
+
+        if (error) throw error;
+
+        allRaces = races || [];
+
+        // Vider la carte et les filtres
+        if (markersLayer) markersLayer.clearLayers();
+
+        // Mettre à jour les indicateurs KPI
+        document.getElementById('total-courses').textContent = allRaces.length;
+        const openCount = allRaces.filter(r => r.status === 'Ouvert' || r.status === 'Inscriptions Ouvertes').length;
+        const soonCount = allRaces.filter(r => r.status === 'Imminent' || r.status === 'Ouverture Imminente').length;
+       
+        document.getElementById('open-races').textContent = openCount;
+        document.getElementById('soon-races').textContent = soonCount;
+
+        // Rendu du tableau et des marqueurs
+        renderRaces(allRaces);
+
+      } catch (err) {
+        console.error("Erreur Supabase :", err.message);
+        document.getElementById('races-table-body').innerHTML = `
+          <tr>
+            <td colspan="5" class="px-4 py-8 text-center text-red-400">
+              Impossible de charger les données (Vérifiez la clé SUPABASE_ANON_KEY).
+            </td>
+          </tr>`;
       }
-
-      allRaces = data || [];
-      updateKPIs(allRaces);
-      renderTable(allRaces);
-      updateMap(allRaces);
     }
 
-    function updateKPIs(races) {
-      document.getElementById('kpi-total').textContent = races.length;
-      document.getElementById('kpi-open').textContent = races.filter(r => r.status === 'Open').length;
-      document.getElementById('kpi-soon').textContent = races.filter(r => r.status === 'Opening Soon').length;
-    }
-
-    function renderTable(races) {
+    // -------------------------------------------------------------
+    // 4. RENDU DU TABLEAU ET DES MARQUEURS
+    // -------------------------------------------------------------
+    function renderRaces(races) {
       const tbody = document.getElementById('races-table-body');
       tbody.innerHTML = '';
 
       if (races.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-500">Aucune course trouvée.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Aucune course trouvée.</td></tr>`;
         return;
       }
 
       races.forEach(race => {
-        let badgeClass = 'bg-slate-700/50 text-slate-300 border border-slate-600';
-        if (race.status === 'Open') badgeClass = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30';
-        if (race.status === 'Opening Soon') badgeClass = 'bg-amber-500/10 text-amber-400 border border-amber-500/30';
+        // Ajout du marqueur sur la carte
+        if (race.latitude && race.longitude && markersLayer) {
+          const marker = L.marker([race.latitude, race.longitude]);
+          marker.bindPopup(`<b>${race.name || 'Course'}</b><br>${race.lieu || ''}`);
+          markersLayer.addLayer(marker);
+        }
 
-        const row = `
-          <tr class="hover:bg-slate-700/30 transition">
-            <td class="p-4 font-semibold text-white">${race.title}</td>
-            <td class="p-4 text-slate-300">${race.location || 'N/C'}</td>
-            <td class="p-4 text-slate-300">${race.distance} km / ${race.elevation}m D+</td>
-            <td class="p-4 text-slate-300">${race.race_date || '-'}</td>
-            <td class="p-4">
-              <span class="px-2.5 py-1 rounded-full text-xs font-medium ${badgeClass}">
-                ${race.status}
-              </span>
-            </td>
-            <td class="p-4 text-right">
-              ${race.organizer_url ? `<a href="${race.organizer_url}" target="_blank" class="text-amber-400 hover:text-amber-300 hover:underline">Voir Lien ↗</a>` : '-'}
-            </td>
-          </tr>
+        // Ajout de la ligne dans le tableau
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-gray-800 hover:bg-gray-800/30 transition-colors';
+        tr.innerHTML = `
+          <td class="px-4 py-3 font-semibold text-white">${race.name || 'N/A'}</td>
+          <td class="px-4 py-3">${race.lieu || 'N/A'}</td>
+          <td class="px-4 py-3">${race.distance || '-'} km / ${race.denivele || '-'} m D+</td>
+          <td class="px-4 py-3">${race.date_epreuve || 'N/A'}</td>
+          <td class="px-4 py-3">
+            <span class="px-2 py-1 text-xs rounded-full font-medium ${
+              race.status === 'Ouvert' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-gray-700 text-gray-300'
+            }">
+              ${race.status || 'Inconnu'}
+            </span>
+          </td>
         `;
-        tbody.innerHTML += row;
+        tbody.appendChild(tr);
       });
     }
 
+    // -------------------------------------------------------------
+    // 5. FILTRE DE RECHERCHE
+    // -------------------------------------------------------------
     function filterRaces() {
       const query = document.getElementById('search-input').value.toLowerCase();
-      const status = document.getElementById('status-filter').value;
-
-      const filtered = allRaces.filter(race => {
-        const matchesQuery = (race.title && race.title.toLowerCase().includes(query)) ||
-                             (race.location && race.location.toLowerCase().includes(query));
-        const matchesStatus = status === 'ALL' || race.status === status;
-        return matchesQuery && matchesStatus;
-      });
-
-      renderTable(filtered);
-      updateMap(filtered);
+      const filtered = allRaces.filter(race =>
+        (race.name && race.name.toLowerCase().includes(query)) ||
+        (race.lieu && race.lieu.toLowerCase().includes(query))
+      );
+      renderRaces(filtered);
     }
 
     // -------------------------------------------------------------
-    // 4. LANCEMENT AUTOMATIQUE
+    // 6. DÉMARRAGE AUTOMATIQUE
     // -------------------------------------------------------------
-    window.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => {
       initMap();
       loadRaces();
     });
