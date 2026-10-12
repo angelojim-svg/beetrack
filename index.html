@@ -128,9 +128,10 @@
 
       // Fond de carte sombre (CartoDB Dark Matter)
      // Remplacer l'ancienne ligne L.tileLayer par celle-ci :
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  maxZoom: 19
+// Option 2 : Esri World Topo Map
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+  attribution: 'Tiles &copy; Esri',
+  maxZoom: 18
 }).addTo(map);
 
       markersLayer.addTo(map);
