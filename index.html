@@ -125,14 +125,13 @@
     function initMap() {
       // Centré sur la France
       map = L.map('map').setView([46.603354, 1.888334], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
 
-      // Fond de carte sombre (CartoDB Dark Matter)
-     // Remplacer l'ancienne ligne L.tileLayer par celle-ci :
-// Option 2 : Esri World Topo Map
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
-  attribution: 'Tiles &copy; Esri',
-  maxZoom: 18
-}).addTo(map);
+  markersLayer.addTo(map);
+}
 
       markersLayer.addTo(map);
     }
