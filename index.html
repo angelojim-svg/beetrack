@@ -181,9 +181,8 @@
 
                 <div class="relative">
                     <select id="favorites-dropdown" onchange="filterByFavoriteSelection(this.value)" class="bg-cardBg hover:bg-borderBg text-gray-200 border border-borderBg px-4 py-2.5 rounded-xl transition duration-200 text-sm focus:outline-none cursor-pointer">
-                        <option value="ALL">♥ Mes Favoris (<span id="fav-count">0</span>)</option>
-                        <option value="ONLY_FAV">Afficher uniquement mes favoris</option>
                         <option value="ALL">Afficher toutes les courses</option>
+                        <option value="ONLY_FAV">Afficher uniquement mes favoris</option>
                     </select>
                 </div>
             </div>
@@ -302,16 +301,16 @@
                 <!-- PANNEAU DROITE : CHRONOLOGIE VERTICALE DE LA SAISON -->
                 <div class="lg:col-span-4 glass-panel p-6 rounded-2xl border border-borderBg space-y-4 sticky top-24">
                     <div class="flex items-center justify-between border-b border-borderBg pb-3">
-                        <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <h3 id="timeline-title" class="text-base font-bold text-white flex items-center gap-2">
                             <i class="fa-solid fa-timeline text-emerald-400"></i>
-                            Chronologie de Saison
+                            Chronologie des épreuves
                         </h3>
                         <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Planning</span>
                     </div>
 
                     <!-- CONTAINER TIMELINE VERTICALE -->
                     <div id="timeline-container" class="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-                        <p class="text-xs text-gray-400 italic text-center py-6">Aucune course sélectionnée dans le filtre.</p>
+                        <p class="text-xs text-gray-400 italic text-center py-6">Aucune course sélectionnée.</p>
                     </div>
                 </div>
 
@@ -532,12 +531,23 @@
             return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
         }
 
-        // RENDU DE LA CHRONOLOGIE VERTICALE AVEC CALCUL DE L'ECART
+        // RENDU DE LA CHRONOLOGIE VERTICALE AVEC ADAPTATION DYNAMIQUE DU TITRE
         function renderTimeline() {
             const container = document.getElementById('timeline-container');
+            const titleElement = document.getElementById('timeline-title');
+
+            // Adaptation dynamique du titre selon l'option de filtrage active
+            if (titleElement) {
+                if (onlyShowFavorites) {
+                    titleElement.innerHTML = `<i class="fa-solid fa-timeline text-emerald-400"></i> Chronologie de ta saison`;
+                } else {
+                    titleElement.innerHTML = `<i class="fa-solid fa-timeline text-emerald-400"></i> Chronologie des épreuves`;
+                }
+            }
+
             if (!container) return;
 
-            // Prendre les courses filtrées qui ont une date valide et les trier par ordre chronologique
+            // Filtrage des courses datées et tri chronologique
             const validRaces = filteredRaces
                 .filter(r => r.raceDate && !isNaN(new Date(r.raceDate).getTime()))
                 .sort((a, b) => new Date(a.raceDate) - new Date(b.raceDate));
