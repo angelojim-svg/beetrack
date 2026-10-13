@@ -139,7 +139,7 @@
             </div>
 
             <!-- AFFICHAGE BUDGET SAISON -->
-            <div class="hidden lg:flex items-center space-x-4 text-sm relative group">
+            <div class="hidden lg:flex items-center space-x-4 text-sm relative group z-40">
                 <div class="flex items-center space-x-2 bg-darkBg/80 px-4 py-2 rounded-xl border border-borderBg cursor-pointer">
                     <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
                     <span class="text-gray-300 font-medium">Budget Saison :</span>
@@ -210,14 +210,15 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
+            <!-- CHAMP DE RECHERCHE ET STATUT D'OUVERTURE -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                <div class="md:col-span-7">
                     <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Recherche par nom ou ville</label>
                     <input type="text" id="filter-keyword" oninput="applyFilters()" placeholder="Ex: Saint-Victoire, Chamonix..." class="w-full px-4 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none">
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Statut d'ouverture</label>
-                    <select id="filter-status" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white">
+                <div class="md:col-span-5 md:pl-4">
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-2 text-right">Statut d'ouverture</label>
+                    <select id="filter-status" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-darkBg border border-borderBg rounded-xl text-sm text-white text-right font-medium cursor-pointer">
                         <option value="ALL">Tous les statuts</option>
                         <option value="Open">Ouvertes</option>
                         <option value="Opening Soon">Prochaines (Bientôt)</option>
@@ -226,10 +227,10 @@
                 </div>
             </div>
 
-            <!-- CURSEURS DE FILTRES UNIFIÉS EN CONTINU SUR UNE MÊME LIGNE -->
+            <!-- CURSEURS DE FILTRES CONTINUS (DISTANCE, D+, ECHEANCE) SUR LA MÊME LIGNE -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4 border-t border-borderBg/50">
                
-                <!-- 1. DISTANCE (0 km à 200 km sur une ligne continue) -->
+                <!-- 1. DISTANCE (0 km à 200 km) -->
                 <div class="space-y-2">
                     <div class="flex justify-between text-xs font-semibold">
                         <span class="text-gray-400">Distance : <b id="slider-dist-min-val" class="text-emerald-400">0 km</b></span>
@@ -242,19 +243,20 @@
                     </div>
                 </div>
 
-                <!-- 2. DÉNIVELÉ D+ & D- (SUR UNE MÊME LIGNE) -->
+                <!-- 2. DÉNIVELÉ POSITIF D+ (0 m à 15000 m) -->
                 <div class="space-y-2">
                     <div class="flex justify-between text-xs font-semibold">
-                        <span class="text-gray-400">D+ Max : <b id="slider-elev-val" class="text-emerald-400">15 000 m</b></span>
-                        <span class="text-gray-400">D- Max : <b id="slider-descent-val" class="text-emerald-400">15 000 m</b></span>
+                        <span class="text-gray-400">D+ : <b id="slider-elev-min-val" class="text-emerald-400">0 m</b></span>
+                        <span class="text-gray-400">à <b id="slider-elev-max-val" class="text-emerald-400">15 000 m</b></span>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <input type="range" id="filter-elevation" min="0" max="15000" step="250" value="15000" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
-                        <input type="range" id="filter-descent" min="0" max="15000" step="250" value="15000" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
+                    <div class="range-slider-container">
+                        <div id="track-elev" class="range-slider-track"></div>
+                        <input type="range" id="filter-elev-min" min="0" max="15000" step="250" value="0" oninput="handleDualSlider('elev'); applyFilters();">
+                        <input type="range" id="filter-elev-max" min="0" max="15000" step="250" value="15000" oninput="handleDualSlider('elev'); applyFilters();">
                     </div>
                 </div>
 
-                <!-- 3. ÉCHÉANCE (0 mois à 24 mois sur une ligne continue) -->
+                <!-- 3. ÉCHÉANCE (0 mois à 24 mois) -->
                 <div class="space-y-2">
                     <div class="flex justify-between text-xs font-semibold">
                         <span class="text-gray-400">Échéance : <b id="slider-horizon-min-val" class="text-emerald-400">0 mois</b></span>
@@ -414,7 +416,6 @@
                     category: r.category || 'Trail',
                     distance: Number(r.distance) || 0,
                     elevation: Number(r.elevation) || 0,
-                    descent: Number(r.descent || r.elevation) || 0,
                     location: r.location || 'France',
                     region: r.region || 'France',
                     lat: r.lat !== null ? parseFloat(r.lat) : null,
@@ -454,20 +455,18 @@
             track.style.left = `${leftPercent}%`;
             track.style.right = `${rightPercent}%`;
 
-            const unit = type === 'dist' ? ' km' : ' mois';
+            let unit = ' km';
+            if (type === 'elev') unit = ' m';
+            if (type === 'horizon') unit = ' mois';
+
             document.getElementById(`slider-${type}-min-val`).innerText = minVal + unit;
             document.getElementById(`slider-${type}-max-val`).innerText = maxVal + unit;
         }
 
         function updateSliderLabels() {
             handleDualSlider('dist');
+            handleDualSlider('elev');
             handleDualSlider('horizon');
-
-            const elev = document.getElementById('filter-elevation');
-            const descent = document.getElementById('filter-descent');
-
-            if (elev) document.getElementById('slider-elev-val').innerText = elev.value + ' m';
-            if (descent) document.getElementById('slider-descent-val').innerText = descent.value + ' m';
         }
 
         function getCountdownBadge(openingDate) {
@@ -516,8 +515,8 @@
             const minDist = parseInt(document.getElementById('filter-dist-min')?.value || 0);
             const maxDist = parseInt(document.getElementById('filter-dist-max')?.value || 200);
            
-            const maxElev = parseInt(document.getElementById('filter-elevation')?.value || 15000);
-            const maxDescent = parseInt(document.getElementById('filter-descent')?.value || 15000);
+            const minElev = parseInt(document.getElementById('filter-elev-min')?.value || 0);
+            const maxElev = parseInt(document.getElementById('filter-elev-max')?.value || 15000);
            
             const minMonths = parseInt(document.getElementById('filter-horizon-min')?.value || 0);
             const maxMonths = parseInt(document.getElementById('filter-horizon-max')?.value || 24);
@@ -548,7 +547,7 @@
                     matchDate = diffMonths >= minMonths && diffMonths <= maxMonths;
                 }
 
-                return matchKw && matchStat && matchDate && r.distance >= minDist && r.distance <= maxDist && r.elevation <= maxElev && r.descent <= maxDescent;
+                return matchKw && matchStat && matchDate && r.distance >= minDist && r.distance <= maxDist && r.elevation >= minElev && r.elevation <= maxElev;
             });
 
             const countElem = document.getElementById('filtered-count');
@@ -617,7 +616,7 @@
                                 📅 ${formattedDate} | ${statusBadgeHtml}
                             </div>
                             <div style="color: #34d399; font-size: 11px; margin-top: 2px;">
-                                📏 ${r.distance}km | 📈 +${r.elevation}m | 📉 -${r.descent}m | 💶 ${displayPrice}
+                                📏 ${r.distance}km | 📈 +${r.elevation}m | 💶 ${displayPrice}
                             </div>
                             <div style="margin-top: 6px; display: flex; gap: 8px; align-items: center;">
                                 ${r.url ? `<a href="${r.url}" target="_blank" style="color: #34d399; text-decoration: underline; font-size: 11px;">S'inscrire</a>` : ''}
@@ -679,10 +678,9 @@
                             <h3 class="text-lg font-bold text-white">${race.title}</h3>
                             <p class="text-xs text-gray-400 mt-1"><i class="fa-regular fa-calendar mr-1"></i>Course : ${formattedDate}</p>
                        
-                            <div class="grid grid-cols-4 gap-1 py-3 my-3 border-y border-borderBg text-center text-xs">
+                            <div class="grid grid-cols-3 gap-2 py-3 my-3 border-y border-borderBg text-center text-xs">
                                 <div><span class="block text-gray-500 text-[10px]">Dist.</span><span class="font-bold text-white">${race.distance}k</span></div>
                                 <div><span class="block text-gray-500 text-[10px]">D+</span><span class="font-bold text-emerald-400">+${race.elevation}m</span></div>
-                                <div><span class="block text-gray-500 text-[10px]">D-</span><span class="font-bold text-blue-400">-${race.descent}m</span></div>
                                 <div><span class="block text-gray-500 text-[10px]">Prix</span><span class="font-bold text-amber-400">${displayPrice}</span></div>
                             </div>
                         </div>
@@ -702,8 +700,8 @@
             if (document.getElementById('filter-status')) document.getElementById('filter-status').value = 'ALL';
             if (document.getElementById('filter-dist-min')) document.getElementById('filter-dist-min').value = 0;
             if (document.getElementById('filter-dist-max')) document.getElementById('filter-dist-max').value = 200;
-            if (document.getElementById('filter-elevation')) document.getElementById('filter-elevation').value = 15000;
-            if (document.getElementById('filter-descent')) document.getElementById('filter-descent').value = 15000;
+            if (document.getElementById('filter-elev-min')) document.getElementById('filter-elev-min').value = 0;
+            if (document.getElementById('filter-elev-max')) document.getElementById('filter-elev-max').value = 15000;
             if (document.getElementById('filter-horizon-min')) document.getElementById('filter-horizon-min').value = 0;
             if (document.getElementById('filter-horizon-max')) document.getElementById('filter-horizon-max').value = 24;
             updateSliderLabels();
