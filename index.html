@@ -124,7 +124,7 @@
 
     <!-- HEADER / NAVIGATION -->
     <header class="sticky top-0 z-50 glass-panel border-b border-borderBg">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-darkBg font-black text-xl shadow-lg shadow-emerald-500/20">
                     <i class="fa-solid font-bold fa-stopwatch"></i>
@@ -191,7 +191,7 @@
     </header>
 
     <!-- MAIN CONTAINER -->
-    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <main class="flex-grow max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
         <!-- SEARCH & FILTER PANEL -->
         <section class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6">
@@ -272,7 +272,7 @@
             </div>
         </section>
 
-        <!-- MAP & LIST SECTION -->
+        <!-- MAP & LIST SECTION WITH CHRONOLOGY SIDEBAR -->
         <section class="space-y-6">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div class="flex items-center space-x-2 bg-darkBg p-1.5 rounded-xl border border-borderBg">
@@ -285,13 +285,37 @@
                 </div>
             </div>
 
-            <!-- MAP CONTAINER -->
-            <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden">
-                <div id="map" class="w-full h-[500px] rounded-xl z-10"></div>
-            </div>
+            <!-- LAYOUT AVEC GRILLE ET SIDEBAR A DROITE -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+               
+                <!-- ZONE PRINCIPALE (MAP / GRILLE DES COURSES) -->
+                <div class="lg:col-span-8 space-y-6">
+                    <!-- MAP CONTAINER -->
+                    <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden">
+                        <div id="map" class="w-full h-[550px] rounded-xl z-10"></div>
+                    </div>
 
-            <!-- CARDS GRID LIST -->
-            <div id="container-list-view" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden"></div>
+                    <!-- CARDS GRID LIST -->
+                    <div id="container-list-view" class="grid grid-cols-1 md:grid-cols-2 gap-6 hidden"></div>
+                </div>
+
+                <!-- PANNEAU DROITE : CHRONOLOGIE VERTICALE DE LA SAISON -->
+                <div class="lg:col-span-4 glass-panel p-6 rounded-2xl border border-borderBg space-y-4 sticky top-24">
+                    <div class="flex items-center justify-between border-b border-borderBg pb-3">
+                        <h3 class="text-base font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-timeline text-emerald-400"></i>
+                            Chronologie de Saison
+                        </h3>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Planning</span>
+                    </div>
+
+                    <!-- CONTAINER TIMELINE VERTICALE -->
+                    <div id="timeline-container" class="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                        <p class="text-xs text-gray-400 italic text-center py-6">Aucune course sélectionnée dans le filtre.</p>
+                    </div>
+                </div>
+
+            </div>
         </section>
 
     </main>
@@ -508,6 +532,69 @@
             return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
         }
 
+        // RENDU DE LA CHRONOLOGIE VERTICALE AVEC CALCUL DE L'ECART
+        function renderTimeline() {
+            const container = document.getElementById('timeline-container');
+            if (!container) return;
+
+            // Prendre les courses filtrées qui ont une date valide et les trier par ordre chronologique
+            const validRaces = filteredRaces
+                .filter(r => r.raceDate && !isNaN(new Date(r.raceDate).getTime()))
+                .sort((a, b) => new Date(a.raceDate) - new Date(b.raceDate));
+
+            if (validRaces.length === 0) {
+                container.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-6">Aucune course datée à afficher.</p>';
+                return;
+            }
+
+            let html = '<div class="relative border-l-2 border-emerald-500/30 ml-4 space-y-6 my-2">';
+
+            validRaces.forEach((race, idx) => {
+                const dateObj = new Date(race.raceDate);
+                const formattedDate = formatDateFR(race.raceDate, race.status);
+                const isFav = favorites.includes(`${race.title}_${race.raceDate}`);
+
+                let gapHtml = '';
+                if (idx > 0) {
+                    const prevDate = new Date(validRaces[idx - 1].raceDate);
+                    const diffTime = Math.abs(dateObj - prevDate);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const diffWeeks = (diffDays / 7).toFixed(1);
+
+                    gapHtml = `
+                        <div class="my-2 -ml-3 flex items-center space-x-2">
+                            <div class="w-6 h-0.5 bg-borderBg"></div>
+                            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-darkBg text-amber-400 border border-amber-500/30 font-bold">
+                                ⏱️ +${diffDays} jours (${diffWeeks} sem.)
+                            </span>
+                        </div>
+                    `;
+                }
+
+                html += `
+                    ${gapHtml}
+                    <div class="relative pl-6">
+                        <span class="absolute -left-[9px] top-1 w-4 h-4 rounded-full ${isFav ? 'bg-amber-400 ring-4 ring-amber-400/20' : 'bg-emerald-500 ring-4 ring-emerald-500/20'}"></span>
+                        <div class="bg-darkBg/80 p-3 rounded-xl border border-borderBg hover:border-emerald-500/50 transition">
+                            <div class="flex justify-between items-start">
+                                <span class="text-[11px] font-bold text-emerald-400 font-mono">${formattedDate}</span>
+                                ${isFav ? '<span class="text-red-400 text-xs">♥</span>' : ''}
+                            </div>
+                            <h4 class="text-xs font-bold text-white mt-1">${race.title}</h4>
+                            <div class="flex items-center space-x-3 text-[10px] text-gray-400 mt-2">
+                                <span>📏 ${race.distance} km</span>
+                                <span>📈 +${race.elevation} m</span>
+                                <span>📍 ${race.location}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
         function applyFilters() {
             const keyword = (document.getElementById('filter-keyword')?.value || '').toLowerCase();
             const status = document.getElementById('filter-status')?.value || 'ALL';
@@ -555,6 +642,7 @@
       
             renderListView();
             updateMapMarkers();
+            renderTimeline();
         }
 
         function updateMapMarkers() {
