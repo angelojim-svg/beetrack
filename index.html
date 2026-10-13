@@ -107,22 +107,29 @@
             <div class="hidden lg:flex items-center space-x-6 text-sm">
                 <div class="flex items-center space-x-2 bg-darkBg/60 px-3 py-1.5 rounded-lg border border-borderBg">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span class="text-gray-400" id="budget-label-display">Budget Dossards :</span>
+                    <span class="text-gray-400" id="budget-label-display">Budget Total :</span>
                     <span class="font-bold text-amber-400" id="stat-total-budget">0 €</span>
                 </div>
             </div>
 
             <!-- GESTION DE BUDGET & FAVORIS -->
             <div class="flex items-center space-x-3">
-                <div class="relative">
-                    <select id="budget-category-select" onchange="changeBudgetCategory(this.value)" class="bg-cardBg hover:bg-borderBg text-gray-200 border border-borderBg px-3 py-2.5 rounded-xl transition duration-200 text-sm focus:outline-none cursor-pointer">
-                        <option value="dossards">🎟️ Postes : Dossards</option>
-                        <option value="materiel">🎒 Postes : Matériel & Équipement</option>
-                        <option value="transport">🚗 Postes : Transport & Déplacements</option>
-                        <option value="hebergement">⛺ Postes : Hébergement</option>
-                        <option value="nutrition">gels Postes : Nutrition & Hydratation</option>
+                <div class="flex items-center space-x-2 bg-cardBg p-1 rounded-xl border border-borderBg">
+                    <select id="budget-category-select" onchange="changeBudgetCategory(this.value)" class="bg-transparent text-gray-200 px-2 py-1.5 transition duration-200 text-xs focus:outline-none cursor-pointer">
+                        <option value="dossards" class="bg-cardBg">🎟️ Dossards</option>
+                        <option value="materiel" class="bg-cardBg">🎒 Matériel</option>
+                        <option value="transport" class="bg-cardBg">🚗 Transport</option>
+                        <option value="hebergement" class="bg-cardBg">⛺ Hébergement</option>
+                        <option value="nutrition" class="bg-cardBg">⚡ Nutrition</option>
                     </select>
+
+                    <!-- CHAMP EDITEUR DE BUDGET (Prix éditable) -->
+                    <div id="budget-input-wrapper" class="hidden flex items-center border-l border-borderBg pl-2 pr-1">
+                        <input type="number" id="budget-amount-input" oninput="updateCustomBudgetAmount(this.value)" class="w-16 bg-darkBg text-amber-400 font-bold px-2 py-1 rounded text-xs border border-borderBg focus:outline-none" min="0" placeholder="0">
+                        <span class="text-xs text-gray-400 ml-1">€</span>
+                    </div>
                 </div>
+
                 <div class="relative">
                     <select id="favorites-dropdown" onchange="filterByFavoriteSelection(this.value)" class="bg-cardBg hover:bg-borderBg text-gray-200 border border-borderBg px-4 py-2.5 rounded-xl transition duration-200 text-sm focus:outline-none cursor-pointer">
                         <option value="ALL">♥ Mes Favoris (<span id="fav-count">0</span>)</option>
@@ -170,49 +177,45 @@
                 </div>
             </div>
 
-            <!-- Curseurs Avancés (Min / Max Distance, D+, D-, Échéance) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-2 border-t border-borderBg/50">
-                <!-- Distance Min / Max -->
-                <div class="space-y-3">
-                    <div>
-                        <div class="flex justify-between text-xs mb-1"><span class="text-gray-400">Distance Min :</span><span id="slider-dist-min-val" class="text-emerald-400 font-bold">0 km</span></div>
-                        <input type="range" id="filter-distance-min" min="0" max="190" step="5" value="0" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
+            <!-- CURSEURS SUR UNE MÊME LIGNE (DIST. MIN/MAX, D+/D-, ÉCHÉANCE MIN/MAX) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2 border-t border-borderBg/50">
+               
+                <!-- DISTANCE (MIN / MAX CÔTÉ À CÔTÉ) -->
+                <div class="space-y-2">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-gray-400">Distance : <b id="slider-dist-min-val" class="text-emerald-400">0 km</b></span>
+                        <span class="text-gray-400">à <b id="slider-dist-val" class="text-emerald-400">200 km</b></span>
                     </div>
-                    <div>
-                        <div class="flex justify-between text-xs mb-1"><span class="text-gray-400">Distance Max :</span><span id="slider-dist-val" class="text-emerald-400 font-bold">200 km</span></div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="range" id="filter-distance-min" min="0" max="190" step="5" value="0" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
                         <input type="range" id="filter-distance" min="5" max="200" step="5" value="200" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
                     </div>
                 </div>
 
-                <!-- D+ & D- -->
-                <div class="space-y-3">
-                    <div>
-                        <div class="flex justify-between text-xs mb-1"><span class="text-gray-400">D+ Max :</span><span id="slider-elev-val" class="text-emerald-400 font-bold">15 000 m</span></div>
-                        <input type="range" id="filter-elevation" min="0" max="15000" step="250" value="15000" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
+                <!-- D+ / D- (CÔTÉ À CÔTÉ) -->
+                <div class="space-y-2">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-gray-400">D+ Max : <b id="slider-elev-val" class="text-emerald-400">15 000 m</b></span>
+                        <span class="text-gray-400">D- Max : <b id="slider-descent-val" class="text-emerald-400">15 000 m</b></span>
                     </div>
-                    <div>
-                        <div class="flex justify-between text-xs mb-1"><span class="text-gray-400">D- Max :</span><span id="slider-descent-val" class="text-emerald-400 font-bold">15 000 m</span></div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="range" id="filter-elevation" min="0" max="15000" step="250" value="15000" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
                         <input type="range" id="filter-descent" min="0" max="15000" step="250" value="15000" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
                     </div>
                 </div>
 
-                <!-- Échéance Min / Max -->
-                <div class="space-y-3">
-                    <div>
-                        <div class="flex justify-between text-xs mb-1"><span class="text-gray-400">Échéance Min :</span><span id="slider-horizon-min-val" class="text-emerald-400 font-bold">0 mois</span></div>
-                        <input type="range" id="filter-horizon-min" min="0" max="23" step="1" value="0" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
+                <!-- ÉCHÉANCE (MIN / MAX CÔTÉ À CÔTÉ) -->
+                <div class="space-y-2">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-gray-400">Échéance : <b id="slider-horizon-min-val" class="text-emerald-400">0 mois</b></span>
+                        <span class="text-gray-400">à <b id="slider-horizon-val" class="text-emerald-400">24 mois</b></span>
                     </div>
-                    <div>
-                        <div class="flex justify-between text-xs mb-1"><span class="text-gray-400">Échéance Max :</span><span id="slider-horizon-val" class="text-emerald-400 font-bold">24 mois</span></div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="range" id="filter-horizon-min" min="0" max="23" step="1" value="0" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
                         <input type="range" id="filter-horizon" min="1" max="24" step="1" value="24" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
                     </div>
                 </div>
 
-                <!-- Résumé / Infos Rapides -->
-                <div class="flex flex-col justify-center bg-darkBg/50 p-4 rounded-xl border border-borderBlob">
-                    <span class="text-xs text-gray-400">Astuce Budget :</span>
-                    <p class="text-[11px] text-gray-300 mt-1">Sélectionne un poste de dépenses en haut à droite pour ventiler tes coûts annexes par rapport à tes favoris.</p>
-                </div>
             </div>
         </section>
 
@@ -257,7 +260,6 @@
         let currentBudgetCategory = 'dossards';
 
         const categoryBudgets = JSON.parse(localStorage.getItem('pacepulse_budgets') || JSON.stringify({
-            dossards: {},
             materiel: 150,
             transport: 80,
             hebergement: 120,
@@ -279,27 +281,37 @@
             const index = favorites.indexOf(key);
             if (index > -1) {
                 favorites.splice(index, 1);
-                if (categoryBudgets.dossards[key]) delete categoryBudgets.dossards[key];
             } else {
                 favorites.push(key);
             }
             localStorage.setItem('pacepulse_favs', JSON.stringify(favorites));
-            localStorage.setItem('pacepulse_budgets', JSON.stringify(categoryBudgets));
             updateFavoritesUI();
             applyFilters();
         }
 
         function changeBudgetCategory(cat) {
             currentBudgetCategory = cat;
-            const labels = {
-                dossards: 'Budget Dossards :',
-                materiel: 'Budget Matériel :',
-                transport: 'Budget Transport :',
-                hebergement: 'Budget Hébergement :',
-                nutrition: 'Budget Nutrition :'
-            };
-            document.getElementById('budget-label-display').innerText = labels[cat] || 'Budget Total :';
+            const wrapper = document.getElementById('budget-input-wrapper');
+            const input = document.getElementById('budget-amount-input');
+            const label = document.getElementById('budget-label-display');
+
+            if (cat === 'dossards') {
+                wrapper.classList.add('hidden');
+                label.innerText = 'Budget Dossards :';
+            } else {
+                wrapper.classList.remove('hidden');
+                label.innerText = `Budget ${cat.charAt(0).toUpperCase() + cat.slice(1)} :`;
+                input.value = categoryBudgets[cat] || 0;
+            }
             updateFavoritesUI();
+        }
+
+        function updateCustomBudgetAmount(val) {
+            if (currentBudgetCategory !== 'dossards') {
+                categoryBudgets[currentBudgetCategory] = Number(val) || 0;
+                localStorage.setItem('pacepulse_budgets', JSON.stringify(categoryBudgets));
+                updateFavoritesUI();
+            }
         }
 
         function updateFavoritesUI() {
@@ -514,7 +526,7 @@
 
                     popupHtml += `
                         <div style="padding-bottom: 8px; margin-bottom: 8px; ${idx < racesAtLocation.length - 1 ? 'border-bottom: 1px solid rgba(255,255,255,0.1);' : ''}">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; justify-between; align-items: center;">
                                 <strong style="color: #fff; font-size: 13px;">${r.title}</strong>
                                 <button onclick="toggleFavorite('${r.title.replace(/'/g, "\\'")}', '${r.raceDate}')" style="background:none; border:none; color: ${isFav ? '#ef4444' : '#9ca3af'}; cursor:pointer; font-size: 14px;">♥</button>
                             </div>
