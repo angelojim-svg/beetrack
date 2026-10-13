@@ -84,6 +84,40 @@
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.07);
         }
+
+        /* Style spécifique pour les curseurs Min-Max superposés */
+        .range-slider-container {
+            position: relative;
+            height: 8px;
+            background: #1f293d;
+            border-radius: 4px;
+        }
+        .range-slider-track {
+            position: absolute;
+            height: 100%;
+            background: #10b981;
+            border-radius: 4px;
+        }
+        .range-slider-container input[type="range"] {
+            position: absolute;
+            width: 100%;
+            height: 8px;
+            top: 0;
+            background: none;
+            pointer-events: none;
+            -webkit-appearance: none;
+        }
+        .range-slider-container input[type="range"]::-webkit-slider-thumb {
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: #34d399;
+            border: 2px solid #0b0f17;
+            cursor: pointer;
+            pointer-events: auto;
+            -webkit-appearance: none;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -104,18 +138,33 @@
                 </div>
             </div>
 
-            <div class="hidden lg:flex items-center space-x-6 text-sm">
-                <div class="flex items-center space-x-2 bg-darkBg/60 px-3 py-1.5 rounded-lg border border-borderBg">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span class="text-gray-400" id="budget-label-display">Budget Total :</span>
-                    <span class="font-bold text-amber-400" id="stat-total-budget">0 €</span>
+            <!-- AFFICHAGE BUDGET SAISON -->
+            <div class="hidden lg:flex items-center space-x-4 text-sm relative group">
+                <div class="flex items-center space-x-2 bg-darkBg/80 px-4 py-2 rounded-xl border border-borderBg cursor-pointer">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span class="text-gray-300 font-medium">Budget Saison :</span>
+                    <span class="font-extrabold text-amber-400 text-base" id="stat-total-budget">0 €</span>
+                    <i class="fa-solid fa-chevron-down text-xs text-gray-400 ml-1"></i>
+                </div>
+
+                <!-- POPUP DETAIL DES DEPENSES SAISON -->
+                <div class="absolute top-12 left-0 w-64 glass-panel p-4 rounded-xl border border-borderBg hidden group-hover:block z-50 shadow-2xl space-y-2 text-xs">
+                    <div class="font-bold text-white border-b border-borderBg pb-1 flex justify-between">
+                        <span>Détail du Budget</span>
+                        <span class="text-amber-400" id="detail-total-budget">0 €</span>
+                    </div>
+                    <div class="flex justify-between text-gray-300"><span>🎟️ Dossards (Favoris) :</span><b id="detail-b-dossards">0 €</b></div>
+                    <div class="flex justify-between text-gray-300"><span>🎒 Matériel :</span><b id="detail-b-materiel">0 €</b></div>
+                    <div class="flex justify-between text-gray-300"><span>🚗 Transport :</span><b id="detail-b-transport">0 €</b></div>
+                    <div class="flex justify-between text-gray-300"><span>⛺ Hébergement :</span><b id="detail-b-hebergement">0 €</b></div>
+                    <div class="flex justify-between text-gray-300"><span>⚡ Nutrition :</span><b id="detail-b-nutrition">0 €</b></div>
                 </div>
             </div>
 
-            <!-- GESTION DE BUDGET & FAVORIS -->
+            <!-- SELECTION ET EDITION DU POSTE DE BUDGET -->
             <div class="flex items-center space-x-3">
-                <div class="flex items-center space-x-2 bg-cardBg p-1 rounded-xl border border-borderBg">
-                    <select id="budget-category-select" onchange="changeBudgetCategory(this.value)" class="bg-transparent text-gray-200 px-2 py-1.5 transition duration-200 text-xs focus:outline-none cursor-pointer">
+                <div class="flex items-center space-x-2 bg-cardBg p-1.5 rounded-xl border border-borderBg">
+                    <select id="budget-category-select" onchange="changeBudgetCategory(this.value)" class="bg-transparent text-gray-200 px-2 py-1 transition duration-200 text-xs focus:outline-none cursor-pointer">
                         <option value="dossards" class="bg-cardBg">🎟️ Dossards</option>
                         <option value="materiel" class="bg-cardBg">🎒 Matériel</option>
                         <option value="transport" class="bg-cardBg">🚗 Transport</option>
@@ -123,7 +172,7 @@
                         <option value="nutrition" class="bg-cardBg">⚡ Nutrition</option>
                     </select>
 
-                    <!-- CHAMP EDITEUR DE BUDGET (Prix éditable) -->
+                    <!-- ÉDITION DU MONTANT DU POSTE SÉLECTIONNÉ -->
                     <div id="budget-input-wrapper" class="hidden flex items-center border-l border-borderBg pl-2 pr-1">
                         <input type="number" id="budget-amount-input" oninput="updateCustomBudgetAmount(this.value)" class="w-16 bg-darkBg text-amber-400 font-bold px-2 py-1 rounded text-xs border border-borderBg focus:outline-none" min="0" placeholder="0">
                         <span class="text-xs text-gray-400 ml-1">€</span>
@@ -177,42 +226,44 @@
                 </div>
             </div>
 
-            <!-- CURSEURS SUR UNE MÊME LIGNE (DIST. MIN/MAX, D+/D-, ÉCHÉANCE MIN/MAX) -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2 border-t border-borderBg/50">
+            <!-- CURSEURS DE FILTRES UNIFIÉS EN CONTINU SUR UNE MÊME LIGNE -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4 border-t border-borderBg/50">
                
-                <!-- DISTANCE (MIN / MAX CÔTÉ À CÔTÉ) -->
+                <!-- 1. DISTANCE (0 km à 200 km sur une ligne continue) -->
                 <div class="space-y-2">
-                    <div class="flex justify-between text-xs">
+                    <div class="flex justify-between text-xs font-semibold">
                         <span class="text-gray-400">Distance : <b id="slider-dist-min-val" class="text-emerald-400">0 km</b></span>
-                        <span class="text-gray-400">à <b id="slider-dist-val" class="text-emerald-400">200 km</b></span>
+                        <span class="text-gray-400">à <b id="slider-dist-max-val" class="text-emerald-400">200 km</b></span>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="range" id="filter-distance-min" min="0" max="190" step="5" value="0" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
-                        <input type="range" id="filter-distance" min="5" max="200" step="5" value="200" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
+                    <div class="range-slider-container">
+                        <div id="track-dist" class="range-slider-track"></div>
+                        <input type="range" id="filter-dist-min" min="0" max="200" step="5" value="0" oninput="handleDualSlider('dist'); applyFilters();">
+                        <input type="range" id="filter-dist-max" min="0" max="200" step="5" value="200" oninput="handleDualSlider('dist'); applyFilters();">
                     </div>
                 </div>
 
-                <!-- D+ / D- (CÔTÉ À CÔTÉ) -->
+                <!-- 2. DÉNIVELÉ D+ & D- (SUR UNE MÊME LIGNE) -->
                 <div class="space-y-2">
-                    <div class="flex justify-between text-xs">
+                    <div class="flex justify-between text-xs font-semibold">
                         <span class="text-gray-400">D+ Max : <b id="slider-elev-val" class="text-emerald-400">15 000 m</b></span>
                         <span class="text-gray-400">D- Max : <b id="slider-descent-val" class="text-emerald-400">15 000 m</b></span>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-2 gap-3">
                         <input type="range" id="filter-elevation" min="0" max="15000" step="250" value="15000" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
                         <input type="range" id="filter-descent" min="0" max="15000" step="250" value="15000" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
                     </div>
                 </div>
 
-                <!-- ÉCHÉANCE (MIN / MAX CÔTÉ À CÔTÉ) -->
+                <!-- 3. ÉCHÉANCE (0 mois à 24 mois sur une ligne continue) -->
                 <div class="space-y-2">
-                    <div class="flex justify-between text-xs">
+                    <div class="flex justify-between text-xs font-semibold">
                         <span class="text-gray-400">Échéance : <b id="slider-horizon-min-val" class="text-emerald-400">0 mois</b></span>
-                        <span class="text-gray-400">à <b id="slider-horizon-val" class="text-emerald-400">24 mois</b></span>
+                        <span class="text-gray-400">à <b id="slider-horizon-max-val" class="text-emerald-400">24 mois</b></span>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="range" id="filter-horizon-min" min="0" max="23" step="1" value="0" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
-                        <input type="range" id="filter-horizon" min="1" max="24" step="1" value="24" oninput="updateSliderLabels(); applyFilters();" class="w-full accent-emerald-500 bg-darkBg h-2 rounded-lg cursor-pointer">
+                    <div class="range-slider-container">
+                        <div id="track-horizon" class="range-slider-track"></div>
+                        <input type="range" id="filter-horizon-min" min="0" max="24" step="1" value="0" oninput="handleDualSlider('horizon'); applyFilters();">
+                        <input type="range" id="filter-horizon-max" min="0" max="24" step="1" value="24" oninput="handleDualSlider('horizon'); applyFilters();">
                     </div>
                 </div>
 
@@ -260,10 +311,10 @@
         let currentBudgetCategory = 'dossards';
 
         const categoryBudgets = JSON.parse(localStorage.getItem('pacepulse_budgets') || JSON.stringify({
-            materiel: 150,
-            transport: 80,
-            hebergement: 120,
-            nutrition: 40
+            materiel: 0,
+            transport: 0,
+            hebergement: 0,
+            nutrition: 0
         }));
 
         function initLeafletMap() {
@@ -293,14 +344,11 @@
             currentBudgetCategory = cat;
             const wrapper = document.getElementById('budget-input-wrapper');
             const input = document.getElementById('budget-amount-input');
-            const label = document.getElementById('budget-label-display');
 
             if (cat === 'dossards') {
                 wrapper.classList.add('hidden');
-                label.innerText = 'Budget Dossards :';
             } else {
                 wrapper.classList.remove('hidden');
-                label.innerText = `Budget ${cat.charAt(0).toUpperCase() + cat.slice(1)} :`;
                 input.value = categoryBudgets[cat] || 0;
             }
             updateFavoritesUI();
@@ -308,7 +356,7 @@
 
         function updateCustomBudgetAmount(val) {
             if (currentBudgetCategory !== 'dossards') {
-                categoryBudgets[currentBudgetCategory] = Number(val) || 0;
+                categoryBudgets[currentBudgetCategory] = Math.max(0, Number(val) || 0);
                 localStorage.setItem('pacepulse_budgets', JSON.stringify(categoryBudgets));
                 updateFavoritesUI();
             }
@@ -318,20 +366,29 @@
             const countElem = document.getElementById('fav-count');
             if (countElem) countElem.innerText = favorites.length;
 
-            let totalBudget = 0;
-            if (currentBudgetCategory === 'dossards') {
-                favorites.forEach(favKey => {
-                    const race = racesData.find(r => `${r.title}_${r.raceDate}` === favKey);
-                    if (race && race.price > 0) {
-                        totalBudget += race.price;
-                    }
-                });
-            } else {
-                totalBudget = Number(categoryBudgets[currentBudgetCategory]) || 0;
-            }
+            let totalDossards = 0;
+            favorites.forEach(favKey => {
+                const race = racesData.find(r => `${r.title}_${r.raceDate}` === favKey);
+                if (race && race.price > 0) {
+                    totalDossards += race.price;
+                }
+            });
 
-            const budgetElem = document.getElementById('stat-total-budget');
-            if (budgetElem) budgetElem.innerText = `${totalBudget} €`;
+            const mat = Number(categoryBudgets.materiel) || 0;
+            const trans = Number(categoryBudgets.transport) || 0;
+            const heb = Number(categoryBudgets.hebergement) || 0;
+            const nut = Number(categoryBudgets.nutrition) || 0;
+
+            const totalSaison = totalDossards + mat + trans + heb + nut;
+
+            document.getElementById('stat-total-budget').innerText = `${totalSaison} €`;
+            if (document.getElementById('detail-total-budget')) document.getElementById('detail-total-budget').innerText = `${totalSaison} €`;
+           
+            if (document.getElementById('detail-b-dossards')) document.getElementById('detail-b-dossards').innerText = `${totalDossards} €`;
+            if (document.getElementById('detail-b-materiel')) document.getElementById('detail-b-materiel').innerText = `${mat} €`;
+            if (document.getElementById('detail-b-transport')) document.getElementById('detail-b-transport').innerText = `${trans} €`;
+            if (document.getElementById('detail-b-hebergement')) document.getElementById('detail-b-hebergement').innerText = `${heb} €`;
+            if (document.getElementById('detail-b-nutrition')) document.getElementById('detail-b-nutrition').innerText = `${nut} €`;
         }
 
         function filterByFavoriteSelection(val) {
@@ -374,20 +431,43 @@
             }
         }
 
+        function handleDualSlider(type) {
+            const minEl = document.getElementById(`filter-${type}-min`);
+            const maxEl = document.getElementById(`filter-${type}-max`);
+            const track = document.getElementById(`track-${type}`);
+
+            let minVal = parseInt(minEl.value);
+            let maxVal = parseInt(maxEl.value);
+
+            if (minVal > maxVal) {
+                const temp = minVal;
+                minVal = maxVal;
+                maxVal = temp;
+                minEl.value = minVal;
+                maxEl.value = maxVal;
+            }
+
+            const maxLimit = parseInt(minEl.max);
+            const leftPercent = (minVal / maxLimit) * 100;
+            const rightPercent = 100 - ((maxVal / maxLimit) * 100);
+
+            track.style.left = `${leftPercent}%`;
+            track.style.right = `${rightPercent}%`;
+
+            const unit = type === 'dist' ? ' km' : ' mois';
+            document.getElementById(`slider-${type}-min-val`).innerText = minVal + unit;
+            document.getElementById(`slider-${type}-max-val`).innerText = maxVal + unit;
+        }
+
         function updateSliderLabels() {
-            const distMin = document.getElementById('filter-distance-min');
-            const distMax = document.getElementById('filter-distance');
+            handleDualSlider('dist');
+            handleDualSlider('horizon');
+
             const elev = document.getElementById('filter-elevation');
             const descent = document.getElementById('filter-descent');
-            const horizonMin = document.getElementById('filter-horizon-min');
-            const horizonMax = document.getElementById('filter-horizon');
 
-            if (distMin) document.getElementById('slider-dist-min-val').innerText = distMin.value + ' km';
-            if (distMax) document.getElementById('slider-dist-val').innerText = distMax.value + ' km';
             if (elev) document.getElementById('slider-elev-val').innerText = elev.value + ' m';
             if (descent) document.getElementById('slider-descent-val').innerText = descent.value + ' m';
-            if (horizonMin) document.getElementById('slider-horizon-min-val').innerText = horizonMin.value + ' mois';
-            if (horizonMax) document.getElementById('slider-horizon-val').innerText = horizonMax.value + ' mois';
         }
 
         function getCountdownBadge(openingDate) {
@@ -432,12 +512,15 @@
         function applyFilters() {
             const keyword = (document.getElementById('filter-keyword')?.value || '').toLowerCase();
             const status = document.getElementById('filter-status')?.value || 'ALL';
-            const minDist = parseInt(document.getElementById('filter-distance-min')?.value || 0);
-            const maxDist = parseInt(document.getElementById('filter-distance')?.value || 200);
+           
+            const minDist = parseInt(document.getElementById('filter-dist-min')?.value || 0);
+            const maxDist = parseInt(document.getElementById('filter-dist-max')?.value || 200);
+           
             const maxElev = parseInt(document.getElementById('filter-elevation')?.value || 15000);
             const maxDescent = parseInt(document.getElementById('filter-descent')?.value || 15000);
+           
             const minMonths = parseInt(document.getElementById('filter-horizon-min')?.value || 0);
-            const maxMonths = parseInt(document.getElementById('filter-horizon')?.value || 24);
+            const maxMonths = parseInt(document.getElementById('filter-horizon-max')?.value || 24);
 
             const now = new Date();
 
@@ -617,12 +700,12 @@
         function resetFilters() {
             if (document.getElementById('filter-keyword')) document.getElementById('filter-keyword').value = '';
             if (document.getElementById('filter-status')) document.getElementById('filter-status').value = 'ALL';
-            if (document.getElementById('filter-distance-min')) document.getElementById('filter-distance-min').value = 0;
-            if (document.getElementById('filter-distance')) document.getElementById('filter-distance').value = 200;
+            if (document.getElementById('filter-dist-min')) document.getElementById('filter-dist-min').value = 0;
+            if (document.getElementById('filter-dist-max')) document.getElementById('filter-dist-max').value = 200;
             if (document.getElementById('filter-elevation')) document.getElementById('filter-elevation').value = 15000;
             if (document.getElementById('filter-descent')) document.getElementById('filter-descent').value = 15000;
             if (document.getElementById('filter-horizon-min')) document.getElementById('filter-horizon-min').value = 0;
-            if (document.getElementById('filter-horizon')) document.getElementById('filter-horizon').value = 24;
+            if (document.getElementById('filter-horizon-max')) document.getElementById('filter-horizon-max').value = 24;
             updateSliderLabels();
             applyFilters();
         }
