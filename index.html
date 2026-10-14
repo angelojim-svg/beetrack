@@ -21,6 +21,9 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <!-- Chart.js pour les graphiques (Camembert & Courbe de charge) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 
@@ -284,15 +287,15 @@
                     <!-- LISTE DES COURSES -->
                     <div id="container-list-view" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden"></div>
 
-                    <!-- GESTION DU BUDGET SAISON -->
+                    <!-- GESTION DU BUDGET SAISON AVEC CAMEMBERT DE REPARTITION -->
                     <div id="container-budget-view" class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6 hidden">
-                        <div class="flex justify-between items-center border-b border-borderBg pb-3">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-borderBg pb-3">
                             <div>
                                 <h3 class="text-lg font-bold text-white flex items-center gap-2">
                                     <i class="fa-solid fa-wallet text-amber-400"></i>
                                     Gestion de ton Budget Saison
                                 </h3>
-                                <p class="text-xs text-gray-400">Saisis tes dépenses estimées ou réelles par poste.</p>
+                                <p class="text-xs text-gray-400">Aperçu global et répartition visuelle de tes dépenses.</p>
                             </div>
                             <div class="flex items-center gap-3">
                                 <button onclick="addNewCustomBudgetCategory()" class="text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-3 py-1.5 rounded-xl font-semibold transition flex items-center gap-1.5">
@@ -301,6 +304,18 @@
                                 <span class="text-xs text-amber-400 font-mono font-bold bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
                                     Total : <span id="budget-view-total">0 €</span>
                                 </span>
+                            </div>
+                        </div>
+
+                        <!-- SECTION CHART CAMEMBERT DES DEPENSES -->
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 bg-darkBg/60 p-4 rounded-2xl border border-borderBg items-center">
+                            <div class="md:col-span-5 flex justify-center items-center h-48 sm:h-56 relative">
+                                <canvas id="budgetPieChart"></canvas>
+                            </div>
+                            <div class="md:col-span-7 space-y-2">
+                                <h4 class="text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Analyse de la répartition</h4>
+                                <div id="budget-pie-legend" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                </div>
                             </div>
                         </div>
 
@@ -345,6 +360,19 @@
                                 </div>
                             </div>
 
+                            <!-- LIEN TRACE GPX -->
+                            <div class="bg-darkBg/90 p-3 rounded-xl border border-borderBg space-y-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-300 font-bold flex items-center gap-1.5">
+                                        <i class="fa-solid fa-map-pin text-emerald-400"></i> Trace GPX :
+                                    </span>
+                                    <button onclick="editGpxLink()" class="text-[10px] text-emerald-400 hover:underline">Modifier</button>
+                                </div>
+                                <div id="gpx-link-display">
+                                    <p class="text-[10px] text-gray-500 italic">Aucune trace GPX enregistrée.</p>
+                                </div>
+                            </div>
+
                             <!-- LIEN ITINERAIRE GOOGLE MAPS -->
                             <div id="detail-race-gmaps-container"></div>
 
@@ -371,18 +399,34 @@
 
                 </div>
 
-                <!-- PANNEAU CHRONOLOGIE VERTICALE -->
-                <div id="timeline-column" class="lg:col-span-4 glass-panel p-4 sm:p-6 rounded-2xl border border-borderBg space-y-3">
-                    <div class="flex items-center justify-between border-b border-borderBg pb-3">
-                        <h3 id="timeline-title" class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                            <i class="fa-solid fa-timeline text-emerald-400"></i>
-                            Chronologie des épreuves
-                        </h3>
-                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Planning</span>
+                <!-- PANNEAU CHRONOLOGIE VERTICALE ET GRAPHIQUE DE CHARGE CUMULEE -->
+                <div id="timeline-column" class="lg:col-span-4 space-y-4">
+                    <div class="glass-panel p-4 sm:p-6 rounded-2xl border border-borderBg space-y-3">
+                        <div class="flex items-center justify-between border-b border-borderBg pb-3">
+                            <h3 id="timeline-title" class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-timeline text-emerald-400"></i>
+                                Chronologie des épreuves
+                            </h3>
+                            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Planning</span>
+                        </div>
+
+                        <div id="timeline-container" class="space-y-4 max-h-[450px] overflow-y-auto pr-1">
+                            <p class="text-xs text-gray-400 italic text-center py-6">Chargement des courses...</p>
+                        </div>
                     </div>
 
-                    <div id="timeline-container" class="space-y-4 max-h-[450px] overflow-y-auto pr-1">
-                        <p class="text-xs text-gray-400 italic text-center py-6">Chargement des courses...</p>
+                    <!-- COURBE CUMULEE : DISTANCE + D+/10 -->
+                    <div class="glass-panel p-4 rounded-2xl border border-borderBg space-y-3">
+                        <div class="flex justify-between items-center border-b border-borderBg pb-2">
+                            <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+                                <i class="fa-solid fa-chart-line text-emerald-400"></i>
+                                Cumul Charge Saison (km + D+/10)
+                            </h4>
+                            <span class="text-[9px] font-mono text-gray-400">Formule Trail</span>
+                        </div>
+                        <div class="h-44 relative">
+                            <canvas id="loadChart"></canvas>
+                        </div>
                     </div>
                 </div>
 
@@ -402,6 +446,7 @@
         let filteredRaces = [];
         let favorites = JSON.parse(localStorage.getItem('pacepulse_favs') || '[]');
         let raceMetaStates = JSON.parse(localStorage.getItem('pacepulse_meta') || '{}');
+        let raceGpxLinks = JSON.parse(localStorage.getItem('pacepulse_gpx') || '{}');
        
         let customLinks = JSON.parse(localStorage.getItem('pacepulse_links') || JSON.stringify([
             { name: 'Strava', url: 'https://www.strava.com', icon: 'fa-brands fa-strava text-orange-500' },
@@ -422,6 +467,9 @@
         let currentDisplayLimit = 50;
         let searchDebounceTimeout = null;
 
+        let budgetPieChartInstance = null;
+        let loadChartInstance = null;
+
         const categoryBudgets = JSON.parse(localStorage.getItem('pacepulse_budgets') || JSON.stringify({
             materiel: 0,
             transport: 0,
@@ -432,15 +480,14 @@
             assurances: 0
         }));
 
-        // FONCTION DE NORMALISATION STYLE BETRAIL (Pardonne les apostrophes, tirets, accents et équivalents phonétiques)
         function normalizeStr(str) {
             if (!str) return '';
             return str.toLowerCase()
-                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Enlève les accents
-                .replace(/['’\-_]/g, " ")                       // Remplace apostrophes et tirets par espace
-                .replace(/ou/g, "o")                            // Normalisation tou/too phonétique
-                .replace(/[^a-z0-0\s]/g, "")                     // Nettoie la ponctuation
-                .replace(/\s+/g, " ")                           // Unifie les espaces
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                .replace(/['’\-_]/g, " ")
+                .replace(/ou/g, "o")
+                .replace(/[^a-z0-0\s]/g, "")
+                .replace(/\s+/g, " ")
                 .trim();
         }
 
@@ -472,6 +519,42 @@
             localStorage.setItem('pacepulse_favs', JSON.stringify(favorites));
             updateFavoritesUI();
             applyFilters();
+        }
+
+        function editGpxLink() {
+            if (!activeSelectedRaceKey) return;
+            const current = raceGpxLinks[activeSelectedRaceKey] || '';
+            let url = prompt("Adresse web de la trace GPX (OpenRunner, Visorando, Komoot, Wikiloc...):", current);
+            if (url === null) return;
+           
+            url = url.trim();
+            if (url && !url.startsWith('http')) url = 'https://' + url;
+
+            if (url) {
+                raceGpxLinks[activeSelectedRaceKey] = url;
+            } else {
+                delete raceGpxLinks[activeSelectedRaceKey];
+            }
+
+            localStorage.setItem('pacepulse_gpx', JSON.stringify(raceGpxLinks));
+            renderGpxLinkDisplay();
+        }
+
+        function renderGpxLinkDisplay() {
+            const container = document.getElementById('gpx-link-display');
+            if (!container) return;
+
+            const url = activeSelectedRaceKey ? raceGpxLinks[activeSelectedRaceKey] : null;
+
+            if (url) {
+                container.innerHTML = `
+                    <a href="${url}" target="_blank" class="w-full text-center bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-semibold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1">
+                        🗺️ Ouvrir la trace GPX ↗
+                    </a>
+                `;
+            } else {
+                container.innerHTML = `<p class="text-[10px] text-gray-500 italic">Aucune trace GPX enregistrée.</p>`;
+            }
         }
 
         function updateBudgetCategoryFromView(catKey, val) {
@@ -613,9 +696,172 @@
             document.getElementById('stat-total-budget').innerText = `${totalSaison} €`;
             if (document.getElementById('detail-total-budget')) document.getElementById('detail-total-budget').innerText = `${totalSaison} €`;
             if (document.getElementById('budget-view-total')) document.getElementById('budget-view-total').innerText = `${totalSaison} €`;
+
+            renderBudgetPieChart(totalDossards);
         }
 
-        // GESTION ULTRA-RAPIDE DE LA SAISIE + AUTOCOMPLETION INTELLIGENTE (STYLE BETRAIL)
+        // TÉLÉCHARGEMENT & RENDU DU CAMEMBERT DU BUDGET
+        function renderBudgetPieChart(totalDossards) {
+            const canvas = document.getElementById('budgetPieChart');
+            if (!canvas) return;
+
+            const labels = ['Dossards', 'Matériel', 'Transport', 'Hébergement', 'Nutrition', 'Médical', 'Coaching', 'Assurances'];
+            const dataValues = [
+                totalDossards,
+                Number(categoryBudgets.materiel) || 0,
+                Number(categoryBudgets.transport) || 0,
+                Number(categoryBudgets.hebergement) || 0,
+                Number(categoryBudgets.nutrition) || 0,
+                Number(categoryBudgets.medical) || 0,
+                Number(categoryBudgets.coaching) || 0,
+                Number(categoryBudgets.assurances) || 0
+            ];
+
+            customBudgetsList.forEach(c => {
+                labels.push(c.name);
+                dataValues.push(Number(categoryBudgets[c.key]) || 0);
+            });
+
+            const backgroundColors = [
+                '#10b981', '#3b82f6', '#eab308', '#f97316',
+                '#ec4899', '#8b5cf6', '#06b6d4', '#64748b',
+                '#a855f7', '#14b8a6', '#f43f5e'
+            ];
+
+            const total = dataValues.reduce((a, b) => a + b, 0);
+
+            // Légende dynamique
+            const legendContainer = document.getElementById('budget-pie-legend');
+            if (legendContainer) {
+                let legendHtml = '';
+                labels.forEach((lbl, idx) => {
+                    const val = dataValues[idx];
+                    if (val > 0 || total === 0) {
+                        const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                        legendHtml += `
+                            <div class="flex items-center justify-between bg-darkBg/90 px-2.5 py-1.5 rounded-lg border border-borderBg">
+                                <span class="flex items-center gap-1.5 text-gray-300">
+                                    <span class="w-2.5 h-2.5 rounded-full inline-block" style="background:${backgroundColors[idx % backgroundColors.length]}"></span>
+                                    ${lbl}
+                                </span>
+                                <span class="font-bold text-white font-mono">${val} € <span class="text-[10px] text-gray-400 font-normal">(${pct}%)</span></span>
+                            </div>
+                        `;
+                    }
+                });
+                legendContainer.innerHTML = legendHtml || '<p class="text-xs text-gray-500 italic">Aucune dépense saisie.</p>';
+            }
+
+            if (budgetPieChartInstance) {
+                budgetPieChartInstance.destroy();
+            }
+
+            budgetPieChartInstance = new Chart(canvas, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: total > 0 ? dataValues : [1],
+                        backgroundColor: total > 0 ? backgroundColors : ['#1f293d'],
+                        borderWidth: 2,
+                        borderColor: '#0b0f17'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (total === 0) return ' Aucune dépense';
+                                    const val = context.raw || 0;
+                                    const pct = ((val / total) * 100).toFixed(1);
+                                    return ` ${context.label}: ${val} € (${pct}%)`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        // GRAPHIQUE DE CHARGE CUMULEE : DISTANCE + D+/10
+        function renderLoadChart() {
+            const canvas = document.getElementById('loadChart');
+            if (!canvas) return;
+
+            const validRaces = filteredRaces
+                .filter(r => r.raceDate && !isNaN(new Date(r.raceDate).getTime()))
+                .sort((a, b) => new Date(a.raceDate) - new Date(b.raceDate));
+
+            if (validRaces.length === 0) {
+                if (loadChartInstance) loadChartInstance.destroy();
+                return;
+            }
+
+            const labels = [];
+            const cumulativeData = [];
+            let currentCumul = 0;
+
+            validRaces.forEach(r => {
+                const dateLabel = formatDateFR(r.raceDate, r.status);
+                const chargeCourse = r.distance + (r.elevation / 10);
+                currentCumul += chargeCourse;
+
+                labels.push(dateLabel);
+                cumulativeData.push(Math.round(currentCumul));
+            });
+
+            if (loadChartInstance) {
+                loadChartInstance.destroy();
+            }
+
+            loadChartInstance = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Cumul (Dist + D+/10)',
+                        data: cumulativeData,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#eab308',
+                        pointBorderColor: '#0b0f17',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    return ` Charge cumulée : ${ctx.raw} pts`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#9ca3af', font: { size: 9 } },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                        },
+                        y: {
+                            ticks: { color: '#34d399', font: { size: 9 } },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                        }
+                    }
+                }
+            });
+        }
+
         function handleFastSearch(val) {
             clearTimeout(searchDebounceTimeout);
             renderSearchSuggestions(val);
@@ -744,7 +990,6 @@
             }
 
             if (races) {
-                // OPTIMISATION : PRE-CALCUL DES CLES NORMALISEES POUR UNE RECHERCHE INSTANTANEE
                 racesData = races.map(r => {
                     const title = r.title || '';
                     const loc = r.location || 'France';
@@ -763,7 +1008,7 @@
                         raceDate: r.race_date,
                         status: r.status,
                         url: r.organizer_url,
-                        searchNorm: normalizeStr(title + ' ' + loc) // Champ de recherche accéléré
+                        searchNorm: normalizeStr(title + ' ' + loc)
                     };
                 });
 
@@ -902,7 +1147,7 @@
             document.getElementById('detail-race-loc').innerText = location;
             document.getElementById('detail-race-price').innerText = price > 0 ? `${price} €` : 'N/C';
 
-            // GOOGLE MAPS : DESTINATION SUR LE LIEU SEULEMENT
+            // GOOGLE MAPS : DESTINATION SUR LE LIEU
             const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=Marseille&destination=${encodeURIComponent(location)}`;
             document.getElementById('detail-race-gmaps-container').innerHTML = `
                 <a href="${gmapsUrl}" target="_blank" class="w-full text-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold py-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
@@ -910,7 +1155,7 @@
                 </a>
             `;
 
-            // LIENS HEBERGEMENT PRE-REMPLIS AVEC LA VILLE
+            // LIENS HEBERGEMENT
             const airbnbUrl = `https://www.airbnb.fr/s/${encodeURIComponent(location)}/homes`;
             const bookingUrl = `https://www.booking.com/searchresults.fr.html?ss=${encodeURIComponent(location)}`;
 
@@ -933,6 +1178,8 @@
             } else {
                 linkContainer.innerHTML = '';
             }
+
+            renderGpxLinkDisplay();
 
             const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
             document.getElementById('check-reg-ok').checked = meta.registered;
@@ -998,6 +1245,7 @@
 
             if (validRaces.length === 0) {
                 container.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-6">Aucune course datée à afficher.</p>';
+                renderLoadChart();
                 return;
             }
 
@@ -1079,6 +1327,8 @@
 
             html += '</div>';
             container.innerHTML = html;
+
+            renderLoadChart();
         }
 
         function applyFilters() {
@@ -1101,7 +1351,6 @@
                 const favKey = `${r.title}_${r.raceDate}`;
                 if (onlyShowFavorites && !favorites.includes(favKey)) return false;
 
-                // UTILISATION DE LA NORMALISATION FUZZY DÉJÀ PRÉ-CALCULÉE
                 const matchKw = !queryNorm || r.searchNorm.includes(queryNorm);
               
                 let matchStat = true;
