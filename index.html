@@ -275,7 +275,8 @@
                     <button id="btn-view-secondary" onclick="switchMainView('secondary')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white">
                         <i id="btn-secondary-icon" class="fa-solid fa-list-ul mr-1"></i> <span id="btn-secondary-text">Liste</span>
                     </button>
-                    <button id="btn-view-budget" onclick="switchMainView('budget')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white">
+                    <!-- ONGLET BUDGET VISIBLE UNIQUEMENT EN MODE FAVORIS -->
+                    <button id="btn-view-budget" onclick="switchMainView('budget')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white hidden">
                         <i class="fa-solid fa-wallet mr-1"></i> Gestion du Budget
                     </button>
                     <button id="btn-view-links" onclick="switchMainView('links')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white">
@@ -284,20 +285,20 @@
                 </div>
             </div>
 
-            <!-- LAYOUT GRILLE RESPONSIVE UNIFORMISÉ AVEC HAUTEURS ÉGALES -->
+            <!-- LAYOUT GRILLE RESPONSIVE UNIFORMISÉ -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
                
-                <!-- ZONE PRINCIPALE (CARTE / LISTE / GESTION BUDGET / LIENS & OUTILS) -->
+                <!-- ZONE PRINCIPALE -->
                 <div id="main-view-column" class="lg:col-span-8 space-y-4 transition-all duration-300 flex flex-col justify-stretch">
-                    <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden flex-1 min-h-[520px] flex flex-col">
-                        <div id="map" class="w-full flex-1 min-h-[500px] rounded-xl z-10"></div>
+                    <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden flex-1 min-h-[480px] flex flex-col">
+                        <div id="map" class="w-full flex-1 min-h-[460px] rounded-xl z-10"></div>
                     </div>
 
                     <!-- LISTE DES COURSES -->
-                    <div id="container-list-view" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden min-h-[520px]"></div>
+                    <div id="container-list-view" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden min-h-[480px]"></div>
 
                     <!-- GESTION DU BUDGET SAISON -->
-                    <div id="container-budget-view" class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6 hidden min-h-[520px]">
+                    <div id="container-budget-view" class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6 hidden min-h-[480px]">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-borderBg pb-3">
                             <div>
                                 <h3 class="text-lg font-bold text-white flex items-center gap-2">
@@ -316,25 +317,21 @@
                             </div>
                         </div>
 
-                        <!-- SECTION CHART CAMEMBERT DES DEPENSES -->
                         <div class="grid grid-cols-1 md:grid-cols-12 gap-6 bg-darkBg/60 p-4 rounded-2xl border border-borderBg items-center">
                             <div class="md:col-span-5 flex justify-center items-center h-48 sm:h-56 relative">
                                 <canvas id="budgetPieChart"></canvas>
                             </div>
                             <div class="md:col-span-7 space-y-2">
                                 <h4 class="text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Analyse de la répartition</h4>
-                                <div id="budget-pie-legend" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                                </div>
+                                <div id="budget-pie-legend" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
                             </div>
                         </div>
 
-                        <!-- GRILLE DES POSTES DE BUDGET -->
-                        <div id="budget-categories-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        </div>
+                        <div id="budget-categories-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
                     </div>
 
-                    <!-- ONGLETS LIENS & OUTILS UTILES -->
-                    <div id="container-links-view" class="glass-panel p-6 rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 via-cardBg to-darkBg space-y-4 hidden min-h-[520px]">
+                    <!-- ONGLET LIENS & OUTILS UTILES -->
+                    <div id="container-links-view" class="glass-panel p-6 rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 via-cardBg to-darkBg space-y-4 hidden min-h-[480px]">
                         <div class="flex justify-between items-center border-b border-emerald-500/20 pb-3">
                             <h3 class="text-lg font-bold text-white flex items-center gap-2">
                                 <i class="fa-solid fa-link text-emerald-400"></i>
@@ -342,37 +339,34 @@
                             </h3>
                             <button onclick="addNewCustomLink()" class="text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-3.5 py-1.5 rounded-xl transition font-semibold">+ Ajouter un outil</button>
                         </div>
-                        <div id="custom-links-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-2">
-                        </div>
+                        <div id="custom-links-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-2"></div>
                     </div>
                 </div>
 
-                <!-- COLONNE DU MILIEU (SUIVI DE LA SAISON COMPLET - SANS SCROLL) -->
+                <!-- COLONNE DU MILIEU (SUIVI DE LA SAISON TAILLÉ JUSTE AU CURSEUR) -->
                 <div id="middle-column" class="hidden lg:col-span-3 transition-all duration-300 flex flex-col">
-                   
-                    <!-- CADRAN SUIVI DE LA SAISON -->
-                    <div id="interactive-detail-panel" class="glass-panel p-3.5 sm:p-4 rounded-2xl border border-emerald-500/50 bg-emerald-950/30 space-y-2.5 flex-1 flex flex-col justify-between">
-                        <div class="space-y-2.5">
-                            <div class="flex justify-between items-start border-b border-borderBg pb-2">
+                    <div id="interactive-detail-panel" class="glass-panel p-3 rounded-2xl border border-emerald-500/50 bg-emerald-950/30 space-y-2 flex-1 flex flex-col justify-between">
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-start border-b border-borderBg pb-1.5">
                                 <div>
-                                    <span class="text-[10px] font-mono text-emerald-400 uppercase font-bold tracking-wider">Suivi de la saison</span>
-                                    <h3 id="detail-race-title" class="text-xs sm:text-sm font-bold text-white mt-0.5 leading-snug"></h3>
+                                    <span class="text-[9px] font-mono text-emerald-400 uppercase font-bold tracking-wider">Suivi de la saison</span>
+                                    <h3 id="detail-race-title" class="text-xs font-bold text-white leading-tight"></h3>
                                 </div>
-                                <button onclick="closeInteractiveDetail()" class="text-xs text-gray-400 hover:text-white bg-darkBg p-1.5 rounded-lg border border-borderBg flex items-center justify-center">✕</button>
+                                <button onclick="closeInteractiveDetail()" class="text-xs text-gray-400 hover:text-white bg-darkBg px-1.5 py-0.5 rounded border border-borderBg">✕</button>
                             </div>
 
-                            <div class="space-y-2 text-xs">
-                                <div class="flex items-center justify-between bg-emerald-900/40 px-3 py-2 rounded-xl border border-emerald-500/40">
-                                    <span class="text-emerald-200 font-bold">Inscription OK ?</span>
-                                    <input type="checkbox" id="check-reg-ok" onchange="toggleRaceStatusMeta('registered')" class="w-4 h-4 accent-emerald-400 cursor-pointer">
+                            <div class="space-y-1.5 text-xs">
+                                <div class="flex items-center justify-between bg-emerald-900/40 px-2.5 py-1.5 rounded-xl border border-emerald-500/40">
+                                    <span class="text-emerald-200 font-bold text-[11px]">Inscription OK ?</span>
+                                    <input type="checkbox" id="check-reg-ok" onchange="toggleRaceStatusMeta('registered')" class="w-3.5 h-3.5 accent-emerald-400 cursor-pointer">
                                 </div>
 
-                                <div class="flex items-center justify-between bg-blue-900/40 px-3 py-2 rounded-xl border border-blue-500/40">
-                                    <span class="text-blue-200 font-bold">Course terminée ?</span>
-                                    <input type="checkbox" id="check-done" onchange="toggleRaceStatusMeta('completed')" class="w-4 h-4 accent-blue-400 cursor-pointer">
+                                <div class="flex items-center justify-between bg-blue-900/40 px-2.5 py-1.5 rounded-xl border border-blue-500/40">
+                                    <span class="text-blue-200 font-bold text-[11px]">Course terminée ?</span>
+                                    <input type="checkbox" id="check-done" onchange="toggleRaceStatusMeta('completed')" class="w-3.5 h-3.5 accent-blue-400 cursor-pointer">
                                 </div>
 
-                                <div class="bg-darkBg/90 px-3 py-2 rounded-xl border border-borderBg space-y-1">
+                                <div class="bg-darkBg/90 px-2.5 py-1.5 rounded-xl border border-borderBg space-y-0.5 text-[11px]">
                                     <div class="flex justify-between">
                                         <span class="text-gray-400">📍 Lieu :</span>
                                         <b id="detail-race-loc" class="text-white text-right font-medium">-</b>
@@ -384,47 +378,46 @@
                                 </div>
 
                                 <!-- LIEN TRACE GPX -->
-                                <div class="bg-darkBg/90 px-3 py-2 rounded-xl border border-borderBg space-y-1">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-gray-300 font-bold flex items-center gap-1.5">
-                                            <i class="fa-solid fa-map-pin text-emerald-400"></i> Trace GPX :
+                                <div class="bg-darkBg/90 px-2.5 py-1.5 rounded-xl border border-borderBg space-y-0.5">
+                                    <div class="flex justify-between items-center text-[11px]">
+                                        <span class="text-gray-300 font-bold flex items-center gap-1">
+                                            <i class="fa-solid fa-map-pin text-emerald-400 text-[10px]"></i> Trace GPX :
                                         </span>
                                         <button onclick="editGpxLink()" class="text-[10px] text-emerald-400 hover:underline">Modifier</button>
                                     </div>
                                     <div id="gpx-link-display">
-                                        <p class="text-[10px] text-gray-500 italic">Aucune trace GPX enregistrée.</p>
+                                        <p class="text-[9px] text-gray-500 italic">Aucune trace GPX enregistrée.</p>
                                     </div>
                                 </div>
 
-                                <!-- LIEN STRAVA / ACTIVITÉ COURSE -->
-                                <div class="bg-darkBg/90 px-3 py-2 rounded-xl border border-borderBg space-y-1">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-gray-300 font-bold flex items-center gap-1.5">
-                                            <i class="fa-brands fa-strava text-orange-500"></i> Lien Activité :
+                                <!-- LIEN STRAVA -->
+                                <div class="bg-darkBg/90 px-2.5 py-1.5 rounded-xl border border-borderBg space-y-0.5">
+                                    <div class="flex justify-between items-center text-[11px]">
+                                        <span class="text-gray-300 font-bold flex items-center gap-1">
+                                            <i class="fa-brands fa-strava text-orange-500 text-[10px]"></i> Lien Activité :
                                         </span>
                                         <button onclick="editStravaActivityLink()" class="text-[10px] text-emerald-400 hover:underline">Modifier</button>
                                     </div>
                                     <div id="strava-link-display">
-                                        <p class="text-[10px] text-gray-500 italic">Aucun lien d'activité enregistré.</p>
+                                        <p class="text-[9px] text-gray-500 italic">Aucun lien d'activité enregistré.</p>
                                     </div>
                                 </div>
 
-                                <!-- LIEN ITINERAIRE GOOGLE MAPS -->
+                                <!-- GOOGLE MAPS -->
                                 <div id="detail-race-gmaps-container"></div>
 
-                                <!-- LIENS HEBERGEMENTS -->
-                                <div id="detail-race-lodging-container" class="grid grid-cols-2 gap-2"></div>
+                                <!-- HEBERGEMENTS -->
+                                <div id="detail-race-lodging-container" class="grid grid-cols-2 gap-1.5"></div>
                             </div>
                         </div>
 
-                        <div id="detail-race-link-container" class="pt-1"></div>
+                        <div id="detail-race-link-container" class="pt-0.5"></div>
                     </div>
-
                 </div>
 
-                <!-- PANNEAU CHRONOLOGIE ALIGNÉ SUR LA HAUTEUR GLOBALE DU CADRAN -->
+                <!-- PANNEAU CHRONOLOGIE -->
                 <div id="timeline-column" class="lg:col-span-4 transition-all duration-300 flex flex-col">
-                    <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-borderBg space-y-3 flex-1 min-h-[520px] flex flex-col">
+                    <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-borderBg space-y-3 flex-1 min-h-[480px] flex flex-col">
                         <div class="flex items-center justify-between border-b border-borderBg pb-2.5">
                             <h3 id="timeline-title" class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
                                 <i class="fa-solid fa-timeline text-emerald-400"></i>
@@ -433,7 +426,6 @@
                             <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Planning</span>
                         </div>
 
-                        <!-- DEFILEMENT INTERNE FLUIDE AJUSTE SANS DÉPASSER -->
                         <div id="timeline-container" class="space-y-4 flex-1 h-0 overflow-y-auto pr-1">
                             <p class="text-xs text-gray-400 italic text-center py-6">Chargement des courses...</p>
                         </div>
@@ -442,7 +434,7 @@
 
             </div>
 
-            <!-- COURBE CUMULÉE SUR TOUTE LA LARGEUR -->
+            <!-- COURBE CUMULÉE -->
             <div id="container-load-chart" class="glass-panel p-4 sm:p-6 rounded-2xl border border-borderBg space-y-3 hidden w-full">
                 <div class="flex justify-between items-center border-b border-borderBg pb-2">
                     <h4 class="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
@@ -519,6 +511,7 @@
         function initLeafletMap() {
             const mapContainer = document.getElementById('map');
             if (!mapContainer) return;
+            // Centré précisément sur la France
             leafletMap = L.map('map').setView([46.603354, 1.888334], 6);
       
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -551,13 +544,17 @@
            
             const btnAll = document.getElementById('btn-toggle-all');
             const btnFav = document.getElementById('btn-toggle-fav');
+            const btnBudget = document.getElementById('btn-view-budget');
 
             if (onlyShowFavorites) {
                 btnFav.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition flex items-center gap-1.5";
                 btnAll.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition";
+                if (btnBudget) btnBudget.classList.remove('hidden'); // Afficher l'onglet budget uniquement en mode favoris
             } else {
                 btnAll.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition";
                 btnFav.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5";
+                if (btnBudget) btnBudget.classList.add('hidden'); // Masquer l'onglet budget
+                if (activeMainTab === 'budget') switchMainView('map');
                 closeInteractiveDetail();
             }
 
@@ -591,12 +588,12 @@
 
             if (url) {
                 container.innerHTML = `
-                    <a href="${url}" target="_blank" class="w-full text-center bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-semibold py-1 rounded-lg text-xs transition flex items-center justify-center gap-1">
+                    <a href="${url}" target="_blank" class="w-full text-center bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-semibold py-1 rounded-lg text-[10px] transition flex items-center justify-center gap-1">
                         🗺️ Ouvrir la trace GPX ↗
                     </a>
                 `;
             } else {
-                container.innerHTML = `<p class="text-[10px] text-gray-500 italic">Aucune trace GPX enregistrée.</p>`;
+                container.innerHTML = `<p class="text-[9px] text-gray-500 italic">Aucune trace GPX enregistrée.</p>`;
             }
         }
 
@@ -627,12 +624,12 @@
 
             if (url) {
                 container.innerHTML = `
-                    <a href="${url}" target="_blank" class="w-full text-center bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/40 font-semibold py-1 rounded-lg text-xs transition flex items-center justify-center gap-1">
+                    <a href="${url}" target="_blank" class="w-full text-center bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/40 font-semibold py-1 rounded-lg text-[10px] transition flex items-center justify-center gap-1">
                         <i class="fa-brands fa-strava"></i> Ouvrir l'activité ↗
                     </a>
                 `;
             } else {
-                container.innerHTML = `<p class="text-[10px] text-gray-500 italic">Aucun lien d'activité enregistré.</p>`;
+                container.innerHTML = `<p class="text-[9px] text-gray-500 italic">Aucun lien d'activité enregistré.</p>`;
             }
         }
 
@@ -1252,7 +1249,7 @@
 
             const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=Marseille&destination=${encodeURIComponent(location)}`;
             document.getElementById('detail-race-gmaps-container').innerHTML = `
-                <a href="${gmapsUrl}" target="_blank" class="w-full text-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold py-1.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                <a href="${gmapsUrl}" target="_blank" class="w-full text-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold py-1 rounded-xl text-[10px] transition flex items-center justify-center gap-1">
                     <i class="fa-solid fa-route"></i> Trajet & temps (Google Maps) ↗
                 </a>
             `;
@@ -1261,10 +1258,10 @@
             const bookingUrl = `https://www.booking.com/searchresults.fr.html?ss=${encodeURIComponent(location)}`;
 
             document.getElementById('detail-race-lodging-container').innerHTML = `
-                <a href="${airbnbUrl}" target="_blank" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold py-1 rounded-xl text-[11px] transition flex items-center justify-center gap-1">
+                <a href="${airbnbUrl}" target="_blank" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold py-1 rounded-lg text-[10px] transition flex items-center justify-center gap-1">
                     🏠 Airbnb ↗
                 </a>
-                <a href="${bookingUrl}" target="_blank" class="bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 font-semibold py-1 rounded-xl text-[11px] transition flex items-center justify-center gap-1">
+                <a href="${bookingUrl}" target="_blank" class="bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 font-semibold py-1 rounded-lg text-[10px] transition flex items-center justify-center gap-1">
                     🏨 Booking ↗
                 </a>
             `;
@@ -1272,7 +1269,7 @@
             const linkContainer = document.getElementById('detail-race-link-container');
             if (url) {
                 linkContainer.innerHTML = `
-                    <a href="${url}" target="_blank" class="w-full text-center bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold py-1.5 rounded-xl text-xs transition block">
+                    <a href="${url}" target="_blank" class="w-full text-center bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold py-1 rounded-lg text-[10px] transition block">
                         Page Inscription ↗
                     </a>
                 `;
@@ -1650,7 +1647,7 @@
 
             btnMap.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
             btnSec.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
-            btnBudget.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
+            if (btnBudget) btnBudget.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
             btnLinks.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
 
             if (v === 'map') {
@@ -1660,9 +1657,9 @@
             } else if (v === 'secondary') {
                 listV.classList.remove('hidden');
                 btnSec.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
-            } else if (v === 'budget') {
+            } else if (v === 'budget' && onlyShowFavorites) {
                 budgetV.classList.remove('hidden');
-                btnBudget.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
+                if (btnBudget) btnBudget.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
             } else if (v === 'links') {
                 linksV.classList.remove('hidden');
                 btnLinks.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
