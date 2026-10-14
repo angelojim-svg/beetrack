@@ -163,6 +163,7 @@
                         <div class="flex justify-between text-gray-300"><span>🩺 Médical :</span><b id="detail-b-medical">0 €</b></div>
                         <div class="flex justify-between text-gray-300"><span>🧘 Coaching :</span><b id="detail-b-coaching">0 €</b></div>
                         <div class="flex justify-between text-gray-300"><span>🛡️ Assurances :</span><b id="detail-b-assurances">0 €</b></div>
+                        <div id="dropdown-custom-budgets" class="border-t border-borderBg/50 pt-1 space-y-1"></div>
                     </div>
                 </div>
 
@@ -180,7 +181,7 @@
     <!-- MAIN CONTAINER -->
     <main class="flex-grow max-w-[1600px] w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6">
 
-        <!-- SEARCH & FILTER PANEL -->
+        <!-- SEARCH & FILTER PANEL AVEC AUTOCOMPLETION BETRAIL STYLE -->
         <section class="glass-panel p-4 sm:p-6 rounded-2xl border border-borderBg space-y-5">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-borderBg pb-3">
                 <h2 class="text-base sm:text-xl font-extrabold text-white flex items-center gap-2">
@@ -196,10 +197,18 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-                <div class="md:col-span-7">
-                    <label class="block text-[11px] font-semibold uppercase text-gray-400 mb-1.5">Recherche par nom ou ville</label>
-                    <input type="text" id="filter-keyword" oninput="applyFilters()" placeholder="Ex: Saint-Victoire, Chamonix..." class="w-full px-3 py-2 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none">
+                <div class="md:col-span-7 relative">
+                    <label class="block text-[11px] font-semibold uppercase text-gray-400 mb-1.5">Recherche (Nom de course, ville...)</label>
+                    <div class="relative">
+                        <input type="text" id="filter-keyword" oninput="handleSearchInputDebounced(this.value)" placeholder="Tapez 2 caractères ou plus..." class="w-full px-3 py-2 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none focus:border-emerald-400">
+                        <i class="fa-solid fa-magnifying-glass absolute right-3 top-2.5 text-gray-500 text-xs"></i>
+                    </div>
+
+                    <!-- DROPDOWN SUGGESTIONS STYLE BETRAIL -->
+                    <div id="search-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-cardBg border border-borderBg rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto divide-y divide-borderBg/50 text-xs">
+                    </div>
                 </div>
+
                 <div class="md:col-span-5">
                     <label class="block text-[11px] font-semibold uppercase text-gray-400 mb-1.5">Statut d'ouverture</label>
                     <select id="filter-status" onchange="applyFilters()" class="w-full px-3 py-2 bg-darkBg border border-borderBg rounded-xl text-sm text-white font-medium cursor-pointer">
@@ -275,95 +284,34 @@
                     <!-- LISTE DES COURSES -->
                     <div id="container-list-view" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden"></div>
 
-                    <!-- GESTION DU BUDGET SAISON -->
+                    <!-- GESTION DU BUDGET SAISON (AVEC POSSIBILITÉ D'AJOUTER DES POSTES PERSO) -->
                     <div id="container-budget-view" class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6 hidden">
                         <div class="flex justify-between items-center border-b border-borderBg pb-3">
-                            <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                                <i class="fa-solid fa-wallet text-amber-400"></i>
-                                Gestion de ton Budget Saison
-                            </h3>
-                            <span class="text-xs text-amber-400 font-mono font-bold bg-amber-500/10 px-3 py-1 rounded-lg border border-amber-500/20">
-                                Total : <span id="budget-view-total">0 €</span>
-                            </span>
+                            <div>
+                                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-wallet text-amber-400"></i>
+                                    Gestion de ton Budget Saison
+                                </h3>
+                                <p class="text-xs text-gray-400">Saisis tes dépenses estimées ou réelles par poste.</p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button onclick="addNewCustomBudgetCategory()" class="text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-3 py-1.5 rounded-xl font-semibold transition flex items-center gap-1.5">
+                                    <i class="fa-solid fa-plus"></i> Ajouter poste
+                                </button>
+                                <span class="text-xs text-amber-400 font-mono font-bold bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
+                                    Total : <span id="budget-view-total">0 €</span>
+                                </span>
+                            </div>
                         </div>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <!-- DOSSARDS -->
-                            <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2">
-                                <div class="flex justify-between items-center text-xs font-bold text-gray-300">
-                                    <span>🎟️ Dossards (Favoris)</span>
-                                    <span class="text-amber-400 font-mono" id="budget-val-dossards">0 €</span>
-                                </div>
-                                <p class="text-[10px] text-gray-400">Calculé automatiquement selon tes favoris.</p>
-                            </div>
-
-                            <!-- MATERIEL -->
-                            <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2">
-                                <div class="flex justify-between items-center text-xs font-bold text-gray-300">
-                                    <span>🎒 Matériel</span>
-                                    <span class="text-amber-400 font-mono" id="budget-val-materiel">0 €</span>
-                                </div>
-                                <input type="number" min="0" placeholder="0 €" oninput="updateBudgetCategoryFromView('materiel', this.value)" id="budget-input-materiel" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
-                            </div>
-
-                            <!-- TRANSPORT -->
-                            <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2">
-                                <div class="flex justify-between items-center text-xs font-bold text-gray-300">
-                                    <span>🚗 Transport</span>
-                                    <span class="text-amber-400 font-mono" id="budget-val-transport">0 €</span>
-                                </div>
-                                <input type="number" min="0" placeholder="0 €" oninput="updateBudgetCategoryFromView('transport', this.value)" id="budget-input-transport" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
-                            </div>
-
-                            <!-- HEBERGEMENT -->
-                            <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2">
-                                <div class="flex justify-between items-center text-xs font-bold text-gray-300">
-                                    <span>⛺ Hébergement</span>
-                                    <span class="text-amber-400 font-mono" id="budget-val-hebergement">0 €</span>
-                                </div>
-                                <input type="number" min="0" placeholder="0 €" oninput="updateBudgetCategoryFromView('hebergement', this.value)" id="budget-input-hebergement" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
-                            </div>
-
-                            <!-- NUTRITION -->
-                            <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2">
-                                <div class="flex justify-between items-center text-xs font-bold text-gray-300">
-                                    <span>⚡ Nutrition</span>
-                                    <span class="text-amber-400 font-mono" id="budget-val-nutrition">0 €</span>
-                                </div>
-                                <input type="number" min="0" placeholder="0 €" oninput="updateBudgetCategoryFromView('nutrition', this.value)" id="budget-input-nutrition" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
-                            </div>
-
-                            <!-- MEDICAL -->
-                            <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2">
-                                <div class="flex justify-between items-center text-xs font-bold text-gray-300">
-                                    <span>🩺 Médical & Santé</span>
-                                    <span class="text-amber-400 font-mono" id="budget-val-medical">0 €</span>
-                                </div>
-                                <input type="number" min="0" placeholder="0 €" oninput="updateBudgetCategoryFromView('medical', this.value)" id="budget-input-medical" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
-                            </div>
-
-                            <!-- COACHING -->
-                            <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2">
-                                <div class="flex justify-between items-center text-xs font-bold text-gray-300">
-                                    <span>🧘 Coaching & Club</span>
-                                    <span class="text-amber-400 font-mono" id="budget-val-coaching">0 €</span>
-                                </div>
-                                <input type="number" min="0" placeholder="0 €" oninput="updateBudgetCategoryFromView('coaching', this.value)" id="budget-input-coaching" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
-                            </div>
-
-                            <!-- ASSURANCES -->
-                            <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2 sm:col-span-2 lg:col-span-2">
-                                <div class="flex justify-between items-center text-xs font-bold text-gray-300">
-                                    <span>🛡️ Assurances & Secours</span>
-                                    <span class="text-amber-400 font-mono" id="budget-val-assurances">0 €</span>
-                                </div>
-                                <input type="number" min="0" placeholder="0 €" oninput="updateBudgetCategoryFromView('assurances', this.value)" id="budget-input-assurances" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
-                            </div>
+                        <!-- GRILLE DES POSTES DE BUDGET -->
+                        <div id="budget-categories-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <!-- POSTES STANDARD ET PERSO GENERES DYNAMIQUEMENT -->
                         </div>
                     </div>
                 </div>
 
-                <!-- COLONNE DU MILIEU (SUIVI DE SAISON + OUTILS DE PREPARATION) -->
+                <!-- COLONNE DU MILIEU (SUIVI DE SAISON + LOGEMENT + OUTILS) -->
                 <div id="middle-column" class="hidden lg:col-span-3 space-y-4 transition-all duration-300">
                    
                     <!-- CADRAN SUIVI DE LA SAISON -->
@@ -398,14 +346,17 @@
                                 </div>
                             </div>
 
-                            <!-- LIEN ITINERAIRE GOOGLE MAPS -->
+                            <!-- LIEN ITINERAIRE GOOGLE MAPS (DESTINATION = LIEU SEULEMENT) -->
                             <div id="detail-race-gmaps-container"></div>
+
+                            <!-- LIENS HEBERGEMENTS (AIRBNB ET BOOKING) -->
+                            <div id="detail-race-lodging-container" class="grid grid-cols-2 gap-2"></div>
 
                             <div id="detail-race-link-container" class="pt-1"></div>
                         </div>
                     </div>
 
-                    <!-- NOUVEAU CADRAN : LIENS UTILES & OUTILS DE PREPARATION -->
+                    <!-- CADRAN : LIENS UTILES & OUTILS DE PREPARATION -->
                     <div class="glass-panel p-4 rounded-2xl border border-borderBg space-y-3">
                         <div class="flex justify-between items-center border-b border-borderBg pb-2">
                             <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
@@ -416,7 +367,6 @@
                         </div>
 
                         <div id="custom-links-list" class="space-y-1.5 text-xs">
-                            <!-- Liens par défaut -->
                         </div>
                     </div>
 
@@ -453,11 +403,14 @@
         let filteredRaces = [];
         let favorites = JSON.parse(localStorage.getItem('pacepulse_favs') || '[]');
         let raceMetaStates = JSON.parse(localStorage.getItem('pacepulse_meta') || '{}');
+       
         let customLinks = JSON.parse(localStorage.getItem('pacepulse_links') || JSON.stringify([
             { name: 'Strava', url: 'https://www.strava.com', icon: 'fa-brands fa-strava text-orange-500' },
             { name: 'Garmin Connect', url: 'https://connect.garmin.com', icon: 'fa-solid fa-clock text-blue-400' },
             { name: 'Nolio Training', url: 'https://www.nolio.io', icon: 'fa-solid fa-chart-line text-emerald-400' }
         ]));
+
+        let customBudgetsList = JSON.parse(localStorage.getItem('pacepulse_custom_budgets_list') || JSON.stringify([]));
 
         let onlyShowFavorites = false;
         let activeMainTab = 'map';
@@ -468,6 +421,7 @@
         let activeSelectedRaceKey = null;
 
         let currentDisplayLimit = 50;
+        let searchDebounceTimeout = null;
 
         const categoryBudgets = JSON.parse(localStorage.getItem('pacepulse_budgets') || JSON.stringify({
             materiel: 0,
@@ -509,10 +463,93 @@
             applyFilters();
         }
 
-        function updateBudgetCategoryFromView(cat, val) {
-            categoryBudgets[cat] = Math.max(0, Number(val) || 0);
+        function updateBudgetCategoryFromView(catKey, val) {
+            categoryBudgets[catKey] = Math.max(0, Number(val) || 0);
             localStorage.setItem('pacepulse_budgets', JSON.stringify(categoryBudgets));
             updateFavoritesUI();
+        }
+
+        function addNewCustomBudgetCategory() {
+            const name = prompt("Nom du nouveau poste de dépense (ex: Stage de trail, Massages, Ostéo...) :");
+            if (!name) return;
+            const key = 'custom_' + Date.now();
+           
+            customBudgetsList.push({ key: key, name: name });
+            localStorage.setItem('pacepulse_custom_budgets_list', JSON.stringify(customBudgetsList));
+            categoryBudgets[key] = 0;
+            localStorage.setItem('pacepulse_budgets', JSON.stringify(categoryBudgets));
+
+            renderBudgetGrid();
+            updateFavoritesUI();
+        }
+
+        function removeCustomBudgetCategory(key) {
+            customBudgetsList = customBudgetsList.filter(item => item.key !== key);
+            localStorage.setItem('pacepulse_custom_budgets_list', JSON.stringify(customBudgetsList));
+            delete categoryBudgets[key];
+            localStorage.setItem('pacepulse_budgets', JSON.stringify(categoryBudgets));
+
+            renderBudgetGrid();
+            updateFavoritesUI();
+        }
+
+        function renderBudgetGrid() {
+            const grid = document.getElementById('budget-categories-grid');
+            if (!grid) return;
+
+            const standardCategories = [
+                { key: 'dossards', name: '🎟️ Dossards (Favoris)', desc: 'Calculé automatiquement depuis tes favoris.', isCalc: true },
+                { key: 'materiel', name: '🎒 Matériel' },
+                { key: 'transport', name: '🚗 Transport' },
+                { key: 'hebergement', name: '⛺ Hébergement' },
+                { key: 'nutrition', name: '⚡ Nutrition' },
+                { key: 'medical', name: '🩺 Médical & Santé' },
+                { key: 'coaching', name: '🧘 Coaching & Club' },
+                { key: 'assurances', name: '🛡️ Assurances & Secours' }
+            ];
+
+            let html = '';
+
+            standardCategories.forEach(cat => {
+                if (cat.isCalc) {
+                    html += `
+                        <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2">
+                            <div class="flex justify-between items-center text-xs font-bold text-gray-300">
+                                <span>${cat.name}</span>
+                                <span class="text-amber-400 font-mono" id="budget-val-${cat.key}">0 €</span>
+                            </div>
+                            <p class="text-[10px] text-gray-400">${cat.desc}</p>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2">
+                            <div class="flex justify-between items-center text-xs font-bold text-gray-300">
+                                <span>${cat.name}</span>
+                                <span class="text-amber-400 font-mono" id="budget-val-${cat.key}">0 €</span>
+                            </div>
+                            <input type="number" min="0" placeholder="0 €" oninput="updateBudgetCategoryFromView('${cat.key}', this.value)" id="budget-input-${cat.key}" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-400">
+                        </div>
+                    `;
+                }
+            });
+
+            customBudgetsList.forEach(customCat => {
+                html += `
+                    <div class="bg-darkBg/80 p-4 rounded-xl border border-emerald-500/30 space-y-2 relative">
+                        <div class="flex justify-between items-center text-xs font-bold text-gray-300">
+                            <span class="flex items-center gap-1">📌 ${customCat.name}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-amber-400 font-mono" id="budget-val-${customCat.key}">0 €</span>
+                                <button onclick="removeCustomBudgetCategory('${customCat.key}')" class="text-gray-500 hover:text-red-400 text-xs px-1">✕</button>
+                            </div>
+                        </div>
+                        <input type="number" min="0" placeholder="0 €" oninput="updateBudgetCategoryFromView('${customCat.key}', this.value)" id="budget-input-${customCat.key}" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-400">
+                    </div>
+                `;
+            });
+
+            grid.innerHTML = html;
         }
 
         function updateFavoritesUI() {
@@ -527,45 +564,97 @@
                 }
             });
 
-            const mat = Number(categoryBudgets.materiel) || 0;
-            const trans = Number(categoryBudgets.transport) || 0;
-            const heb = Number(categoryBudgets.hebergement) || 0;
-            const nut = Number(categoryBudgets.nutrition) || 0;
-            const med = Number(categoryBudgets.medical) || 0;
-            const coach = Number(categoryBudgets.coaching) || 0;
-            const ass = Number(categoryBudgets.assurances) || 0;
+            let totalSaison = totalDossards;
 
-            const totalSaison = totalDossards + mat + trans + heb + nut + med + coach + ass;
+            // Mettre à jour la valeur calculée des dossards
+            if (document.getElementById('detail-b-dossards')) document.getElementById('detail-b-dossards').innerText = `${totalDossards} €`;
+            if (document.getElementById('budget-val-dossards')) document.getElementById('budget-val-dossards').innerText = `${totalDossards} €`;
+
+            // Mettre à jour les catégories standards
+            const stdKeys = ['materiel', 'transport', 'hebergement', 'nutrition', 'medical', 'coaching', 'assurances'];
+            stdKeys.forEach(k => {
+                const val = Number(categoryBudgets[k]) || 0;
+                totalSaison += val;
+                if (document.getElementById(`detail-b-${k}`)) document.getElementById(`detail-b-${k}`).innerText = `${val} €`;
+                if (document.getElementById(`budget-val-${k}`)) document.getElementById(`budget-val-${k}`).innerText = `${val} €`;
+                if (document.getElementById(`budget-input-${k}`) && document.activeElement !== document.getElementById(`budget-input-${k}`)) {
+                    document.getElementById(`budget-input-${k}`).value = val || '';
+                }
+            });
+
+            // Mettre à jour les catégories perso et la liste déroulante du header
+            const dropdownCustomWrapper = document.getElementById('dropdown-custom-budgets');
+            let dropdownCustomHtml = '';
+
+            customBudgetsList.forEach(customCat => {
+                const val = Number(categoryBudgets[customCat.key]) || 0;
+                totalSaison += val;
+
+                if (document.getElementById(`budget-val-${customCat.key}`)) {
+                    document.getElementById(`budget-val-${customCat.key}`).innerText = `${val} €`;
+                }
+                if (document.getElementById(`budget-input-${customCat.key}`) && document.activeElement !== document.getElementById(`budget-input-${customCat.key}`)) {
+                    document.getElementById(`budget-input-${customCat.key}`).value = val || '';
+                }
+
+                dropdownCustomHtml += `<div class="flex justify-between text-gray-300"><span>📌 ${customCat.name} :</span><b>${val} €</b></div>`;
+            });
+
+            if (dropdownCustomWrapper) dropdownCustomWrapper.innerHTML = dropdownCustomHtml;
 
             document.getElementById('stat-total-budget').innerText = `${totalSaison} €`;
             if (document.getElementById('detail-total-budget')) document.getElementById('detail-total-budget').innerText = `${totalSaison} €`;
             if (document.getElementById('budget-view-total')) document.getElementById('budget-view-total').innerText = `${totalSaison} €`;
+        }
 
-            if (document.getElementById('detail-b-dossards')) document.getElementById('detail-b-dossards').innerText = `${totalDossards} €`;
-            if (document.getElementById('detail-b-materiel')) document.getElementById('detail-b-materiel').innerText = `${mat} €`;
-            if (document.getElementById('detail-b-transport')) document.getElementById('detail-b-transport').innerText = `${trans} €`;
-            if (document.getElementById('detail-b-hebergement')) document.getElementById('detail-b-hebergement').innerText = `${heb} €`;
-            if (document.getElementById('detail-b-nutrition')) document.getElementById('detail-b-nutrition').innerText = `${nut} €`;
-            if (document.getElementById('detail-b-medical')) document.getElementById('detail-b-medical').innerText = `${med} €`;
-            if (document.getElementById('detail-b-coaching')) document.getElementById('detail-b-coaching').innerText = `${coach} €`;
-            if (document.getElementById('detail-b-assurances')) document.getElementById('detail-b-assurances').innerText = `${ass} €`;
+        // DEBOUNCE POUR LA RECHERCHE ET PROPOSITIONS EN TEMPS REEL
+        function handleSearchInputDebounced(val) {
+            clearTimeout(searchDebounceTimeout);
+            searchDebounceTimeout = setTimeout(() => {
+                renderSearchSuggestions(val);
+                applyFilters();
+            }, 250);
+        }
 
-            if (document.getElementById('budget-val-dossards')) document.getElementById('budget-val-dossards').innerText = `${totalDossards} €`;
-            if (document.getElementById('budget-val-materiel')) document.getElementById('budget-val-materiel').innerText = `${mat} €`;
-            if (document.getElementById('budget-val-transport')) document.getElementById('budget-val-transport').innerText = `${trans} €`;
-            if (document.getElementById('budget-val-hebergement')) document.getElementById('budget-val-hebergement').innerText = `${heb} €`;
-            if (document.getElementById('budget-val-nutrition')) document.getElementById('budget-val-nutrition').innerText = `${nut} €`;
-            if (document.getElementById('budget-val-medical')) document.getElementById('budget-val-medical').innerText = `${med} €`;
-            if (document.getElementById('budget-val-coaching')) document.getElementById('budget-val-coaching').innerText = `${coach} €`;
-            if (document.getElementById('budget-val-assurances')) document.getElementById('budget-val-assurances').innerText = `${ass} €`;
+        function renderSearchSuggestions(val) {
+            const container = document.getElementById('search-suggestions');
+            if (!container) return;
 
-            if (document.getElementById('budget-input-materiel') && document.activeElement !== document.getElementById('budget-input-materiel')) document.getElementById('budget-input-materiel').value = mat || '';
-            if (document.getElementById('budget-input-transport') && document.activeElement !== document.getElementById('budget-input-transport')) document.getElementById('budget-input-transport').value = trans || '';
-            if (document.getElementById('budget-input-hebergement') && document.activeElement !== document.getElementById('budget-input-hebergement')) document.getElementById('budget-input-hebergement').value = heb || '';
-            if (document.getElementById('budget-input-nutrition') && document.activeElement !== document.getElementById('budget-input-nutrition')) document.getElementById('budget-input-nutrition').value = nut || '';
-            if (document.getElementById('budget-input-medical') && document.activeElement !== document.getElementById('budget-input-medical')) document.getElementById('budget-input-medical').value = med || '';
-            if (document.getElementById('budget-input-coaching') && document.activeElement !== document.getElementById('budget-input-coaching')) document.getElementById('budget-input-coaching').value = coach || '';
-            if (document.getElementById('budget-input-assurances') && document.activeElement !== document.getElementById('budget-input-assurances')) document.getElementById('budget-input-assurances').value = ass || '';
+            const query = (val || '').trim().toLowerCase();
+            if (query.length < 2) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            const matches = racesData.filter(r =>
+                r.title.toLowerCase().includes(query) || r.location.toLowerCase().includes(query)
+            ).slice(0, 6);
+
+            if (matches.length === 0) {
+                container.innerHTML = `<div class="p-3 text-gray-500 italic">Aucune épreuve trouvée</div>`;
+            } else {
+                let html = '';
+                matches.forEach(m => {
+                    html += `
+                        <div onclick="selectSearchSuggestion('${m.title.replace(/'/g, "\\'")}')" class="p-2.5 hover:bg-emerald-500/10 hover:text-emerald-300 cursor-pointer transition flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-white">${m.title}</div>
+                                <div class="text-[10px] text-gray-400">📍 ${m.location} | 📏 ${m.distance}km</div>
+                            </div>
+                            <span class="text-[10px] bg-darkBg border border-borderBg px-2 py-0.5 rounded text-amber-400 font-mono">${m.raceDate ? formatDateFR(m.raceDate, m.status) : 'TBD'}</span>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            }
+            container.classList.remove('hidden');
+        }
+
+        function selectSearchSuggestion(title) {
+            const input = document.getElementById('filter-keyword');
+            if (input) input.value = title;
+            document.getElementById('search-suggestions').classList.add('hidden');
+            applyFilters();
         }
 
         function renderCustomLinks() {
@@ -798,11 +887,24 @@
             document.getElementById('detail-race-loc').innerText = location;
             document.getElementById('detail-race-price').innerText = price > 0 ? `${price} €` : 'N/C';
 
-            // Lien Google Maps itinéraire depuis Marseille
-            const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=Marseille&destination=${encodeURIComponent(location + ' ' + title)}`;
+            // GOOGLE MAPS : DESTINATION SUR LE LIEU SEULEMENT
+            const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=Marseille&destination=${encodeURIComponent(location)}`;
             document.getElementById('detail-race-gmaps-container').innerHTML = `
                 <a href="${gmapsUrl}" target="_blank" class="w-full text-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold py-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
                     <i class="fa-solid fa-route"></i> Trajet & temps (Google Maps) ↗
+                </a>
+            `;
+
+            // LIENS HEBERGEMENT (AIRBNB & BOOKING) PRE-REMPLIS AVEC LA VILLE
+            const airbnbUrl = `https://www.airbnb.fr/s/${encodeURIComponent(location)}/homes`;
+            const bookingUrl = `https://www.booking.com/searchresults.fr.html?ss=${encodeURIComponent(location)}`;
+
+            document.getElementById('detail-race-lodging-container').innerHTML = `
+                <a href="${airbnbUrl}" target="_blank" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold py-1.5 rounded-xl text-[11px] transition flex items-center justify-center gap-1">
+                    🏠 Airbnb ↗
+                </a>
+                <a href="${bookingUrl}" target="_blank" class="bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 font-semibold py-1.5 rounded-xl text-[11px] transition flex items-center justify-center gap-1">
+                    🏨 Booking ↗
                 </a>
             `;
 
@@ -1145,6 +1247,8 @@
             if (document.getElementById('filter-elev-max')) document.getElementById('filter-elev-max').value = 15000;
             if (document.getElementById('filter-horizon-min')) document.getElementById('filter-horizon-min').value = 0;
             if (document.getElementById('filter-horizon-max')) document.getElementById('filter-horizon-max').value = 24;
+            const sugg = document.getElementById('search-suggestions');
+            if (sugg) sugg.classList.add('hidden');
             updateSliderLabels();
             applyFilters();
         }
@@ -1184,9 +1288,19 @@
             }
         }
 
+        // Cacher les suggestions au clic en dehors
+        document.addEventListener('click', (e) => {
+            const sugg = document.getElementById('search-suggestions');
+            const input = document.getElementById('filter-keyword');
+            if (sugg && input && !sugg.contains(e.target) && e.target !== input) {
+                sugg.classList.add('hidden');
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', () => {
             initLeafletMap();
             updateSliderLabels();
+            renderBudgetGrid();
             renderCustomLinks();
             fetchRacesFromSupabase();
         });
