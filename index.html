@@ -150,16 +150,19 @@
                         <i class="fa-solid fa-chevron-down text-[10px] text-gray-400 ml-1"></i>
                     </div>
 
-                    <div class="absolute top-12 left-0 sm:left-auto sm:right-0 w-60 glass-panel p-3 rounded-xl border border-borderBg hidden group-hover:block z-50 shadow-2xl space-y-1.5 text-xs">
+                    <div class="absolute top-12 left-0 sm:left-auto sm:right-0 w-64 glass-panel p-3 rounded-xl border border-borderBg hidden group-hover:block z-50 shadow-2xl space-y-1.5 text-xs">
                         <div class="font-bold text-white border-b border-borderBg pb-1 flex justify-between">
                             <span>Détail du Budget</span>
                             <span class="text-amber-400" id="detail-total-budget">0 €</span>
                         </div>
-                        <div class="flex justify-between text-gray-300"><span>🎟️ Dossards (Favoris) :</span><b id="detail-b-dossards">0 €</b></div>
+                        <div class="flex justify-between text-gray-300"><span>🎟️ Dossards :</span><b id="detail-b-dossards">0 €</b></div>
                         <div class="flex justify-between text-gray-300"><span>🎒 Matériel :</span><b id="detail-b-materiel">0 €</b></div>
                         <div class="flex justify-between text-gray-300"><span>🚗 Transport :</span><b id="detail-b-transport">0 €</b></div>
                         <div class="flex justify-between text-gray-300"><span>⛺ Hébergement :</span><b id="detail-b-hebergement">0 €</b></div>
                         <div class="flex justify-between text-gray-300"><span>⚡ Nutrition :</span><b id="detail-b-nutrition">0 €</b></div>
+                        <div class="flex justify-between text-gray-300"><span>🩺 Médical :</span><b id="detail-b-medical">0 €</b></div>
+                        <div class="flex justify-between text-gray-300"><span>🧘 Coaching :</span><b id="detail-b-coaching">0 €</b></div>
+                        <div class="flex justify-between text-gray-300"><span>🛡️ Assurances :</span><b id="detail-b-assurances">0 €</b></div>
                     </div>
                 </div>
 
@@ -272,7 +275,7 @@
                     <!-- LISTE DES COURSES -->
                     <div id="container-list-view" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden"></div>
 
-                    <!-- GESTION DU BUDGET SAISON (AFFICHE QUAND ON EST EN VUE FAVORIS) -->
+                    <!-- GESTION DU BUDGET SAISON -->
                     <div id="container-budget-view" class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6 hidden">
                         <div class="flex justify-between items-center border-b border-borderBg pb-3">
                             <h3 class="text-lg font-bold text-white flex items-center gap-2">
@@ -284,80 +287,139 @@
                             </span>
                         </div>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <!-- POSTE DOSSARDS -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <!-- DOSSARDS -->
                             <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2">
                                 <div class="flex justify-between items-center text-xs font-bold text-gray-300">
-                                    <span>🎟️ Dossards (Calculé depuis favoris)</span>
+                                    <span>🎟️ Dossards (Favoris)</span>
                                     <span class="text-amber-400 font-mono" id="budget-val-dossards">0 €</span>
                                 </div>
-                                <p class="text-[11px] text-gray-400">Somme automatique des tarifs des courses enregistrées dans tes favoris.</p>
+                                <p class="text-[10px] text-gray-400">Calculé automatiquement selon tes favoris.</p>
                             </div>
 
-                            <!-- POSTE MATERIEL -->
+                            <!-- MATERIEL -->
                             <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2">
                                 <div class="flex justify-between items-center text-xs font-bold text-gray-300">
-                                    <span>🎒 Matériel (Chaussures, Sac...)</span>
+                                    <span>🎒 Matériel</span>
                                     <span class="text-amber-400 font-mono" id="budget-val-materiel">0 €</span>
                                 </div>
-                                <input type="number" min="0" placeholder="Saisir montant (€)" oninput="updateBudgetCategoryFromView('materiel', this.value)" id="budget-input-materiel" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
+                                <input type="number" min="0" placeholder="0 €" oninput="updateBudgetCategoryFromView('materiel', this.value)" id="budget-input-materiel" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
                             </div>
 
-                            <!-- POSTE TRANSPORT -->
+                            <!-- TRANSPORT -->
                             <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2">
-                                <div class="flex justify-between items-center text-xs font-bold text-gray-300"><span>🚗 Transport (Carburant, Péage, Train)</span><span class="text-amber-400 font-mono" id="budget-val-transport">0 €</span></div>
-                                <input type="number" min="0" placeholder="Saisir montant (€)" oninput="updateBudgetCategoryFromView('transport', this.value)" id="budget-input-transport" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
+                                <div class="flex justify-between items-center text-xs font-bold text-gray-300">
+                                    <span>🚗 Transport</span>
+                                    <span class="text-amber-400 font-mono" id="budget-val-transport">0 €</span>
+                                </div>
+                                <input type="number" min="0" placeholder="0 €" oninput="updateBudgetCategoryFromView('transport', this.value)" id="budget-input-transport" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
                             </div>
 
-                            <!-- POSTE HEBERGEMENT -->
+                            <!-- HEBERGEMENT -->
                             <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2">
-                                <div class="flex justify-between items-center text-xs font-bold text-gray-300"><span>⛺ Hébergement (Hôtel, Camping, Airbnb)</span><span class="text-amber-400 font-mono" id="budget-val-hebergement">0 €</span></div>
-                                <input type="number" min="0" placeholder="Saisir montant (€)" oninput="updateBudgetCategoryFromView('hebergement', this.value)" id="budget-input-hebergement" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
+                                <div class="flex justify-between items-center text-xs font-bold text-gray-300">
+                                    <span>⛺ Hébergement</span>
+                                    <span class="text-amber-400 font-mono" id="budget-val-hebergement">0 €</span>
+                                </div>
+                                <input type="number" min="0" placeholder="0 €" oninput="updateBudgetCategoryFromView('hebergement', this.value)" id="budget-input-hebergement" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
                             </div>
 
-                            <!-- POSTE NUTRITION -->
-                            <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2 sm:col-span-2">
-                                <div class="flex justify-between items-center text-xs font-bold text-gray-300"><span>⚡ Nutrition & Ravitaillements (Gels, Barres)</span><span class="text-amber-400 font-mono" id="budget-val-nutrition">0 €</span></div>
-                                <input type="number" min="0" placeholder="Saisir montant (€)" oninput="updateBudgetCategoryFromView('nutrition', this.value)" id="budget-input-nutrition" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
+                            <!-- NUTRITION -->
+                            <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2">
+                                <div class="flex justify-between items-center text-xs font-bold text-gray-300">
+                                    <span>⚡ Nutrition</span>
+                                    <span class="text-amber-400 font-mono" id="budget-val-nutrition">0 €</span>
+                                </div>
+                                <input type="number" min="0" placeholder="0 €" oninput="updateBudgetCategoryFromView('nutrition', this.value)" id="budget-input-nutrition" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
+                            </div>
+
+                            <!-- MEDICAL -->
+                            <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2">
+                                <div class="flex justify-between items-center text-xs font-bold text-gray-300">
+                                    <span>🩺 Médical & Santé</span>
+                                    <span class="text-amber-400 font-mono" id="budget-val-medical">0 €</span>
+                                </div>
+                                <input type="number" min="0" placeholder="0 €" oninput="updateBudgetCategoryFromView('medical', this.value)" id="budget-input-medical" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
+                            </div>
+
+                            <!-- COACHING -->
+                            <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2">
+                                <div class="flex justify-between items-center text-xs font-bold text-gray-300">
+                                    <span>🧘 Coaching & Club</span>
+                                    <span class="text-amber-400 font-mono" id="budget-val-coaching">0 €</span>
+                                </div>
+                                <input type="number" min="0" placeholder="0 €" oninput="updateBudgetCategoryFromView('coaching', this.value)" id="budget-input-coaching" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
+                            </div>
+
+                            <!-- ASSURANCES -->
+                            <div class="bg-darkBg/80 p-4 rounded-xl border border-borderBg space-y-2 sm:col-span-2 lg:col-span-2">
+                                <div class="flex justify-between items-center text-xs font-bold text-gray-300">
+                                    <span>🛡️ Assurances & Secours</span>
+                                    <span class="text-amber-400 font-mono" id="budget-val-assurances">0 €</span>
+                                </div>
+                                <input type="number" min="0" placeholder="0 €" oninput="updateBudgetCategoryFromView('assurances', this.value)" id="budget-input-assurances" class="w-full bg-cardBg border border-borderBg rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- CADRAN DÉTAIL INTERACTIF VERTICAL -->
-                <div id="interactive-detail-panel" class="hidden lg:col-span-3 glass-panel p-4 rounded-2xl border border-emerald-500/50 bg-emerald-950/30 space-y-4 transition-all duration-300">
-                    <div class="flex justify-between items-start border-b border-borderBg pb-3">
-                        <div>
-                            <span class="text-[10px] font-mono text-emerald-400 uppercase font-bold tracking-wider">Suivi de la saison</span>
-                            <h3 id="detail-race-title" class="text-sm font-bold text-white mt-0.5 leading-snug"></h3>
+                <!-- COLONNE DU MILIEU (SUIVI DE SAISON + OUTILS DE PREPARATION) -->
+                <div id="middle-column" class="hidden lg:col-span-3 space-y-4 transition-all duration-300">
+                   
+                    <!-- CADRAN SUIVI DE LA SAISON -->
+                    <div id="interactive-detail-panel" class="glass-panel p-4 rounded-2xl border border-emerald-500/50 bg-emerald-950/30 space-y-4">
+                        <div class="flex justify-between items-start border-b border-borderBg pb-3">
+                            <div>
+                                <span class="text-[10px] font-mono text-emerald-400 uppercase font-bold tracking-wider">Suivi de la saison</span>
+                                <h3 id="detail-race-title" class="text-sm font-bold text-white mt-0.5 leading-snug"></h3>
+                            </div>
+                            <button onclick="closeInteractiveDetail()" class="text-xs text-gray-400 hover:text-white bg-darkBg p-1.5 rounded-lg border border-borderBg flex items-center justify-center">✕</button>
                         </div>
-                        <button onclick="closeInteractiveDetail()" class="text-xs text-gray-400 hover:text-white bg-darkBg p-1.5 rounded-lg border border-borderBg flex items-center justify-center">✕</button>
+
+                        <div class="space-y-3 text-xs">
+                            <div class="flex items-center justify-between bg-emerald-900/40 p-3 rounded-xl border border-emerald-500/40">
+                                <span class="text-emerald-200 font-bold">Inscription OK ?</span>
+                                <input type="checkbox" id="check-reg-ok" onchange="toggleRaceStatusMeta('registered')" class="w-4 h-4 accent-emerald-400 cursor-pointer">
+                            </div>
+
+                            <div class="flex items-center justify-between bg-blue-900/40 p-3 rounded-xl border border-blue-500/40">
+                                <span class="text-blue-200 font-bold">Course terminée ?</span>
+                                <input type="checkbox" id="check-done" onchange="toggleRaceStatusMeta('completed')" class="w-4 h-4 accent-blue-400 cursor-pointer">
+                            </div>
+
+                            <div class="bg-darkBg/90 p-3 rounded-xl border border-borderBg space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">📍 Lieu :</span>
+                                    <b id="detail-race-loc" class="text-white text-right font-medium">-</b>
+                                </div>
+                                <div class="flex justify-between border-t border-borderBg/50 pt-1.5">
+                                    <span class="text-gray-400">💶 Prix :</span>
+                                    <b id="detail-race-price" class="text-amber-400 font-bold">-</b>
+                                </div>
+                            </div>
+
+                            <!-- LIEN ITINERAIRE GOOGLE MAPS -->
+                            <div id="detail-race-gmaps-container"></div>
+
+                            <div id="detail-race-link-container" class="pt-1"></div>
+                        </div>
                     </div>
 
-                    <div class="space-y-3 text-xs">
-                        <div class="flex items-center justify-between bg-emerald-900/40 p-3 rounded-xl border border-emerald-500/40">
-                            <span class="text-emerald-200 font-bold">Inscription OK ?</span>
-                            <input type="checkbox" id="check-reg-ok" onchange="toggleRaceStatusMeta('registered')" class="w-4 h-4 accent-emerald-400 cursor-pointer">
+                    <!-- NOUVEAU CADRAN : LIENS UTILES & OUTILS DE PREPARATION -->
+                    <div class="glass-panel p-4 rounded-2xl border border-borderBg space-y-3">
+                        <div class="flex justify-between items-center border-b border-borderBg pb-2">
+                            <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+                                <i class="fa-solid fa-link text-emerald-400"></i>
+                                Liens & Outils Utiles
+                            </h4>
+                            <button onclick="addNewCustomLink()" class="text-[10px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded transition">+ Ajouter</button>
                         </div>
 
-                        <div class="flex items-center justify-between bg-blue-900/40 p-3 rounded-xl border border-blue-500/40">
-                            <span class="text-blue-200 font-bold">Course terminée ?</span>
-                            <input type="checkbox" id="check-done" onchange="toggleRaceStatusMeta('completed')" class="w-4 h-4 accent-blue-400 cursor-pointer">
+                        <div id="custom-links-list" class="space-y-1.5 text-xs">
+                            <!-- Liens par défaut -->
                         </div>
-
-                        <div class="bg-darkBg/90 p-3 rounded-xl border border-borderBg space-y-2">
-                            <div class="flex justify-between">
-                                <span class="text-gray-400">📍 Lieu :</span>
-                                <b id="detail-race-loc" class="text-white text-right font-medium">-</b>
-                            </div>
-                            <div class="flex justify-between border-t border-borderBg/50 pt-1.5">
-                                <span class="text-gray-400">💶 Prix :</span>
-                                <b id="detail-race-price" class="text-amber-400 font-bold">-</b>
-                            </div>
-                        </div>
-
-                        <div id="detail-race-link-container" class="pt-1"></div>
                     </div>
+
                 </div>
 
                 <!-- PANNEAU CHRONOLOGIE VERTICALE -->
@@ -391,8 +453,14 @@
         let filteredRaces = [];
         let favorites = JSON.parse(localStorage.getItem('pacepulse_favs') || '[]');
         let raceMetaStates = JSON.parse(localStorage.getItem('pacepulse_meta') || '{}');
+        let customLinks = JSON.parse(localStorage.getItem('pacepulse_links') || JSON.stringify([
+            { name: 'Strava', url: 'https://www.strava.com', icon: 'fa-brands fa-strava text-orange-500' },
+            { name: 'Garmin Connect', url: 'https://connect.garmin.com', icon: 'fa-solid fa-clock text-blue-400' },
+            { name: 'Nolio Training', url: 'https://www.nolio.io', icon: 'fa-solid fa-chart-line text-emerald-400' }
+        ]));
+
         let onlyShowFavorites = false;
-        let activeMainTab = 'map'; // 'map', 'secondary'
+        let activeMainTab = 'map';
 
         let leafletMap = null;
         let markerClusterGroup = null;
@@ -405,7 +473,10 @@
             materiel: 0,
             transport: 0,
             hebergement: 0,
-            nutrition: 0
+            nutrition: 0,
+            medical: 0,
+            coaching: 0,
+            assurances: 0
         }));
 
         function initLeafletMap() {
@@ -418,7 +489,6 @@
             }).addTo(leafletMap);
         }
 
-        // RECENTRE ET REINITIALISE LA MAP QUAND ON CLIQUE SUR CARTE
         function resetMapAndSwitchView(v) {
             switchMainView(v);
             if (leafletMap) {
@@ -461,8 +531,11 @@
             const trans = Number(categoryBudgets.transport) || 0;
             const heb = Number(categoryBudgets.hebergement) || 0;
             const nut = Number(categoryBudgets.nutrition) || 0;
+            const med = Number(categoryBudgets.medical) || 0;
+            const coach = Number(categoryBudgets.coaching) || 0;
+            const ass = Number(categoryBudgets.assurances) || 0;
 
-            const totalSaison = totalDossards + mat + trans + heb + nut;
+            const totalSaison = totalDossards + mat + trans + heb + nut + med + coach + ass;
 
             document.getElementById('stat-total-budget').innerText = `${totalSaison} €`;
             if (document.getElementById('detail-total-budget')) document.getElementById('detail-total-budget').innerText = `${totalSaison} €`;
@@ -473,17 +546,68 @@
             if (document.getElementById('detail-b-transport')) document.getElementById('detail-b-transport').innerText = `${trans} €`;
             if (document.getElementById('detail-b-hebergement')) document.getElementById('detail-b-hebergement').innerText = `${heb} €`;
             if (document.getElementById('detail-b-nutrition')) document.getElementById('detail-b-nutrition').innerText = `${nut} €`;
+            if (document.getElementById('detail-b-medical')) document.getElementById('detail-b-medical').innerText = `${med} €`;
+            if (document.getElementById('detail-b-coaching')) document.getElementById('detail-b-coaching').innerText = `${coach} €`;
+            if (document.getElementById('detail-b-assurances')) document.getElementById('detail-b-assurances').innerText = `${ass} €`;
 
             if (document.getElementById('budget-val-dossards')) document.getElementById('budget-val-dossards').innerText = `${totalDossards} €`;
             if (document.getElementById('budget-val-materiel')) document.getElementById('budget-val-materiel').innerText = `${mat} €`;
             if (document.getElementById('budget-val-transport')) document.getElementById('budget-val-transport').innerText = `${trans} €`;
             if (document.getElementById('budget-val-hebergement')) document.getElementById('budget-val-hebergement').innerText = `${heb} €`;
             if (document.getElementById('budget-val-nutrition')) document.getElementById('budget-val-nutrition').innerText = `${nut} €`;
+            if (document.getElementById('budget-val-medical')) document.getElementById('budget-val-medical').innerText = `${med} €`;
+            if (document.getElementById('budget-val-coaching')) document.getElementById('budget-val-coaching').innerText = `${coach} €`;
+            if (document.getElementById('budget-val-assurances')) document.getElementById('budget-val-assurances').innerText = `${ass} €`;
 
             if (document.getElementById('budget-input-materiel') && document.activeElement !== document.getElementById('budget-input-materiel')) document.getElementById('budget-input-materiel').value = mat || '';
             if (document.getElementById('budget-input-transport') && document.activeElement !== document.getElementById('budget-input-transport')) document.getElementById('budget-input-transport').value = trans || '';
             if (document.getElementById('budget-input-hebergement') && document.activeElement !== document.getElementById('budget-input-hebergement')) document.getElementById('budget-input-hebergement').value = heb || '';
             if (document.getElementById('budget-input-nutrition') && document.activeElement !== document.getElementById('budget-input-nutrition')) document.getElementById('budget-input-nutrition').value = nut || '';
+            if (document.getElementById('budget-input-medical') && document.activeElement !== document.getElementById('budget-input-medical')) document.getElementById('budget-input-medical').value = med || '';
+            if (document.getElementById('budget-input-coaching') && document.activeElement !== document.getElementById('budget-input-coaching')) document.getElementById('budget-input-coaching').value = coach || '';
+            if (document.getElementById('budget-input-assurances') && document.activeElement !== document.getElementById('budget-input-assurances')) document.getElementById('budget-input-assurances').value = ass || '';
+        }
+
+        function renderCustomLinks() {
+            const container = document.getElementById('custom-links-list');
+            if (!container) return;
+
+            if (customLinks.length === 0) {
+                container.innerHTML = '<p class="text-[10px] text-gray-500 italic">Aucun lien enregistré.</p>';
+                return;
+            }
+
+            let html = '';
+            customLinks.forEach((link, i) => {
+                html += `
+                    <div class="flex justify-between items-center bg-darkBg/80 p-2 rounded-lg border border-borderBg hover:border-emerald-500/40 transition">
+                        <a href="${link.url}" target="_blank" class="flex items-center gap-2 text-gray-200 hover:text-emerald-400 font-medium">
+                            <i class="${link.icon || 'fa-solid fa-globe text-gray-400'}"></i>
+                            <span>${link.name}</span>
+                        </a>
+                        <button onclick="removeCustomLink(${i})" class="text-[10px] text-gray-500 hover:text-red-400 px-1">✕</button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function addNewCustomLink() {
+            const name = prompt("Nom du site / outil (Ex: Strava, Nolio, Montre...) :");
+            if (!name) return;
+            let url = prompt("Adresse web (URL) :");
+            if (!url) return;
+            if (!url.startsWith('http')) url = 'https://' + url;
+
+            customLinks.push({ name, url, icon: 'fa-solid fa-arrow-up-right-from-square text-emerald-400' });
+            localStorage.setItem('pacepulse_links', JSON.stringify(customLinks));
+            renderCustomLinks();
+        }
+
+        function removeCustomLink(index) {
+            customLinks.splice(index, 1);
+            localStorage.setItem('pacepulse_links', JSON.stringify(customLinks));
+            renderCustomLinks();
         }
 
         function filterByFavoriteSelection(val) {
@@ -656,7 +780,7 @@
             }
 
             const raceKey = `${title}_${raceDate}`;
-            const panel = document.getElementById('interactive-detail-panel');
+            const middleCol = document.getElementById('middle-column');
             const mainCol = document.getElementById('main-view-column');
 
             if (activeSelectedRaceKey === raceKey) {
@@ -668,11 +792,19 @@
 
             mainCol.classList.remove('lg:col-span-8');
             mainCol.classList.add('lg:col-span-5');
-            panel.classList.remove('hidden');
+            middleCol.classList.remove('hidden');
 
             document.getElementById('detail-race-title').innerText = title;
             document.getElementById('detail-race-loc').innerText = location;
             document.getElementById('detail-race-price').innerText = price > 0 ? `${price} €` : 'N/C';
+
+            // Lien Google Maps itinéraire depuis Marseille
+            const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=Marseille&destination=${encodeURIComponent(location + ' ' + title)}`;
+            document.getElementById('detail-race-gmaps-container').innerHTML = `
+                <a href="${gmapsUrl}" target="_blank" class="w-full text-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold py-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-route"></i> Trajet & temps (Google Maps) ↗
+                </a>
+            `;
 
             const linkContainer = document.getElementById('detail-race-link-container');
             if (url) {
@@ -701,10 +833,10 @@
 
         function closeInteractiveDetail() {
             activeSelectedRaceKey = null;
-            const panel = document.getElementById('interactive-detail-panel');
+            const middleCol = document.getElementById('middle-column');
             const mainCol = document.getElementById('main-view-column');
 
-            panel.classList.add('hidden');
+            middleCol.classList.add('hidden');
             mainCol.classList.remove('lg:col-span-5');
             mainCol.classList.add('lg:col-span-8');
 
@@ -934,7 +1066,7 @@
 
                     popupHtml += `
                         <div style="padding-bottom: 6px; margin-bottom: 6px; ${idx < racesAtLocation.length - 1 ? 'border-bottom: 1px solid rgba(255,255,255,0.1);' : ''}">
-                            <div style="display: flex; justify-between; align-items: center;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <strong style="color: #fff;">${r.title}</strong>
                                 <button onclick="toggleFavorite('${r.title.replace(/'/g, "\\'")}', '${r.raceDate}')" style="background:none; border:none; color: ${isFav ? '#ef4444' : '#9ca3af'}; cursor:pointer;">♥</button>
                             </div>
@@ -1055,6 +1187,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             initLeafletMap();
             updateSliderLabels();
+            renderCustomLinks();
             fetchRacesFromSupabase();
         });
     </script>
