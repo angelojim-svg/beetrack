@@ -85,7 +85,6 @@
             border: 1px solid rgba(255, 255, 255, 0.07);
         }
 
-        /* Style spécifique pour les curseurs Min-Max superposés */
         .range-slider-container {
             position: relative;
             height: 8px;
@@ -122,7 +121,7 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- HEADER / NAVIGATION (RESPONSIVE) -->
+    <!-- HEADER / NAVIGATION -->
     <header class="sticky top-0 z-50 glass-panel border-b border-borderBg">
         <div class="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-3 lg:py-0 lg:h-20 flex flex-col lg:flex-row items-center justify-between gap-3">
            
@@ -185,8 +184,8 @@
                 <!-- MENU FAVORIS -->
                 <div class="relative">
                     <select id="favorites-dropdown" onchange="filterByFavoriteSelection(this.value)" class="bg-cardBg hover:bg-borderBg text-gray-200 border border-borderBg px-3 py-2 rounded-xl text-xs sm:text-sm focus:outline-none cursor-pointer">
-                        <option value="ALL">Toutes les courses</option>
-                        <option value="ONLY_FAV">♥ Mes Favoris (<span id="fav-count">0</span>)</option>
+                        <option value="ALL">Afficher toutes les courses</option>
+                        <option value="ONLY_FAV">♥ Afficher uniquement mes favoris (<span id="fav-count">0</span>)</option>
                     </select>
                 </div>
 
@@ -229,7 +228,7 @@
                 </div>
             </div>
 
-            <!-- CURSEURS DE FILTRES CONTINUS (RESPONSIVE GRID) -->
+            <!-- CURSEURS DE FILTRES CONTINUS -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-3 border-t border-borderBg/50">
                
                 <!-- 1. DISTANCE -->
@@ -287,10 +286,10 @@
                 </div>
             </div>
 
-            <!-- LAYOUT MOBILE / DESKTOP RESPONSIVE -->
+            <!-- LAYOUT RESPONSIVE -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                
-                <!-- ZONE PRINCIPALE (CARTE OU LISTE) -->
+                <!-- ZONE PRINCIPALE -->
                 <div class="lg:col-span-8 space-y-4">
                     <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden">
                         <div id="map" class="w-full h-[400px] sm:h-[550px] rounded-xl z-10"></div>
@@ -310,7 +309,7 @@
                     </div>
 
                     <div id="timeline-container" class="space-y-4 max-h-[450px] overflow-y-auto pr-1">
-                        <p class="text-xs text-gray-400 italic text-center py-6">Aucune course sélectionnée.</p>
+                        <p class="text-xs text-gray-400 italic text-center py-6">Chargement des courses...</p>
                     </div>
                 </div>
 
@@ -322,14 +321,14 @@
     <!-- SCRIPT JAVASCRIPT PRINCIPAL -->
     <script>
         const SUPABASE_URL = 'https://rjfykmedcxgasduebvbn.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqZnlrbWVkY3hnYXNkdWVidmJuIiwicm9sZSI6ImFub24iOiJpYXQiOjE3OTEyNDI3NjEsImV4cCI6MjEwNjgxODc2MX0.4N9LkjjLno-z_o7NEGQjGdJDFXpzvBzRfzs-vRwv1GA';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqZnlrbWVkY3hnYXNkdWVidmJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNDI3NjEsImV4cCI6MjEwNjgxODc2MX0.4N9LkjjLno-z_o7NEGQjGdJDFXpzvBzRfzs-vRwv1GA';
 
         window.dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let racesData = [];
         let filteredRaces = [];
         let favorites = JSON.parse(localStorage.getItem('pacepulse_favs') || '[]');
-        let onlyShowFavorites = false;
+        let onlyShowFavorites = false; // Par défaut à false pour tout afficher
         let leafletMap = null;
         let markerClusterGroup = null;
         let currentDisplayLimit = 50;
