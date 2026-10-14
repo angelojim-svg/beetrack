@@ -133,12 +133,15 @@
                     <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-darkBg font-black text-base shadow-md shadow-emerald-500/20">
                         <i class="fa-solid font-bold fa-stopwatch"></i>
                     </div>
-                    <div class="flex flex-col">
+                    <div class="flex flex-col items-start gap-0.5">
                         <div class="flex items-center space-x-2">
                             <span class="text-lg sm:text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-gray-200 to-amber-400 bg-clip-text text-transparent leading-none">BeeTrack</span>
                             <span class="text-[10px] font-mono tracking-wider font-bold text-amber-400 uppercase bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">PILOTAGE SAISON</span>
                         </div>
-                        <p class="text-xs text-gray-400 font-medium">Planifie tes trails, pilote tes inscriptions et maîtrise le budget de ta saison.</p>
+                        <!-- SOUS-TITRE SURLIGNÉ EN BLEU -->
+                        <p class="text-xs text-white font-medium bg-blue-600/90 px-2 py-0.5 rounded inline-block shadow-sm">
+                            Planifie tes trails, pilote tes inscriptions et maîtrise le budget de ta saison.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -411,7 +414,7 @@
                             </div>
                         </div>
 
-                        <!-- BOUTON INSCRIPTION FIXÉ EN BAS SANS DÉBORDEMENT -->
+                        <!-- BOUTON INSCRIPTION FIXÉ EN BAS -->
                         <div id="detail-race-link-container" class="pt-2 border-t border-borderBg mt-1"></div>
                     </div>
                 </div>
@@ -1640,9 +1643,13 @@
             budgetV.classList.add('hidden');
             linksV.classList.add('hidden');
 
-            btnMap.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
-            btnSec.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
-            btnLinks.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
+            const inactiveStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
+            const activeStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
+
+            btnMap.className = inactiveStyle;
+            btnSec.className = inactiveStyle;
+            btnLinks.className = inactiveStyle;
+            if (btnBudget) btnBudget.className = inactiveStyle;
 
             if (onlyShowFavorites) {
                 if (btnBudget) btnBudget.classList.remove('hidden');
@@ -1652,7 +1659,7 @@
 
             if (v === 'map') {
                 mapV.classList.remove('hidden');
-                btnMap.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
+                btnMap.className = activeStyle;
                 if (leafletMap) {
                     setTimeout(() => {
                         leafletMap.invalidateSize();
@@ -1661,13 +1668,13 @@
                 }
             } else if (v === 'secondary') {
                 listV.classList.remove('hidden');
-                btnSec.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
+                btnSec.className = activeStyle;
             } else if (v === 'budget' && onlyShowFavorites) {
                 budgetV.classList.remove('hidden');
-                if (btnBudget) btnBudget.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
+                if (btnBudget) btnBudget.className = activeStyle;
             } else if (v === 'links') {
                 linksV.classList.remove('hidden');
-                btnLinks.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
+                btnLinks.className = activeStyle;
             }
         }
 
