@@ -144,7 +144,7 @@
             </div>
 
             <!-- BLOCS BUDGET ET FAVORIS -->
-            <div class="w-full lg:w-auto flex flex-wrap items-center justify-between lg:justify-end gap-2 text-xs">
+            <div class="w-full lg:w-auto flex flex-wrap items-center justify-between lg:justify-end gap-3 text-xs">
                
                 <div class="relative group z-40">
                     <div class="flex items-center space-x-2 bg-darkBg/90 px-3 py-1.5 rounded-xl border border-borderBg cursor-pointer">
@@ -171,11 +171,14 @@
                     </div>
                 </div>
 
-                <div class="relative">
-                    <select id="favorites-dropdown" onchange="filterByFavoriteSelection(this.value)" class="bg-cardBg hover:bg-borderBg text-gray-200 border border-borderBg px-3 py-1.5 rounded-xl text-xs focus:outline-none cursor-pointer">
-                        <option value="ALL">Afficher toutes les courses</option>
-                        <option value="ONLY_FAV">♥ Afficher uniquement mes favoris (<span id="fav-count">0</span>)</option>
-                    </select>
+                <!-- SWITCH VISUEL FAVORIS / TOUTES LES COURSES -->
+                <div class="flex items-center bg-darkBg p-1 rounded-xl border border-borderBg">
+                    <button id="btn-toggle-all" onclick="setFavoritesFilter(false)" class="px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition">
+                        Toutes les courses
+                    </button>
+                    <button id="btn-toggle-fav" onclick="setFavoritesFilter(true)" class="px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5">
+                        <span class="text-red-400 font-bold">♥</span> Mes favoris (<span id="fav-count">0</span>)
+                    </button>
                 </div>
 
             </div>
@@ -185,17 +188,17 @@
     <!-- MAIN CONTAINER -->
     <main class="flex-grow max-w-[1600px] w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4 space-y-3">
 
-        <!-- CADRAN LIENS ET OUTILS UTILES -->
-        <section class="glass-panel p-3.5 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/20 via-cardBg to-cardBg space-y-2.5 shadow-lg">
-            <div class="flex justify-between items-center border-b border-emerald-500/20 pb-1.5">
-                <h4 class="text-xs font-bold text-emerald-300 flex items-center gap-2">
+        <!-- CADRAN LIENS ET OUTILS UTILES AVEC DÉGRADÉ HARMONISÉ -->
+        <section class="glass-panel p-3.5 sm:p-4 rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 via-cardBg to-darkBg space-y-2.5 shadow-xl">
+            <div class="flex justify-between items-center border-b border-emerald-500/20 pb-2">
+                <h2 class="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
                     <i class="fa-solid fa-link text-emerald-400"></i>
-                    Liens & Outils Utiles
-                </h4>
-                <button onclick="addNewCustomLink()" class="text-[10px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-lg transition font-semibold">+ Ajouter un outil</button>
+                    <span class="bg-gradient-to-r from-emerald-400 to-amber-300 bg-clip-text text-transparent">Liens & Outils Utiles</span>
+                </h2>
+                <button onclick="addNewCustomLink()" class="text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-3 py-1 rounded-lg transition font-semibold">+ Ajouter un outil</button>
             </div>
 
-            <div id="custom-links-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+            <div id="custom-links-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-xs pt-1">
             </div>
         </section>
 
@@ -425,7 +428,6 @@
                             <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Planning</span>
                         </div>
 
-                        <!-- AJUSTEMENT : flex-1 h-full supprime la limite max-h-[500px] pour afficher jusqu'en bas -->
                         <div id="timeline-container" class="space-y-4 flex-1 h-full overflow-y-auto pr-1">
                             <p class="text-xs text-gray-400 italic text-center py-6">Chargement des courses...</p>
                         </div>
@@ -535,6 +537,25 @@
             }
             localStorage.setItem('pacepulse_favs', JSON.stringify(favorites));
             updateFavoritesUI();
+            applyFilters();
+        }
+
+        function setFavoritesFilter(showOnlyFavs) {
+            onlyShowFavorites = showOnlyFavs;
+           
+            const btnAll = document.getElementById('btn-toggle-all');
+            const btnFav = document.getElementById('btn-toggle-fav');
+
+            if (onlyShowFavorites) {
+                btnFav.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition flex items-center gap-1.5";
+                btnAll.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition";
+            } else {
+                btnAll.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition";
+                btnFav.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5";
+                closeInteractiveDetail();
+            }
+
+            updateTabLabels();
             applyFilters();
         }
 
@@ -1042,15 +1063,6 @@
             customLinks.splice(index, 1);
             localStorage.setItem('pacepulse_links', JSON.stringify(customLinks));
             renderCustomLinks();
-        }
-
-        function filterByFavoriteSelection(val) {
-            onlyShowFavorites = (val === 'ONLY_FAV');
-            if (!onlyShowFavorites) {
-                closeInteractiveDetail();
-            }
-            updateTabLabels();
-            applyFilters();
         }
 
         function updateTabLabels() {
