@@ -139,7 +139,7 @@
                 </div>
             </div>
 
-            <!-- BLOCS BUDGET ET FAVORIS ADAPTATIFS -->
+            <!-- BLOCS BUDGET ET FAVORIS -->
             <div class="w-full lg:w-auto flex flex-wrap items-center justify-between lg:justify-end gap-2 text-sm">
                
                 <!-- AFFICHAGE BUDGET SAISON -->
@@ -328,7 +328,7 @@
         let racesData = [];
         let filteredRaces = [];
         let favorites = JSON.parse(localStorage.getItem('pacepulse_favs') || '[]');
-        let onlyShowFavorites = false; // Par défaut à false pour tout afficher
+        let onlyShowFavorites = false;
         let leafletMap = null;
         let markerClusterGroup = null;
         let currentDisplayLimit = 50;
@@ -459,6 +459,8 @@
             const maxEl = document.getElementById(`filter-${type}-max`);
             const track = document.getElementById(`track-${type}`);
 
+            if (!minEl || !maxEl || !track) return;
+
             let minVal = parseInt(minEl.value);
             let maxVal = parseInt(maxEl.value);
 
@@ -481,8 +483,11 @@
             if (type === 'elev') unit = ' m';
             if (type === 'horizon') unit = ' mois';
 
-            document.getElementById(`slider-${type}-min-val`).innerText = minVal + unit;
-            document.getElementById(`slider-${type}-max-val`).innerText = maxVal + unit;
+            const minLabel = document.getElementById(`slider-${type}-min-val`);
+            const maxLabel = document.getElementById(`slider-${type}-max-val`);
+
+            if (minLabel) minLabel.innerText = minVal + unit;
+            if (maxLabel) maxLabel.innerText = maxVal + unit;
         }
 
         function updateSliderLabels() {
