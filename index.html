@@ -289,13 +289,13 @@
                 </div>
             </div>
 
-            <!-- LAYOUT GRILLE RESPONSIVE -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+            <!-- LAYOUT GRILLE RESPONSIVE UNIFORMISÉ -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
                
                 <!-- ZONE PRINCIPALE (CARTE / LISTE / GESTION BUDGET) -->
-                <div id="main-view-column" class="lg:col-span-8 space-y-4 transition-all duration-300">
-                    <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden">
-                        <div id="map" class="w-full h-[400px] sm:h-[550px] rounded-xl z-10"></div>
+                <div id="main-view-column" class="lg:col-span-8 space-y-4 transition-all duration-300 flex flex-col">
+                    <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden flex-grow flex flex-col">
+                        <div id="map" class="w-full flex-grow min-h-[480px] sm:min-h-[580px] rounded-xl z-10"></div>
                     </div>
 
                     <!-- LISTE DES COURSES -->
@@ -340,81 +340,83 @@
                 </div>
 
                 <!-- COLONNE DU MILIEU (SUIVI DE SAISON + LOGEMENT) -->
-                <div id="middle-column" class="hidden lg:col-span-3 space-y-4 transition-all duration-300">
+                <div id="middle-column" class="hidden lg:col-span-3 space-y-4 transition-all duration-300 flex flex-col">
                    
                     <!-- CADRAN SUIVI DE LA SAISON -->
-                    <div id="interactive-detail-panel" class="glass-panel p-4 rounded-2xl border border-emerald-500/50 bg-emerald-950/30 space-y-4">
-                        <div class="flex justify-between items-start border-b border-borderBg pb-3">
-                            <div>
-                                <span class="text-[10px] font-mono text-emerald-400 uppercase font-bold tracking-wider">Suivi de la saison</span>
-                                <h3 id="detail-race-title" class="text-sm font-bold text-white mt-0.5 leading-snug"></h3>
+                    <div id="interactive-detail-panel" class="glass-panel p-4 rounded-2xl border border-emerald-500/50 bg-emerald-950/30 space-y-4 flex-grow flex flex-col justify-between">
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-start border-b border-borderBg pb-3">
+                                <div>
+                                    <span class="text-[10px] font-mono text-emerald-400 uppercase font-bold tracking-wider">Suivi de la saison</span>
+                                    <h3 id="detail-race-title" class="text-sm font-bold text-white mt-0.5 leading-snug"></h3>
+                                </div>
+                                <button onclick="closeInteractiveDetail()" class="text-xs text-gray-400 hover:text-white bg-darkBg p-1.5 rounded-lg border border-borderBg flex items-center justify-center">✕</button>
                             </div>
-                            <button onclick="closeInteractiveDetail()" class="text-xs text-gray-400 hover:text-white bg-darkBg p-1.5 rounded-lg border border-borderBg flex items-center justify-center">✕</button>
+
+                            <div class="space-y-3 text-xs">
+                                <div class="flex items-center justify-between bg-emerald-900/40 p-3 rounded-xl border border-emerald-500/40">
+                                    <span class="text-emerald-200 font-bold">Inscription OK ?</span>
+                                    <input type="checkbox" id="check-reg-ok" onchange="toggleRaceStatusMeta('registered')" class="w-4 h-4 accent-emerald-400 cursor-pointer">
+                                </div>
+
+                                <div class="flex items-center justify-between bg-blue-900/40 p-3 rounded-xl border border-blue-500/40">
+                                    <span class="text-blue-200 font-bold">Course terminée ?</span>
+                                    <input type="checkbox" id="check-done" onchange="toggleRaceStatusMeta('completed')" class="w-4 h-4 accent-blue-400 cursor-pointer">
+                                </div>
+
+                                <div class="bg-darkBg/90 p-3 rounded-xl border border-borderBg space-y-2">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">📍 Lieu :</span>
+                                        <b id="detail-race-loc" class="text-white text-right font-medium">-</b>
+                                    </div>
+                                    <div class="flex justify-between border-t border-borderBg/50 pt-1.5">
+                                        <span class="text-gray-400">💶 Prix :</span>
+                                        <b id="detail-race-price" class="text-amber-400 font-bold">-</b>
+                                    </div>
+                                </div>
+
+                                <!-- LIEN TRACE GPX -->
+                                <div class="bg-darkBg/90 p-3 rounded-xl border border-borderBg space-y-2">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-300 font-bold flex items-center gap-1.5">
+                                            <i class="fa-solid fa-map-pin text-emerald-400"></i> Trace GPX :
+                                        </span>
+                                        <button onclick="editGpxLink()" class="text-[10px] text-emerald-400 hover:underline">Modifier</button>
+                                    </div>
+                                    <div id="gpx-link-display">
+                                        <p class="text-[10px] text-gray-500 italic">Aucune trace GPX enregistrée.</p>
+                                    </div>
+                                </div>
+
+                                <!-- LIEN STRAVA / ACTIVITÉ COURSE -->
+                                <div class="bg-darkBg/90 p-3 rounded-xl border border-borderBg space-y-2">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-300 font-bold flex items-center gap-1.5">
+                                            <i class="fa-brands fa-strava text-orange-500"></i> Lien Activité (Strava...) :
+                                        </span>
+                                        <button onclick="editStravaActivityLink()" class="text-[10px] text-emerald-400 hover:underline">Modifier</button>
+                                    </div>
+                                    <div id="strava-link-display">
+                                        <p class="text-[10px] text-gray-500 italic">Aucun lien d'activité enregistré.</p>
+                                    </div>
+                                </div>
+
+                                <!-- LIEN ITINERAIRE GOOGLE MAPS -->
+                                <div id="detail-race-gmaps-container"></div>
+
+                                <!-- LIENS HEBERGEMENTS -->
+                                <div id="detail-race-lodging-container" class="grid grid-cols-2 gap-2"></div>
+                            </div>
                         </div>
 
-                        <div class="space-y-3 text-xs">
-                            <div class="flex items-center justify-between bg-emerald-900/40 p-3 rounded-xl border border-emerald-500/40">
-                                <span class="text-emerald-200 font-bold">Inscription OK ?</span>
-                                <input type="checkbox" id="check-reg-ok" onchange="toggleRaceStatusMeta('registered')" class="w-4 h-4 accent-emerald-400 cursor-pointer">
-                            </div>
-
-                            <div class="flex items-center justify-between bg-blue-900/40 p-3 rounded-xl border border-blue-500/40">
-                                <span class="text-blue-200 font-bold">Course terminée ?</span>
-                                <input type="checkbox" id="check-done" onchange="toggleRaceStatusMeta('completed')" class="w-4 h-4 accent-blue-400 cursor-pointer">
-                            </div>
-
-                            <div class="bg-darkBg/90 p-3 rounded-xl border border-borderBg space-y-2">
-                                <div class="flex justify-between">
-                                    <span class="text-gray-400">📍 Lieu :</span>
-                                    <b id="detail-race-loc" class="text-white text-right font-medium">-</b>
-                                </div>
-                                <div class="flex justify-between border-t border-borderBg/50 pt-1.5">
-                                    <span class="text-gray-400">💶 Prix :</span>
-                                    <b id="detail-race-price" class="text-amber-400 font-bold">-</b>
-                                </div>
-                            </div>
-
-                            <!-- LIEN TRACE GPX -->
-                            <div class="bg-darkBg/90 p-3 rounded-xl border border-borderBg space-y-2">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-gray-300 font-bold flex items-center gap-1.5">
-                                        <i class="fa-solid fa-map-pin text-emerald-400"></i> Trace GPX :
-                                    </span>
-                                    <button onclick="editGpxLink()" class="text-[10px] text-emerald-400 hover:underline">Modifier</button>
-                                </div>
-                                <div id="gpx-link-display">
-                                    <p class="text-[10px] text-gray-500 italic">Aucune trace GPX enregistrée.</p>
-                                </div>
-                            </div>
-
-                            <!-- LIEN STRAVA / ACTIVITÉ COURSE -->
-                            <div class="bg-darkBg/90 p-3 rounded-xl border border-borderBg space-y-2">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-gray-300 font-bold flex items-center gap-1.5">
-                                        <i class="fa-brands fa-strava text-orange-500"></i> Lien Activité (Strava...) :
-                                    </span>
-                                    <button onclick="editStravaActivityLink()" class="text-[10px] text-emerald-400 hover:underline">Modifier</button>
-                                </div>
-                                <div id="strava-link-display">
-                                    <p class="text-[10px] text-gray-500 italic">Aucun lien d'activité enregistré.</p>
-                                </div>
-                            </div>
-
-                            <!-- LIEN ITINERAIRE GOOGLE MAPS -->
-                            <div id="detail-race-gmaps-container"></div>
-
-                            <!-- LIENS HEBERGEMENTS -->
-                            <div id="detail-race-lodging-container" class="grid grid-cols-2 gap-2"></div>
-
-                            <div id="detail-race-link-container" class="pt-1"></div>
-                        </div>
+                        <div id="detail-race-link-container" class="pt-2"></div>
                     </div>
 
                 </div>
 
-                <!-- PANNEAU CHRONOLOGIE VERTICALE ET GRAPHIQUE DE CHARGE CUMULEE -->
-                <div id="timeline-column" class="lg:col-span-4 space-y-4">
-                    <div class="glass-panel p-4 sm:p-6 rounded-2xl border border-borderBg space-y-3">
+                <!-- PANNEAU CHRONOLOGIE VERTICALE -->
+                <div id="timeline-column" class="lg:col-span-4 space-y-4 flex flex-col">
+                    <div class="glass-panel p-4 sm:p-6 rounded-2xl border border-borderBg space-y-3 flex-grow flex flex-col">
                         <div class="flex items-center justify-between border-b border-borderBg pb-3">
                             <h3 id="timeline-title" class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
                                 <i class="fa-solid fa-timeline text-emerald-400"></i>
@@ -423,26 +425,26 @@
                             <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Planning</span>
                         </div>
 
-                        <div id="timeline-container" class="space-y-4 max-h-[450px] overflow-y-auto pr-1">
+                        <div id="timeline-container" class="space-y-4 flex-grow max-h-[500px] overflow-y-auto pr-1">
                             <p class="text-xs text-gray-400 italic text-center py-6">Chargement des courses...</p>
-                        </div>
-                    </div>
-
-                    <!-- COURBE CUMULEE -->
-                    <div id="container-load-chart" class="glass-panel p-4 rounded-2xl border border-borderBg space-y-3 hidden">
-                        <div class="flex justify-between items-center border-b border-borderBg pb-2">
-                            <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
-                                <i class="fa-solid fa-chart-line text-emerald-400"></i>
-                                Cumul Charge Saison (km + D+/10)
-                            </h4>
-                            <span class="text-[9px] font-mono text-amber-400 font-bold">Vue Favoris</span>
-                        </div>
-                        <div class="h-48 relative">
-                            <canvas id="loadChart"></canvas>
                         </div>
                     </div>
                 </div>
 
+            </div>
+
+            <!-- COURBE CUMULÉE SUR TOUTE LA LARGEUR (EXTRÉMITÉ GAUCHE CARTE JUSQU'À EXTRÉMITÉ DROITE CHRONOLOGIE) -->
+            <div id="container-load-chart" class="glass-panel p-4 sm:p-6 rounded-2xl border border-borderBg space-y-3 hidden w-full">
+                <div class="flex justify-between items-center border-b border-borderBg pb-2">
+                    <h4 class="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-emerald-400"></i>
+                        Cumul Charge Saison (km + D+/10)
+                    </h4>
+                    <span class="text-[10px] font-mono text-amber-400 font-bold bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/20">Vue Favoris - Globale</span>
+                </div>
+                <div class="h-56 sm:h-64 relative w-full">
+                    <canvas id="loadChart"></canvas>
+                </div>
             </div>
         </section>
 
@@ -928,7 +930,7 @@
                                     if (!meta) return `Charge: ${context.raw}`;
                                     return [
                                         `📅 Date : ${context.label}`,
-                                        `📏 Course : ${meta.dist} km | D+ ${meta.elev}m (+${meta.raceCharge} pts)`,
+                                        `📏 Course : ${meta.dist} km | D+ ${meta.elevation}m (+${meta.raceCharge} pts)`,
                                         `📊 Cumul Saison : ${meta.totalCumul} pts`
                                     ];
                                 }
@@ -937,11 +939,11 @@
                     },
                     scales: {
                         x: {
-                            ticks: { color: '#9ca3af', font: { size: 9 } },
+                            ticks: { color: '#9ca3af', font: { size: 10 } },
                             grid: { color: 'rgba(255, 255, 255, 0.05)' }
                         },
                         y: {
-                            ticks: { color: '#34d399', font: { size: 9 } },
+                            ticks: { color: '#34d399', font: { size: 10 } },
                             grid: { color: 'rgba(255, 255, 255, 0.05)' }
                         }
                     }
@@ -1330,7 +1332,6 @@
 
             if (!container) return;
 
-            // Filtrer et limiter l'affichage des résultats pour préserver les performances
             const validRaces = filteredRaces
                 .filter(r => r.raceDate && !isNaN(new Date(r.raceDate).getTime()))
                 .sort((a, b) => new Date(a.raceDate) - new Date(b.raceDate));
@@ -1341,7 +1342,6 @@
                 return;
             }
 
-            // Limiter à 50 courses dans la chronologie sauf si vue Favoris pour éviter les ralentissements
             const racesToDisplay = onlyShowFavorites ? validRaces : validRaces.slice(0, 50);
 
             let html = '<div class="relative border-l-2 border-emerald-500/30 ml-3 space-y-4 my-2">';
