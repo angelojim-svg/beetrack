@@ -181,7 +181,7 @@
     <!-- MAIN CONTAINER -->
     <main class="flex-grow max-w-[1600px] w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6">
 
-        <!-- SEARCH & FILTER PANEL AVEC AUTOCOMPLETION BETRAIL STYLE -->
+        <!-- SEARCH & FILTER PANEL -->
         <section class="glass-panel p-4 sm:p-6 rounded-2xl border border-borderBg space-y-5">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-borderBg pb-3">
                 <h2 class="text-base sm:text-xl font-extrabold text-white flex items-center gap-2">
@@ -200,12 +200,12 @@
                 <div class="md:col-span-7 relative">
                     <label class="block text-[11px] font-semibold uppercase text-gray-400 mb-1.5">Recherche (Nom de course, ville...)</label>
                     <div class="relative">
-                        <input type="text" id="filter-keyword" oninput="handleSearchInputDebounced(this.value)" placeholder="Tapez 2 caractères ou plus..." class="w-full px-3 py-2 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none focus:border-emerald-400">
+                        <input type="text" id="filter-keyword" oninput="handleFastSearch(this.value)" placeholder="Tapez 2 lettres (ex: too, tou, sainte...)" class="w-full px-3 py-2 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none focus:border-emerald-400">
                         <i class="fa-solid fa-magnifying-glass absolute right-3 top-2.5 text-gray-500 text-xs"></i>
                     </div>
 
-                    <!-- DROPDOWN SUGGESTIONS STYLE BETRAIL -->
-                    <div id="search-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-cardBg border border-borderBg rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto divide-y divide-borderBg/50 text-xs">
+                    <!-- DROPDOWN SUGGESTIONS INTELLIGENT BETRAIL STYLE -->
+                    <div id="search-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-cardBg border border-borderBg rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto divide-y divide-borderBg/50 text-xs">
                     </div>
                 </div>
 
@@ -284,7 +284,7 @@
                     <!-- LISTE DES COURSES -->
                     <div id="container-list-view" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden"></div>
 
-                    <!-- GESTION DU BUDGET SAISON (AVEC POSSIBILITÉ D'AJOUTER DES POSTES PERSO) -->
+                    <!-- GESTION DU BUDGET SAISON -->
                     <div id="container-budget-view" class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6 hidden">
                         <div class="flex justify-between items-center border-b border-borderBg pb-3">
                             <div>
@@ -306,7 +306,6 @@
 
                         <!-- GRILLE DES POSTES DE BUDGET -->
                         <div id="budget-categories-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <!-- POSTES STANDARD ET PERSO GENERES DYNAMIQUEMENT -->
                         </div>
                     </div>
                 </div>
@@ -346,17 +345,17 @@
                                 </div>
                             </div>
 
-                            <!-- LIEN ITINERAIRE GOOGLE MAPS (DESTINATION = LIEU SEULEMENT) -->
+                            <!-- LIEN ITINERAIRE GOOGLE MAPS -->
                             <div id="detail-race-gmaps-container"></div>
 
-                            <!-- LIENS HEBERGEMENTS (AIRBNB ET BOOKING) -->
+                            <!-- LIENS HEBERGEMENTS -->
                             <div id="detail-race-lodging-container" class="grid grid-cols-2 gap-2"></div>
 
                             <div id="detail-race-link-container" class="pt-1"></div>
                         </div>
                     </div>
 
-                    <!-- CADRAN : LIENS UTILES & OUTILS DE PREPARATION -->
+                    <!-- CADRAN : LIENS UTILES -->
                     <div class="glass-panel p-4 rounded-2xl border border-borderBg space-y-3">
                         <div class="flex justify-between items-center border-b border-borderBg pb-2">
                             <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
@@ -433,6 +432,18 @@
             assurances: 0
         }));
 
+        // FONCTION DE NORMALISATION STYLE BETRAIL (Pardonne les apostrophes, tirets, accents et équivalents phonétiques)
+        function normalizeStr(str) {
+            if (!str) return '';
+            return str.toLowerCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Enlève les accents
+                .replace(/['’\-_]/g, " ")                       // Remplace apostrophes et tirets par espace
+                .replace(/ou/g, "o")                            // Normalisation tou/too phonétique
+                .replace(/[^a-z0-0\s]/g, "")                     // Nettoie la ponctuation
+                .replace(/\s+/g, " ")                           // Unifie les espaces
+                .trim();
+        }
+
         function initLeafletMap() {
             const mapContainer = document.getElementById('map');
             if (!mapContainer) return;
@@ -470,7 +481,7 @@
         }
 
         function addNewCustomBudgetCategory() {
-            const name = prompt("Nom du nouveau poste de dépense (ex: Stage de trail, Massages, Ostéo...) :");
+            const name = prompt("Nom du nouveau poste de dépense (ex: Stage de trail, Massages...) :");
             if (!name) return;
             const key = 'custom_' + Date.now();
            
@@ -566,11 +577,9 @@
 
             let totalSaison = totalDossards;
 
-            // Mettre à jour la valeur calculée des dossards
             if (document.getElementById('detail-b-dossards')) document.getElementById('detail-b-dossards').innerText = `${totalDossards} €`;
             if (document.getElementById('budget-val-dossards')) document.getElementById('budget-val-dossards').innerText = `${totalDossards} €`;
 
-            // Mettre à jour les catégories standards
             const stdKeys = ['materiel', 'transport', 'hebergement', 'nutrition', 'medical', 'coaching', 'assurances'];
             stdKeys.forEach(k => {
                 const val = Number(categoryBudgets[k]) || 0;
@@ -582,7 +591,6 @@
                 }
             });
 
-            // Mettre à jour les catégories perso et la liste déroulante du header
             const dropdownCustomWrapper = document.getElementById('dropdown-custom-budgets');
             let dropdownCustomHtml = '';
 
@@ -607,31 +615,32 @@
             if (document.getElementById('budget-view-total')) document.getElementById('budget-view-total').innerText = `${totalSaison} €`;
         }
 
-        // DEBOUNCE POUR LA RECHERCHE ET PROPOSITIONS EN TEMPS REEL
-        function handleSearchInputDebounced(val) {
+        // GESTION ULTRA-RAPIDE DE LA SAISIE + AUTOCOMPLETION INTELLIGENTE (STYLE BETRAIL)
+        function handleFastSearch(val) {
             clearTimeout(searchDebounceTimeout);
+            renderSearchSuggestions(val);
+
             searchDebounceTimeout = setTimeout(() => {
-                renderSearchSuggestions(val);
                 applyFilters();
-            }, 250);
+            }, 200);
         }
 
         function renderSearchSuggestions(val) {
             const container = document.getElementById('search-suggestions');
             if (!container) return;
 
-            const query = (val || '').trim().toLowerCase();
-            if (query.length < 2) {
+            const queryNorm = normalizeStr(val);
+            if (queryNorm.length < 2) {
                 container.classList.add('hidden');
                 return;
             }
 
             const matches = racesData.filter(r =>
-                r.title.toLowerCase().includes(query) || r.location.toLowerCase().includes(query)
-            ).slice(0, 6);
+                r.searchNorm.includes(queryNorm)
+            ).slice(0, 8);
 
             if (matches.length === 0) {
-                container.innerHTML = `<div class="p-3 text-gray-500 italic">Aucune épreuve trouvée</div>`;
+                container.innerHTML = `<div class="p-3 text-gray-500 italic text-center">Aucune épreuve trouvée</div>`;
             } else {
                 let html = '';
                 matches.forEach(m => {
@@ -682,7 +691,7 @@
         }
 
         function addNewCustomLink() {
-            const name = prompt("Nom du site / outil (Ex: Strava, Nolio, Montre...) :");
+            const name = prompt("Nom du site / outil (Ex: Strava, Nolio...) :");
             if (!name) return;
             let url = prompt("Adresse web (URL) :");
             if (!url) return;
@@ -735,22 +744,28 @@
             }
 
             if (races) {
-                racesData = races.map(r => ({
-                    id: r.id,
-                    title: r.title,
-                    category: r.category || 'Trail',
-                    distance: Number(r.distance) || 0,
-                    elevation: Number(r.elevation) || 0,
-                    location: r.location || 'France',
-                    region: r.region || 'France',
-                    lat: r.lat !== null ? parseFloat(r.lat) : null,
-                    lng: r.lng !== null ? parseFloat(r.lng) : null,
-                    price: parseFloat(r.price) || 0,
-                    openingDate: r.opening_date,
-                    raceDate: r.race_date,
-                    status: r.status,
-                    url: r.organizer_url
-                }));
+                // OPTIMISATION : PRE-CALCUL DES CLES NORMALISEES POUR UNE RECHERCHE INSTANTANEE
+                racesData = races.map(r => {
+                    const title = r.title || '';
+                    const loc = r.location || 'France';
+                    return {
+                        id: r.id,
+                        title: title,
+                        category: r.category || 'Trail',
+                        distance: Number(r.distance) || 0,
+                        elevation: Number(r.elevation) || 0,
+                        location: loc,
+                        region: r.region || 'France',
+                        lat: r.lat !== null ? parseFloat(r.lat) : null,
+                        lng: r.lng !== null ? parseFloat(r.lng) : null,
+                        price: parseFloat(r.price) || 0,
+                        openingDate: r.opening_date,
+                        raceDate: r.race_date,
+                        status: r.status,
+                        url: r.organizer_url,
+                        searchNorm: normalizeStr(title + ' ' + loc) // Champ de recherche accéléré
+                    };
+                });
 
                 updateFavoritesUI();
                 applyFilters();
@@ -895,7 +910,7 @@
                 </a>
             `;
 
-            // LIENS HEBERGEMENT (AIRBNB & BOOKING) PRE-REMPLIS AVEC LA VILLE
+            // LIENS HEBERGEMENT PRE-REMPLIS AVEC LA VILLE
             const airbnbUrl = `https://www.airbnb.fr/s/${encodeURIComponent(location)}/homes`;
             const bookingUrl = `https://www.booking.com/searchresults.fr.html?ss=${encodeURIComponent(location)}`;
 
@@ -1067,7 +1082,8 @@
         }
 
         function applyFilters() {
-            const keyword = (document.getElementById('filter-keyword')?.value || '').toLowerCase();
+            const rawKeyword = document.getElementById('filter-keyword')?.value || '';
+            const queryNorm = normalizeStr(rawKeyword);
             const status = document.getElementById('filter-status')?.value || 'ALL';
            
             const minDist = parseInt(document.getElementById('filter-dist-min')?.value || 0);
@@ -1085,7 +1101,8 @@
                 const favKey = `${r.title}_${r.raceDate}`;
                 if (onlyShowFavorites && !favorites.includes(favKey)) return false;
 
-                const matchKw = !keyword || r.title.toLowerCase().includes(keyword) || r.location.toLowerCase().includes(keyword);
+                // UTILISATION DE LA NORMALISATION FUZZY DÉJÀ PRÉ-CALCULÉE
+                const matchKw = !queryNorm || r.searchNorm.includes(queryNorm);
               
                 let matchStat = true;
                 if (status !== 'ALL') {
@@ -1288,7 +1305,6 @@
             }
         }
 
-        // Cacher les suggestions au clic en dehors
         document.addEventListener('click', (e) => {
             const sugg = document.getElementById('search-suggestions');
             const input = document.getElementById('filter-keyword');
