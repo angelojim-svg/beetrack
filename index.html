@@ -275,6 +275,7 @@
                     <button id="btn-view-secondary" onclick="switchMainView('secondary')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white">
                         <i id="btn-secondary-icon" class="fa-solid fa-list-ul mr-1"></i> <span id="btn-secondary-text">Liste</span>
                     </button>
+                    <!-- BOUTON MASQUÉ PAR DÉFAUT EN MODE TOUTES LES COURSES -->
                     <button id="btn-view-budget" onclick="switchMainView('budget')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white hidden">
                         <i class="fa-solid fa-wallet mr-1"></i> Gestion du Budget
                     </button>
@@ -342,7 +343,7 @@
                     </div>
                 </div>
 
-                <!-- COLONNE CENTRALE (SUIVI DE LA SAISON - POLICE AGRANDIE & CADRE ADAPTÉ À 440PX) -->
+                <!-- COLONNE CENTRALE (SUIVI DE LA SAISON) -->
                 <div id="middle-column" class="hidden lg:col-span-3 transition-all duration-300">
                     <div id="interactive-detail-panel" class="glass-panel p-4 rounded-2xl border border-emerald-500/50 bg-emerald-950/30 space-y-2.5 h-[440px] flex flex-col justify-between">
                         <div class="space-y-2">
@@ -414,7 +415,7 @@
                     </div>
                 </div>
 
-                <!-- PANNEAU CHRONOLOGIE (HAUTEUR D'AFFICHAGE RÉGLÉE À 440PX) -->
+                <!-- PANNEAU CHRONOLOGIE -->
                 <div id="timeline-column" class="lg:col-span-4 transition-all duration-300">
                     <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-borderBg space-y-3 h-[440px] flex flex-col">
                         <div class="flex items-center justify-between border-b border-borderBg pb-2">
@@ -1640,7 +1641,7 @@
 
             btnMap.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
             btnSec.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
-            if (btnBudget) btnBudget.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
+            if (btnBudget) btnBudget.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white hidden";
             btnLinks.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
 
             if (v === 'map') {
@@ -1661,6 +1662,10 @@
             } else if (v === 'links') {
                 linksV.classList.remove('hidden');
                 btnLinks.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
+            }
+
+            if (onlyShowFavorites && btnBudget) {
+                btnBudget.classList.remove('hidden');
             }
         }
 
