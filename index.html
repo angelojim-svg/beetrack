@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
 
     <!-- JS de MarkerCluster -->
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.js"></script>
 
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -138,7 +138,6 @@
                             <span class="text-lg sm:text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-gray-200 to-amber-400 bg-clip-text text-transparent leading-none">BeeTrack</span>
                             <span class="text-[10px] font-mono tracking-wider font-bold text-amber-400 uppercase bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">PILOTAGE SAISON</span>
                         </div>
-                        <!-- SOUS-TITRE SURLIGNÉ EN BLEU -->
                         <p class="text-xs text-white font-medium bg-blue-600/90 px-2 py-0.5 rounded inline-block shadow-sm">
                             Planifie tes trails, pilote tes inscriptions et maîtrise le budget de ta saison.
                         </p>
@@ -146,7 +145,7 @@
                 </div>
             </div>
 
-            <!-- BLOCS BUDGET ET FAVORIS -->
+            <!-- BLOCS BUDGET, FAVORIS & PROFIL / AUTH -->
             <div class="w-full lg:w-auto flex flex-wrap items-center justify-between lg:justify-end gap-3 text-xs">
                
                 <div class="relative group z-40">
@@ -184,9 +183,62 @@
                     </button>
                 </div>
 
+                <!-- MODULE AUTHENTIFICATION & SAUVEGARDE PROFIL -->
+                <div id="auth-container" class="flex items-center bg-darkBg p-1 rounded-xl border border-borderBg">
+                    <!-- Non connecté -->
+                    <div id="auth-logged-out" class="flex items-center space-x-2 px-2 py-0.5">
+                        <button onclick="openAuthModal()" class="text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1">
+                            <i class="fa-solid fa-user"></i> Sauvegarder profil
+                        </button>
+                    </div>
+
+                    <!-- Connecté -->
+                    <div id="auth-logged-in" class="hidden flex items-center space-x-2 px-2 py-0.5">
+                        <span class="text-xs text-emerald-400 font-mono font-bold flex items-center gap-1">
+                            <i class="fa-solid fa-cloud-check text-emerald-400"></i> <span id="user-email-display" class="max-w-[100px] truncate">Profil</span>
+                        </span>
+                        <button onclick="handleSignOut()" class="text-[10px] text-gray-400 hover:text-red-400 bg-cardBg px-2 py-1 rounded border border-borderBg transition">
+                            Déconnexion
+                        </button>
+                    </div>
+                </div>
+
             </div>
         </div>
     </header>
+
+    <!-- MODAL AUTHENTIFICATION (CONNEXION / INSCRIPTION) -->
+    <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel p-6 rounded-2xl border border-emerald-500/40 max-w-sm w-full space-y-4 shadow-2xl relative">
+            <button onclick="closeAuthModal()" class="absolute top-3 right-3 text-gray-400 hover:text-white text-xs bg-darkBg px-2 py-1 rounded border border-borderBg">✕</button>
+
+            <div class="text-center space-y-1">
+                <h3 class="text-lg font-extrabold text-white flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-user-shield text-emerald-400"></i>
+                    Sauvegarde de Profil
+                </h3>
+                <p class="text-xs text-gray-400">Retrouvez vos favoris et votre tableau de bord sur tous vos appareils.</p>
+            </div>
+
+            <form onsubmit="handleAuthSubmit(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-gray-300 mb-1 font-semibold">Adresse Email</label>
+                    <input type="email" id="auth-email" required placeholder="votre@email.com" class="w-full bg-darkBg border border-borderBg rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
+                </div>
+                <div>
+                    <label class="block text-gray-300 mb-1 font-semibold">Mot de passe</label>
+                    <input type="password" id="auth-password" required placeholder="••••••••" class="w-full bg-darkBg border border-borderBg rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
+                </div>
+
+                <div id="auth-error" class="hidden p-2 rounded-lg bg-red-500/20 border border-red-500/40 text-red-300 text-[11px]"></div>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="submit" id="btn-login" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold py-2 rounded-xl transition">Se Connecter</button>
+                    <button type="button" onclick="handleSignUp()" class="flex-1 bg-darkBg hover:bg-cardBg text-emerald-400 border border-emerald-500/40 font-bold py-2 rounded-xl transition">Créer Compte</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- MAIN CONTAINER -->
     <main class="flex-grow max-w-[1600px] w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4 space-y-3">
@@ -278,7 +330,6 @@
                     <button id="btn-view-secondary" onclick="switchMainView('secondary')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white">
                         <i id="btn-secondary-icon" class="fa-solid fa-list-ul mr-1"></i> <span id="btn-secondary-text">Liste</span>
                     </button>
-                    <!-- BOUTON HIDE MASQUÉ PAR DÉFAUT -->
                     <button id="btn-view-budget" onclick="switchMainView('budget')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white hidden">
                         <i class="fa-solid fa-wallet mr-1"></i> Gestion du Budget
                     </button>
@@ -462,6 +513,8 @@
 
         window.dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        let currentUser = null;
+
         let racesData = [];
         let filteredRaces = [];
         let favorites = JSON.parse(localStorage.getItem('pacepulse_favs') || '[]');
@@ -500,6 +553,140 @@
             coaching: 0,
             assurances: 0
         }));
+
+        /* ==================== SYSTEME DE GESTION DU PROFIL & AUTH ==================== */
+
+        function openAuthModal() {
+            document.getElementById('auth-modal').classList.remove('hidden');
+            document.getElementById('auth-error').classList.add('hidden');
+        }
+
+        function closeAuthModal() {
+            document.getElementById('auth-modal').classList.add('hidden');
+        }
+
+        async function initAuthListener() {
+            const { data: { session } } = await window.dbClient.auth.getSession();
+            handleSessionChange(session);
+
+            window.dbClient.auth.onAuthStateChange((_event, session) => {
+                handleSessionChange(session);
+            });
+        }
+
+        async function handleSessionChange(session) {
+            if (session && session.user) {
+                currentUser = session.user;
+                document.getElementById('auth-logged-out').classList.add('hidden');
+                document.getElementById('auth-logged-in').classList.remove('hidden');
+                document.getElementById('user-email-display').innerText = currentUser.email.split('@')[0];
+                await loadUserProfile();
+            } else {
+                currentUser = null;
+                document.getElementById('auth-logged-in').classList.add('hidden');
+                document.getElementById('auth-logged-out').classList.remove('hidden');
+            }
+        }
+
+        async function handleAuthSubmit(e) {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const errorDiv = document.getElementById('auth-error');
+
+            errorDiv.classList.add('hidden');
+
+            const { data, error } = await window.dbClient.auth.signInWithPassword({ email, password });
+            if (error) {
+                errorDiv.innerText = "Erreur de connexion : " + error.message;
+                errorDiv.classList.remove('hidden');
+            } else {
+                closeAuthModal();
+            }
+        }
+
+        async function handleSignUp() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const errorDiv = document.getElementById('auth-error');
+
+            errorDiv.classList.add('hidden');
+
+            if (!email || !password) {
+                errorDiv.innerText = "Veuillez renseigner un email et un mot de passe.";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            const { data, error } = await window.dbClient.auth.signUp({ email, password });
+            if (error) {
+                errorDiv.innerText = "Erreur d'inscription : " + error.message;
+                errorDiv.classList.remove('hidden');
+            } else {
+                alert("Compte créé avec succès ! Si la confirmation par mail est activée, vérifiez vos emails.");
+                closeAuthModal();
+            }
+        }
+
+        async function handleSignOut() {
+            await window.dbClient.auth.signOut();
+            location.reload();
+        }
+
+        async function saveUserProfile() {
+            // Sauvegarde dans localStorage dans tous les cas
+            localStorage.setItem('pacepulse_favs', JSON.stringify(favorites));
+            localStorage.setItem('pacepulse_meta', JSON.stringify(raceMetaStates));
+            localStorage.setItem('pacepulse_gpx', JSON.stringify(raceGpxLinks));
+            localStorage.setItem('pacepulse_strava', JSON.stringify(raceStravaLinks));
+            localStorage.setItem('pacepulse_links', JSON.stringify(customLinks));
+            localStorage.setItem('pacepulse_budgets', JSON.stringify(categoryBudgets));
+            localStorage.setItem('pacepulse_custom_budgets_list', JSON.stringify(customBudgetsList));
+
+            // Si l'utilisateur est connecté, on synchronise avec Supabase
+            if (currentUser) {
+                const profilePayload = {
+                    id: currentUser.id,
+                    updated_at: new Date().toISOString(),
+                    favorites: favorites,
+                    meta: raceMetaStates,
+                    gpx: raceGpxLinks,
+                    strava: raceStravaLinks,
+                    links: customLinks,
+                    budgets: categoryBudgets,
+                    custom_budgets_list: customBudgetsList
+                };
+
+                await window.dbClient.from('profiles').upsert(profilePayload);
+            }
+        }
+
+        async function loadUserProfile() {
+            if (!currentUser) return;
+
+            const { data, error } = await window.dbClient
+                .from('profiles')
+                .select('*')
+                .eq('id', currentUser.id)
+                .single();
+
+            if (data && !error) {
+                if (data.favorites) favorites = data.favorites;
+                if (data.meta) raceMetaStates = data.meta;
+                if (data.gpx) raceGpxLinks = data.gpx;
+                if (data.strava) raceStravaLinks = data.strava;
+                if (data.links) customLinks = data.links;
+                if (data.budgets) Object.assign(categoryBudgets, data.budgets);
+                if (data.custom_budgets_list) customBudgetsList = data.custom_budgets_list;
+
+                renderBudgetGrid();
+                renderCustomLinks();
+                updateFavoritesUI();
+                applyFilters();
+            }
+        }
+
+        /* ==================== FONCTIONS DE L'APPLICATION ==================== */
 
         function normalizeStr(str) {
             if (!str) return '';
@@ -544,7 +731,7 @@
             } else {
                 favorites.push(key);
             }
-            localStorage.setItem('pacepulse_favs', JSON.stringify(favorites));
+            saveUserProfile();
             updateFavoritesUI();
             applyFilters();
         }
@@ -586,7 +773,7 @@
                 delete raceGpxLinks[activeSelectedRaceKey];
             }
 
-            localStorage.setItem('pacepulse_gpx', JSON.stringify(raceGpxLinks));
+            saveUserProfile();
             renderGpxLinkDisplay();
         }
 
@@ -622,7 +809,7 @@
                 delete raceStravaLinks[activeSelectedRaceKey];
             }
 
-            localStorage.setItem('pacepulse_strava', JSON.stringify(raceStravaLinks));
+            saveUserProfile();
             renderStravaLinkDisplay();
         }
 
@@ -645,7 +832,7 @@
 
         function updateBudgetCategoryFromView(catKey, val) {
             categoryBudgets[catKey] = Math.max(0, Number(val) || 0);
-            localStorage.setItem('pacepulse_budgets', JSON.stringify(categoryBudgets));
+            saveUserProfile();
             updateFavoritesUI();
         }
 
@@ -655,9 +842,8 @@
             const key = 'custom_' + Date.now();
            
             customBudgetsList.push({ key: key, name: name });
-            localStorage.setItem('pacepulse_custom_budgets_list', JSON.stringify(customBudgetsList));
             categoryBudgets[key] = 0;
-            localStorage.setItem('pacepulse_budgets', JSON.stringify(categoryBudgets));
+            saveUserProfile();
 
             renderBudgetGrid();
             updateFavoritesUI();
@@ -665,9 +851,8 @@
 
         function removeCustomBudgetCategory(key) {
             customBudgetsList = customBudgetsList.filter(item => item.key !== key);
-            localStorage.setItem('pacepulse_custom_budgets_list', JSON.stringify(customBudgetsList));
             delete categoryBudgets[key];
-            localStorage.setItem('pacepulse_budgets', JSON.stringify(categoryBudgets));
+            saveUserProfile();
 
             renderBudgetGrid();
             updateFavoritesUI();
@@ -1050,13 +1235,13 @@
             if (!url.startsWith('http')) url = 'https://' + url;
 
             customLinks.push({ name, url, icon: 'fa-solid fa-arrow-up-right-from-square text-emerald-400' });
-            localStorage.setItem('pacepulse_links', JSON.stringify(customLinks));
+            saveUserProfile();
             renderCustomLinks();
         }
 
         function removeCustomLink(index) {
             customLinks.splice(index, 1);
-            localStorage.setItem('pacepulse_links', JSON.stringify(customLinks));
+            saveUserProfile();
             renderCustomLinks();
         }
 
@@ -1318,7 +1503,7 @@
                 raceMetaStates[activeSelectedRaceKey].completed = document.getElementById('check-done').checked;
             }
 
-            localStorage.setItem('pacepulse_meta', JSON.stringify(raceMetaStates));
+            saveUserProfile();
             renderTimeline();
         }
 
@@ -1692,6 +1877,7 @@
             renderBudgetGrid();
             renderCustomLinks();
             fetchRacesFromSupabase();
+            initAuthListener();
         });
     </script>
 </body>
