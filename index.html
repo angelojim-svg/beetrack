@@ -240,6 +240,38 @@
         </div>
     </div>
 
+    <!-- MODAL DE CHOIX DE CONFLICT DE PROFIL (FUSION / ÉCRASER / CONSERVER LOCAL) -->
+    <div id="profile-conflict-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel p-6 rounded-2xl border border-amber-500/40 max-w-md w-full space-y-4 shadow-2xl relative">
+            <div class="text-center space-y-2">
+                <div class="w-10 h-10 mx-auto rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-lg">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <h3 class="text-base font-extrabold text-white">Données locales et Cloud différentes</h3>
+                <p class="text-xs text-gray-300 leading-relaxed">
+                    Vous possédez des favoris et réglages sur cet appareil (local) ainsi que sur votre compte cloud. Que souhaitez-vous faire ?
+                </p>
+            </div>
+
+            <div class="space-y-2 pt-2 text-xs">
+                <button onclick="resolveProfileConflict('merge')" class="w-full text-left p-3 rounded-xl bg-darkBg hover:bg-cardBg border border-emerald-500/40 transition group">
+                    <div class="font-bold text-emerald-400 group-hover:underline">🔀 Fusionner les deux</div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">Combine vos favoris et budgets locaux avec ceux du cloud (recommandé).</div>
+                </button>
+
+                <button onclick="resolveProfileConflict('overwrite')" class="w-full text-left p-3 rounded-xl bg-darkBg hover:bg-cardBg border border-borderBg transition group">
+                    <div class="font-bold text-amber-400 group-hover:underline">☁️ Remplacer par le Cloud</div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">Ignore les réglages locaux et charge uniquement le profil cloud.</div>
+                </button>
+
+                <button onclick="resolveProfileConflict('keep_local')" class="w-full text-left p-3 rounded-xl bg-darkBg hover:bg-cardBg border border-borderBg transition group">
+                    <div class="font-bold text-blue-400 group-hover:underline">💻 Conserver le Local et écraser le Cloud</div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">Conserve uniquement vos réglages actuels sur cet appareil et les pousse sur le cloud.</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- MAIN CONTAINER -->
     <main class="flex-grow max-w-[1600px] w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4 space-y-3">
 
@@ -514,6 +546,7 @@
         window.dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = null;
+        let pendingCloudData = null; // Stocke les données cloud en cas de conflit
 
         let racesData = [];
         let filteredRaces = [];
@@ -624,13 +657,19 @@
                 return;
             }
 
+            // Inscription : On intègre directement les données locales existantes dans le nouveau profil
             const { data, error } = await window.dbClient.auth.signUp({ email, password });
             if (error) {
                 errorDiv.innerText = "Erreur d'inscription : " + error.message;
                 errorDiv.classList.remove('hidden');
             } else {
-                alert("Compte créé avec succès ! Si la confirmation par mail est activée, vérifiez vos emails.");
+                alert("Compte créé avec succès ! Vos configurations locales ont été intégrées à votre nouveau profil.");
                 closeAuthModal();
+
+                if (data.session && data.session.user) {
+                    currentUser = data.session.user;
+                    await saveUserProfile(); // Sauvegarde l'état local actuel sur le profil cloud distant
+                }
             }
         }
 
@@ -680,22 +719,72 @@
                     .maybeSingle();
 
                 if (data && !error) {
-                    if (data.favorites) favorites = data.favorites;
-                    if (data.meta) raceMetaStates = data.meta;
-                    if (data.gpx) raceGpxLinks = data.gpx;
-                    if (data.strava) raceStravaLinks = data.strava;
-                    if (data.links) customLinks = data.links;
-                    if (data.budgets) Object.assign(categoryBudgets, data.budgets);
-                    if (data.custom_budgets_list) customBudgetsList = data.custom_budgets_list;
+                    const cloudHasFavorites = data.favorites && data.favorites.length > 0;
+                    const localHasFavorites = favorites.length > 0;
 
-                    renderBudgetGrid();
-                    renderCustomLinks();
-                    updateFavoritesUI();
-                    applyFilters();
+                    // Si le cloud a des favoris et que le local en a aussi des différents, on demande à l'utilisateur
+                    if (cloudHasFavorites && localHasFavorites && JSON.stringify(data.favorites.sort()) !== JSON.stringify(favorites.sort())) {
+                        pendingCloudData = data;
+                        document.getElementById('profile-conflict-modal').classList.remove('hidden');
+                        return;
+                    }
+
+                    // Sinon, chargement automatique normal
+                    applyCloudProfile(data);
+                } else {
+                    // Si le profil cloud est vide, on y pousse les données locales actuelles
+                    await saveUserProfile();
                 }
             } catch (e) {
                 console.error("Erreur lors du chargement du profil Supabase:", e);
             }
+        }
+
+        function applyCloudProfile(data) {
+            if (data.favorites) favorites = data.favorites;
+            if (data.meta) raceMetaStates = data.meta;
+            if (data.gpx) raceGpxLinks = data.gpx;
+            if (data.strava) raceStravaLinks = data.strava;
+            if (data.links) customLinks = data.links;
+            if (data.budgets) Object.assign(categoryBudgets, data.budgets);
+            if (data.custom_budgets_list) customBudgetsList = data.custom_budgets_list;
+
+            saveUserProfile();
+            renderBudgetGrid();
+            renderCustomLinks();
+            updateFavoritesUI();
+            applyFilters();
+        }
+
+        function resolveProfileConflict(action) {
+            document.getElementById('profile-conflict-modal').classList.add('hidden');
+            if (!pendingCloudData) return;
+
+            if (action === 'merge') {
+                // Fusion intelligente des favoris et métas
+                favorites = Array.from(new Set([...favorites, ...(pendingCloudData.favorites || [])]));
+                Object.assign(raceMetaStates, pendingCloudData.meta || {});
+                Object.assign(raceGpxLinks, pendingCloudData.gpx || {});
+                Object.assign(raceStravaLinks, pendingCloudData.strava || {});
+                if (pendingCloudData.links && pendingCloudData.links.length > 0) customLinks = pendingCloudData.links;
+                Object.assign(categoryBudgets, pendingCloudData.budgets || {});
+                if (pendingCloudData.custom_budgets_list) customBudgetsList = pendingCloudData.custom_budgets_list;
+
+                saveUserProfile();
+            } else if (action === 'overwrite') {
+                // Écraser le local par le cloud
+                applyCloudProfile(pendingCloudData);
+                return;
+            } else if (action === 'keep_local') {
+                // Conserver le local et écraser le cloud avec
+                saveUserProfile();
+            }
+
+            pendingCloudData = null;
+            renderBudgetGrid();
+            renderCustomLinks();
+            updateFavoritesUI();
+            applyFilters();
         }
 
         /* ==================== FONCTIONS DE L'APPLICATION ==================== */
@@ -1691,7 +1780,6 @@
                 leafletMap.removeLayer(markerClusterGroup);
             }
 
-            // Vérification de sécurité pour éviter l'erreur si le script du plugin met du temps à charger
             if (typeof L.markerClusterGroup !== 'function') {
                 console.warn("MarkerCluster plugin non chargé, utilisation de marqueurs simples.");
                 return;
