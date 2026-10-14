@@ -126,16 +126,19 @@
 
     <!-- HEADER / NAVIGATION -->
     <header class="sticky top-0 z-50 glass-panel border-b border-borderBg">
-        <div class="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-3 lg:py-0 lg:h-20 flex flex-col lg:flex-row items-center justify-between gap-3">
+        <div class="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-3 lg:py-0 lg:h-24 flex flex-col lg:flex-row items-center justify-between gap-3">
            
             <div class="w-full lg:w-auto flex items-center justify-between">
                 <div class="flex items-center space-x-3">
-                    <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-darkBg font-black text-lg shadow-lg shadow-emerald-500/20">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-darkBg font-black text-xl shadow-lg shadow-emerald-500/20">
                         <i class="fa-solid font-bold fa-stopwatch"></i>
                     </div>
                     <div class="flex flex-col">
-                        <span class="text-lg sm:text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-gray-200 to-amber-400 bg-clip-text text-transparent leading-none">BeeTrack</span>
-                        <span class="text-[10px] font-mono tracking-wider font-bold text-amber-400 mt-1 uppercase">PILOTAGE SAISON</span>
+                        <div class="flex items-center space-x-3">
+                            <span class="text-xl sm:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-white via-gray-200 to-amber-400 bg-clip-text text-transparent leading-none">BeeTrack</span>
+                            <span class="text-[11px] font-mono tracking-wider font-bold text-amber-400 uppercase bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">PILOTAGE SAISON</span>
+                        </div>
+                        <p class="text-xs text-gray-400 font-medium mt-1">Tableau de bord et suivi de tes inscriptions, et budget de ta saison</p>
                     </div>
                 </div>
             </div>
@@ -182,84 +185,7 @@
     <!-- MAIN CONTAINER -->
     <main class="flex-grow max-w-[1600px] w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6">
 
-        <!-- SEARCH & FILTER PANEL -->
-        <section class="glass-panel p-4 sm:p-6 rounded-2xl border border-borderBg space-y-5">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-borderBg pb-3">
-                <h2 class="text-base sm:text-xl font-extrabold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-filter text-emerald-400"></i>
-                    Recherche & Radar
-                </h2>
-                <div class="flex items-center justify-between sm:justify-end space-x-3">
-                    <button onclick="resetFilters()" class="text-xs text-gray-400 hover:text-white underline">Réinitialiser</button>
-                    <span class="text-xs bg-darkBg px-2.5 py-1 rounded-lg border border-borderBg text-gray-300 font-mono">
-                        <span id="filtered-count" class="text-emerald-400 font-bold">0</span> épreuve(s)
-                    </span>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-                <div class="md:col-span-7 relative">
-                    <label class="block text-[11px] font-semibold uppercase text-gray-400 mb-1.5">Recherche (Nom de course, ville...)</label>
-                    <div class="relative">
-                        <input type="text" id="filter-keyword" oninput="handleFastSearch(this.value)" placeholder="Tapez 2 lettres (ex: too, tou, sainte...)" class="w-full px-3 py-2 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none focus:border-emerald-400">
-                        <i class="fa-solid fa-magnifying-glass absolute right-3 top-2.5 text-gray-500 text-xs"></i>
-                    </div>
-
-                    <div id="search-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-cardBg border border-borderBg rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto divide-y divide-borderBg/50 text-xs">
-                    </div>
-                </div>
-
-                <div class="md:col-span-5">
-                    <label class="block text-[11px] font-semibold uppercase text-gray-400 mb-1.5">Statut d'ouverture</label>
-                    <select id="filter-status" onchange="applyFilters()" class="w-full px-3 py-2 bg-darkBg border border-borderBg rounded-xl text-sm text-white font-medium cursor-pointer">
-                        <option value="ALL">Tous les statuts</option>
-                        <option value="Open">Ouvertes</option>
-                        <option value="Opening Soon">Prochaines (Bientôt)</option>
-                        <option value="TBD">Date à confirmer par l'organisateur</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-3 border-t border-borderBg/50">
-                <div class="space-y-1.5">
-                    <div class="flex justify-between text-xs font-semibold">
-                        <span class="text-gray-400">Distance : <b id="slider-dist-min-val" class="text-emerald-400">0 km</b></span>
-                        <span class="text-gray-400">à <b id="slider-dist-max-val" class="text-emerald-400">200 km</b></span>
-                    </div>
-                    <div class="range-slider-container">
-                        <div id="track-dist" class="range-slider-track"></div>
-                        <input type="range" id="filter-dist-min" min="0" max="200" step="5" value="0" oninput="handleDualSlider('dist'); applyFilters();">
-                        <input type="range" id="filter-dist-max" min="0" max="200" step="5" value="200" oninput="handleDualSlider('dist'); applyFilters();">
-                    </div>
-                </div>
-
-                <div class="space-y-1.5">
-                    <div class="flex justify-between text-xs font-semibold">
-                        <span class="text-gray-400">D+ : <b id="slider-elev-min-val" class="text-emerald-400">0 m</b></span>
-                        <span class="text-gray-400">à <b id="slider-elev-max-val" class="text-emerald-400">15 000 m</b></span>
-                    </div>
-                    <div class="range-slider-container">
-                        <div id="track-elev" class="range-slider-track"></div>
-                        <input type="range" id="filter-elev-min" min="0" max="15000" step="250" value="0" oninput="handleDualSlider('elev'); applyFilters();">
-                        <input type="range" id="filter-elev-max" min="0" max="15000" step="250" value="15000" oninput="handleDualSlider('elev'); applyFilters();">
-                    </div>
-                </div>
-
-                <div class="space-y-1.5">
-                    <div class="flex justify-between text-xs font-semibold">
-                        <span class="text-gray-400">Échéance : <b id="slider-horizon-min-val" class="text-emerald-400">0 mois</b></span>
-                        <span class="text-gray-400">à <b id="slider-horizon-max-val" class="text-emerald-400">24 mois</b></span>
-                    </div>
-                    <div class="range-slider-container">
-                        <div id="track-horizon" class="range-slider-track"></div>
-                        <input type="range" id="filter-horizon-min" min="0" max="24" step="1" value="0" oninput="handleDualSlider('horizon'); applyFilters();">
-                        <input type="range" id="filter-horizon-max" min="0" max="24" step="1" value="24" oninput="handleDualSlider('horizon'); applyFilters();">
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- MAP, DETAIL PANEL & CHRONOLOGY SECTION -->
+        <!-- SECTION MAP, DETAIL PANEL & CHRONOLOGY (POSITIONNÉE EN HAUT) -->
         <section class="space-y-6">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div class="flex items-center space-x-2 bg-darkBg p-1 rounded-xl border border-borderBg">
@@ -370,6 +296,19 @@
                                 </div>
                             </div>
 
+                            <!-- LIEN STRAVA / ACTIVITÉ COURSE -->
+                            <div class="bg-darkBg/90 p-3 rounded-xl border border-borderBg space-y-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-300 font-bold flex items-center gap-1.5">
+                                        <i class="fa-brands fa-strava text-orange-500"></i> Lien Activité (Strava...) :
+                                    </span>
+                                    <button onclick="editStravaActivityLink()" class="text-[10px] text-emerald-400 hover:underline">Modifier</button>
+                                </div>
+                                <div id="strava-link-display">
+                                    <p class="text-[10px] text-gray-500 italic">Aucun lien d'activité enregistré.</p>
+                                </div>
+                            </div>
+
                             <!-- LIEN ITINERAIRE GOOGLE MAPS -->
                             <div id="detail-race-gmaps-container"></div>
 
@@ -412,7 +351,7 @@
                         </div>
                     </div>
 
-                    <!-- COURBE CUMULEE (UNIQUEMENT VISIBLE EN MODE FAVORIS / CHRONOLOGIE SAISON) -->
+                    <!-- COURBE CUMULEE (UNIQUEMENT VISIBLE EN MODE FAVORIS) -->
                     <div id="container-load-chart" class="glass-panel p-4 rounded-2xl border border-borderBg space-y-3 hidden">
                         <div class="flex justify-between items-center border-b border-borderBg pb-2">
                             <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
@@ -430,6 +369,83 @@
             </div>
         </section>
 
+        <!-- SEARCH & FILTER PANEL (REPOSITIONNÉ EN BAS DE LA CARTE) -->
+        <section class="glass-panel p-4 sm:p-6 rounded-2xl border border-borderBg space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-borderBg pb-3">
+                <h2 class="text-base sm:text-xl font-extrabold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-filter text-emerald-400"></i>
+                    Recherche & Radar
+                </h2>
+                <div class="flex items-center justify-between sm:justify-end space-x-3">
+                    <button onclick="resetFilters()" class="text-xs text-gray-400 hover:text-white underline">Réinitialiser</button>
+                    <span class="text-xs bg-darkBg px-2.5 py-1 rounded-lg border border-borderBg text-gray-300 font-mono">
+                        <span id="filtered-count" class="text-emerald-400 font-bold">0</span> épreuve(s)
+                    </span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                <div class="md:col-span-7 relative">
+                    <label class="block text-[11px] font-semibold uppercase text-gray-400 mb-1.5">Recherche (Nom de course, ville...)</label>
+                    <div class="relative">
+                        <input type="text" id="filter-keyword" oninput="handleFastSearch(this.value)" placeholder="Tapez 2 lettres (ex: too, tou, sainte...)" class="w-full px-3 py-2 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none focus:border-emerald-400">
+                        <i class="fa-solid fa-magnifying-glass absolute right-3 top-2.5 text-gray-500 text-xs"></i>
+                    </div>
+
+                    <div id="search-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-cardBg border border-borderBg rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto divide-y divide-borderBg/50 text-xs">
+                    </div>
+                </div>
+
+                <div class="md:col-span-5">
+                    <label class="block text-[11px] font-semibold uppercase text-gray-400 mb-1.5">Statut d'ouverture</label>
+                    <select id="filter-status" onchange="applyFilters()" class="w-full px-3 py-2 bg-darkBg border border-borderBg rounded-xl text-sm text-white font-medium cursor-pointer">
+                        <option value="ALL">Tous les statuts</option>
+                        <option value="Open">Ouvertes</option>
+                        <option value="Opening Soon">Prochaines (Bientôt)</option>
+                        <option value="TBD">Date à confirmer par l'organisateur</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-3 border-t border-borderBg/50">
+                <div class="space-y-1.5">
+                    <div class="flex justify-between text-xs font-semibold">
+                        <span class="text-gray-400">Distance : <b id="slider-dist-min-val" class="text-emerald-400">0 km</b></span>
+                        <span class="text-gray-400">à <b id="slider-dist-max-val" class="text-emerald-400">200 km</b></span>
+                    </div>
+                    <div class="range-slider-container">
+                        <div id="track-dist" class="range-slider-track"></div>
+                        <input type="range" id="filter-dist-min" min="0" max="200" step="5" value="0" oninput="handleDualSlider('dist'); applyFilters();">
+                        <input type="range" id="filter-dist-max" min="0" max="200" step="5" value="200" oninput="handleDualSlider('dist'); applyFilters();">
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <div class="flex justify-between text-xs font-semibold">
+                        <span class="text-gray-400">D+ : <b id="slider-elev-min-val" class="text-emerald-400">0 m</b></span>
+                        <span class="text-gray-400">à <b id="slider-elev-max-val" class="text-emerald-400">15 000 m</b></span>
+                    </div>
+                    <div class="range-slider-container">
+                        <div id="track-elev" class="range-slider-track"></div>
+                        <input type="range" id="filter-elev-min" min="0" max="15000" step="250" value="0" oninput="handleDualSlider('elev'); applyFilters();">
+                        <input type="range" id="filter-elev-max" min="0" max="15000" step="250" value="15000" oninput="handleDualSlider('elev'); applyFilters();">
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <div class="flex justify-between text-xs font-semibold">
+                        <span class="text-gray-400">Échéance : <b id="slider-horizon-min-val" class="text-emerald-400">0 mois</b></span>
+                        <span class="text-gray-400">à <b id="slider-horizon-max-val" class="text-emerald-400">24 mois</b></span>
+                    </div>
+                    <div class="range-slider-container">
+                        <div id="track-horizon" class="range-slider-track"></div>
+                        <input type="range" id="filter-horizon-min" min="0" max="24" step="1" value="0" oninput="handleDualSlider('horizon'); applyFilters();">
+                        <input type="range" id="filter-horizon-max" min="0" max="24" step="1" value="24" oninput="handleDualSlider('horizon'); applyFilters();">
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <!-- SCRIPT JAVASCRIPT PRINCIPAL -->
@@ -444,6 +460,7 @@
         let favorites = JSON.parse(localStorage.getItem('pacepulse_favs') || '[]');
         let raceMetaStates = JSON.parse(localStorage.getItem('pacepulse_meta') || '{}');
         let raceGpxLinks = JSON.parse(localStorage.getItem('pacepulse_gpx') || '{}');
+        let raceStravaLinks = JSON.parse(localStorage.getItem('pacepulse_strava') || '{}');
        
         let customLinks = JSON.parse(localStorage.getItem('pacepulse_links') || JSON.stringify([
             { name: 'Strava', url: 'https://www.strava.com', icon: 'fa-brands fa-strava text-orange-500' },
@@ -551,6 +568,42 @@
                 `;
             } else {
                 container.innerHTML = `<p class="text-[10px] text-gray-500 italic">Aucune trace GPX enregistrée.</p>`;
+            }
+        }
+
+        function editStravaActivityLink() {
+            if (!activeSelectedRaceKey) return;
+            const current = raceStravaLinks[activeSelectedRaceKey] || '';
+            let url = prompt("Lien web de l'activité (ex: Strava, Nolio, Garmin Connect...):", current);
+            if (url === null) return;
+           
+            url = url.trim();
+            if (url && !url.startsWith('http')) url = 'https://' + url;
+
+            if (url) {
+                raceStravaLinks[activeSelectedRaceKey] = url;
+            } else {
+                delete raceStravaLinks[activeSelectedRaceKey];
+            }
+
+            localStorage.setItem('pacepulse_strava', JSON.stringify(raceStravaLinks));
+            renderStravaLinkDisplay();
+        }
+
+        function renderStravaLinkDisplay() {
+            const container = document.getElementById('strava-link-display');
+            if (!container) return;
+
+            const url = activeSelectedRaceKey ? raceStravaLinks[activeSelectedRaceKey] : null;
+
+            if (url) {
+                container.innerHTML = `
+                    <a href="${url}" target="_blank" class="w-full text-center bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/40 font-semibold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1">
+                        <i class="fa-brands fa-strava"></i> Ouvrir l'activité ↗
+                    </a>
+                `;
+            } else {
+                container.innerHTML = `<p class="text-[10px] text-gray-500 italic">Aucun lien d'activité enregistré.</p>`;
             }
         }
 
@@ -783,25 +836,22 @@
             });
         }
 
-        // COURBE DE CHARGE CUMULEE : UNIQUEMENT SUR FAVORIS + TOOLTIP SURVOL DE LA COURSE
+        // COURBE DE CHARGE CUMULEE : UNIQUEMENT SUR FAVORIS
         function renderLoadChart() {
             const chartContainer = document.getElementById('container-load-chart');
             if (!chartContainer) return;
 
-            // Masquer complètement la courbe si on est sur "afficher toutes les courses"
             if (!onlyShowFavorites) {
                 chartContainer.classList.add('hidden');
                 if (loadChartInstance) loadChartInstance.destroy();
                 return;
             }
 
-            // Afficher le conteneur du graphique si on est sur la vue favoris
             chartContainer.classList.remove('hidden');
 
             const canvas = document.getElementById('loadChart');
             if (!canvas) return;
 
-            // Filtrer uniquement les courses favoris datées et trier par date
             const validFavRaces = filteredRaces
                 .filter(r => r.raceDate && !isNaN(new Date(r.raceDate).getTime()))
                 .sort((a, b) => new Date(a.raceDate) - new Date(b.raceDate));
@@ -1136,9 +1186,11 @@
             return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
         }
 
+        // MISE EN EVIDENCE ET OUVERTURE DE LA BULLE POPUP AU SURVOL (HOVER)
         function highlightMapMarker(raceKey, highlight) {
             const marker = markersMapRef[raceKey];
             if (!marker) return;
+
             const iconElem = marker.getElement();
             if (iconElem) {
                 const innerDiv = iconElem.querySelector('div');
@@ -1147,10 +1199,12 @@
                         innerDiv.style.background = '#eab308';
                         innerDiv.style.transform = 'scale(1.4)';
                         innerDiv.style.zIndex = '1000';
+                        marker.openPopup();
                     } else {
                         innerDiv.style.background = marker.defaultColor || '#10b981';
                         innerDiv.style.transform = 'scale(1)';
                         innerDiv.style.zIndex = '1';
+                        marker.closePopup();
                     }
                 }
             }
@@ -1216,6 +1270,7 @@
             }
 
             renderGpxLinkDisplay();
+            renderStravaLinkDisplay();
 
             const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
             document.getElementById('check-reg-ok').checked = meta.registered;
@@ -1470,7 +1525,7 @@
 
                     popupHtml += `
                         <div style="padding-bottom: 6px; margin-bottom: 6px; ${idx < racesAtLocation.length - 1 ? 'border-bottom: 1px solid rgba(255,255,255,0.1);' : ''}">
-                            <div style="display: flex; justify-between; align-items: center;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <strong style="color: #fff;">${r.title}</strong>
                                 <button onclick="toggleFavorite('${r.title.replace(/'/g, "\\'")}', '${r.raceDate}')" style="background:none; border:none; color: ${isFav ? '#ef4444' : '#9ca3af'}; cursor:pointer;">♥</button>
                             </div>
