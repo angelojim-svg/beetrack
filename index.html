@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
 
     <!-- JS de MarkerCluster -->
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -124,7 +124,7 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- HEADER / NAVIGATION (HAUTEUR ET PADDING REDUITS) -->
+    <!-- HEADER / NAVIGATION -->
     <header class="sticky top-0 z-50 glass-panel border-b border-borderBg shadow-lg">
         <div class="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-2.5 lg:py-0 lg:h-16 flex flex-col lg:flex-row items-center justify-between gap-2">
            
@@ -182,10 +182,10 @@
         </div>
     </header>
 
-    <!-- MAIN CONTAINER (ESPACEMENT AMÉLIORÉ & RESSERRÉ) -->
+    <!-- MAIN CONTAINER -->
     <main class="flex-grow max-w-[1600px] w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4 space-y-3">
 
-        <!-- CADRAN LIENS ET OUTILS UTILES (COLORÉ & BORDURE ÉMERAUDE) -->
+        <!-- CADRAN LIENS ET OUTILS UTILES -->
         <section class="glass-panel p-3.5 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/20 via-cardBg to-cardBg space-y-2.5 shadow-lg">
             <div class="flex justify-between items-center border-b border-emerald-500/20 pb-1.5">
                 <h4 class="text-xs font-bold text-emerald-300 flex items-center gap-2">
@@ -199,7 +199,7 @@
             </div>
         </section>
 
-        <!-- SEARCH & FILTER PANEL (CADRAN RECHERCHE ET RADAR DYNAMISÉ ET COLORÉ) -->
+        <!-- SEARCH & FILTER PANEL -->
         <section class="glass-panel p-4 sm:p-5 rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 via-cardBg to-darkBg space-y-4 shadow-xl">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-500/20 pb-2.5">
                 <h2 class="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
@@ -428,7 +428,7 @@
                         </div>
                     </div>
 
-                    <!-- COURBE CUMULEE (UNIQUEMENT VISIBLE EN MODE FAVORIS) -->
+                    <!-- COURBE CUMULEE -->
                     <div id="container-load-chart" class="glass-panel p-4 rounded-2xl border border-borderBg space-y-3 hidden">
                         <div class="flex justify-between items-center border-b border-borderBg pb-2">
                             <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
@@ -1080,6 +1080,8 @@
                 racesData = races.map(r => {
                     const title = r.title || '';
                     const loc = r.location || 'France';
+                    const rDate = r.race_date || r.raceDate || null;
+                    const oDate = r.opening_date || r.openingDate || null;
                     return {
                         id: r.id,
                         title: title,
@@ -1091,10 +1093,10 @@
                         lat: r.lat !== null ? parseFloat(r.lat) : null,
                         lng: r.lng !== null ? parseFloat(r.lng) : null,
                         price: parseFloat(r.price) || 0,
-                        openingDate: r.opening_date,
-                        raceDate: r.race_date,
+                        openingDate: oDate,
+                        raceDate: rDate,
                         status: r.status,
-                        url: r.organizer_url,
+                        url: r.organizer_url || r.url,
                         searchNorm: normalizeStr(title + ' ' + loc)
                     };
                 });
@@ -1328,19 +1330,23 @@
 
             if (!container) return;
 
+            // Filtrer et limiter l'affichage des résultats pour préserver les performances
             const validRaces = filteredRaces
                 .filter(r => r.raceDate && !isNaN(new Date(r.raceDate).getTime()))
                 .sort((a, b) => new Date(a.raceDate) - new Date(b.raceDate));
 
             if (validRaces.length === 0) {
-                container.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-6">Aucune course datée à afficher.</p>';
+                container.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-6">Aucune course datée à afficher avec ces filtres.</p>';
                 renderLoadChart();
                 return;
             }
 
+            // Limiter à 50 courses dans la chronologie sauf si vue Favoris pour éviter les ralentissements
+            const racesToDisplay = onlyShowFavorites ? validRaces : validRaces.slice(0, 50);
+
             let html = '<div class="relative border-l-2 border-emerald-500/30 ml-3 space-y-4 my-2">';
 
-            validRaces.forEach((race, idx) => {
+            racesToDisplay.forEach((race, idx) => {
                 const raceKey = `${race.title}_${race.raceDate}`;
                 const dateObj = new Date(race.raceDate);
                 const formattedDate = formatDateFR(race.raceDate, race.status);
@@ -1359,7 +1365,7 @@
 
                 let gapHtml = '';
                 if (idx > 0) {
-                    const prevDate = new Date(validRaces[idx - 1].raceDate);
+                    const prevDate = new Date(racesToDisplay[idx - 1].raceDate);
                     const diffTime = Math.abs(dateObj - prevDate);
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                     const diffWeeks = (diffDays / 7).toFixed(1);
@@ -1414,6 +1420,10 @@
                 `;
             });
 
+            if (!onlyShowFavorites && validRaces.length > 50) {
+                html += `<div class="text-center py-2 text-[10px] text-gray-400 italic">Affichage des 50 premières épreuves sur ${validRaces.length}. Affinez votre recherche pour en voir d'autres.</div>`;
+            }
+
             html += '</div>';
             container.innerHTML = html;
 
@@ -1456,8 +1466,10 @@
                 let matchDate = true;
                 if (r.raceDate) {
                     const rDate = new Date(r.raceDate);
-                    const diffMonths = (rDate.getFullYear() - now.getFullYear()) * 12 + (rDate.getMonth() - now.getMonth());
-                    matchDate = diffMonths >= minMonths && diffMonths <= maxMonths;
+                    if (!isNaN(rDate.getTime())) {
+                        const diffMonths = (rDate.getFullYear() - now.getFullYear()) * 12 + (rDate.getMonth() - now.getMonth());
+                        matchDate = diffMonths >= minMonths && diffMonths <= maxMonths;
+                    }
                 }
 
                 return matchKw && matchStat && matchDate && r.distance >= minDist && r.distance <= maxDist && r.elevation >= minElev && r.elevation <= maxElev;
@@ -1517,7 +1529,7 @@
 
                 let popupHtml = `<div style="max-height: 200px; overflow-y: auto; padding: 2px; color: #f3f4f6; font-size: 12px;">`;
                 racesAtLocation.forEach((r, idx) => {
-                    const formattedDate = formatDateFR(r.raceDate || r.race_date, r.status);
+                    const formattedDate = formatDateFR(r.raceDate, r.status);
                     const isFav = favorites.includes(`${r.title}_${r.raceDate}`);
                     const displayPrice = r.price > 0 ? `${r.price} €` : 'N/C';
 
