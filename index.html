@@ -917,20 +917,50 @@
                         tension: 0.25,
                         pointBackgroundColor: '#eab308',
                         pointBorderColor: '#0b0f17',
-                        pointRadius: 5
+                        pointRadius: 6,
+                        pointHoverRadius: 9
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            enabled: true,
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(19, 27, 46, 0.95)',
+                            titleColor: '#34d399',
+                            bodyColor: '#ffffff',
+                            borderColor: '#10b981',
+                            borderWidth: 1,
+                            padding: 10,
+                            callbacks: {
+                                title: function(context) {
+                                    const index = context[0].dataIndex;
+                                    const meta = racesDetailsMeta[index];
+                                    return meta ? `🏃 ${meta.title}` : context[0].label;
+                                },
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    const meta = racesDetailsMeta[index];
+                                    if (!meta) return `Charge: ${context.raw}`;
+                                    return [
+                                        `📅 Date : ${context.label}`,
+                                        `📏 Course : ${meta.dist} km | D+ ${meta.elev}m (+${meta.raceCharge} pts)`,
+                                        `📊 Cumul Saison : ${meta.totalCumul} pts`
+                                    ];
+                                }
+                            }
+                        }
+                    },
                     scales: {
                         x: { ticks: { color: '#9ca3af', font: { size: 11 } } },
                         y: { ticks: { color: '#34d399', font: { size: 11 } } }
                     }
                 }
             });
-        }
 
         function handleFastSearch(val) {
             clearTimeout(searchDebounceTimeout);
