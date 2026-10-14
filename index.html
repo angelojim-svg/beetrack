@@ -292,20 +292,20 @@
                 </div>
             </div>
 
-            <!-- LAYOUT GRILLE RESPONSIVE UNIFORMISÉ -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+            <!-- LAYOUT GRILLE RESPONSIVE UNIFORMISÉ AVEC HAUTEURS ÉGALES (items-stretch) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
                
                 <!-- ZONE PRINCIPALE (CARTE / LISTE / GESTION BUDGET) -->
-                <div id="main-view-column" class="lg:col-span-8 space-y-4 transition-all duration-300">
-                    <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden h-[480px]">
-                        <div id="map" class="w-full h-full rounded-xl z-10"></div>
+                <div id="main-view-column" class="lg:col-span-8 space-y-4 transition-all duration-300 flex flex-col justify-stretch">
+                    <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden flex-1 min-h-[520px] flex flex-col">
+                        <div id="map" class="w-full flex-1 min-h-[500px] rounded-xl z-10"></div>
                     </div>
 
                     <!-- LISTE DES COURSES -->
-                    <div id="container-list-view" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden max-h-[480px] overflow-y-auto"></div>
+                    <div id="container-list-view" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden min-h-[520px]"></div>
 
                     <!-- GESTION DU BUDGET SAISON -->
-                    <div id="container-budget-view" class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6 hidden max-h-[480px] overflow-y-auto">
+                    <div id="container-budget-view" class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6 hidden min-h-[520px]">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-borderBg pb-3">
                             <div>
                                 <h3 class="text-lg font-bold text-white flex items-center gap-2">
@@ -342,13 +342,13 @@
                     </div>
                 </div>
 
-                <!-- COLONNE DU MILIEU (SUIVI DE LA SAISON) -->
-                <div id="middle-column" class="hidden lg:col-span-3 transition-all duration-300">
+                <!-- COLONNE DU MILIEU (SUIVI DE LA SAISON COMPLET) -->
+                <div id="middle-column" class="hidden lg:col-span-3 transition-all duration-300 flex flex-col">
                    
-                    <!-- CADRAN SUIVI DE LA SAISON -->
-                    <div id="interactive-detail-panel" class="glass-panel p-4 rounded-2xl border border-emerald-500/50 bg-emerald-950/30 space-y-4 h-[480px] flex flex-col justify-between overflow-y-auto">
-                        <div class="space-y-4">
-                            <div class="flex justify-between items-start border-b border-borderBg pb-3">
+                    <!-- CADRAN SUIVI DE LA SAISON : HAUTEUR LIBRE S'AFFICHE SANS COUPURE -->
+                    <div id="interactive-detail-panel" class="glass-panel p-4 sm:p-5 rounded-2xl border border-emerald-500/50 bg-emerald-950/30 space-y-4 flex-1 flex flex-col justify-between">
+                        <div class="space-y-3.5">
+                            <div class="flex justify-between items-start border-b border-borderBg pb-2.5">
                                 <div>
                                     <span class="text-[10px] font-mono text-emerald-400 uppercase font-bold tracking-wider">Suivi de la saison</span>
                                     <h3 id="detail-race-title" class="text-sm font-bold text-white mt-0.5 leading-snug"></h3>
@@ -356,18 +356,18 @@
                                 <button onclick="closeInteractiveDetail()" class="text-xs text-gray-400 hover:text-white bg-darkBg p-1.5 rounded-lg border border-borderBg flex items-center justify-center">✕</button>
                             </div>
 
-                            <div class="space-y-3 text-xs">
-                                <div class="flex items-center justify-between bg-emerald-900/40 p-3 rounded-xl border border-emerald-500/40">
+                            <div class="space-y-2.5 text-xs">
+                                <div class="flex items-center justify-between bg-emerald-900/40 p-2.5 rounded-xl border border-emerald-500/40">
                                     <span class="text-emerald-200 font-bold">Inscription OK ?</span>
                                     <input type="checkbox" id="check-reg-ok" onchange="toggleRaceStatusMeta('registered')" class="w-4 h-4 accent-emerald-400 cursor-pointer">
                                 </div>
 
-                                <div class="flex items-center justify-between bg-blue-900/40 p-3 rounded-xl border border-blue-500/40">
+                                <div class="flex items-center justify-between bg-blue-900/40 p-2.5 rounded-xl border border-blue-500/40">
                                     <span class="text-blue-200 font-bold">Course terminée ?</span>
                                     <input type="checkbox" id="check-done" onchange="toggleRaceStatusMeta('completed')" class="w-4 h-4 accent-blue-400 cursor-pointer">
                                 </div>
 
-                                <div class="bg-darkBg/90 p-3 rounded-xl border border-borderBg space-y-2">
+                                <div class="bg-darkBg/90 p-2.5 rounded-xl border border-borderBg space-y-1.5">
                                     <div class="flex justify-between">
                                         <span class="text-gray-400">📍 Lieu :</span>
                                         <b id="detail-race-loc" class="text-white text-right font-medium">-</b>
@@ -379,7 +379,7 @@
                                 </div>
 
                                 <!-- LIEN TRACE GPX -->
-                                <div class="bg-darkBg/90 p-3 rounded-xl border border-borderBg space-y-2">
+                                <div class="bg-darkBg/90 p-2.5 rounded-xl border border-borderBg space-y-1.5">
                                     <div class="flex justify-between items-center">
                                         <span class="text-gray-300 font-bold flex items-center gap-1.5">
                                             <i class="fa-solid fa-map-pin text-emerald-400"></i> Trace GPX :
@@ -392,10 +392,10 @@
                                 </div>
 
                                 <!-- LIEN STRAVA / ACTIVITÉ COURSE -->
-                                <div class="bg-darkBg/90 p-3 rounded-xl border border-borderBg space-y-2">
+                                <div class="bg-darkBg/90 p-2.5 rounded-xl border border-borderBg space-y-1.5">
                                     <div class="flex justify-between items-center">
                                         <span class="text-gray-300 font-bold flex items-center gap-1.5">
-                                            <i class="fa-brands fa-strava text-orange-500"></i> Lien Activité (Strava...) :
+                                            <i class="fa-brands fa-strava text-orange-500"></i> Lien Activité :
                                         </span>
                                         <button onclick="editStravaActivityLink()" class="text-[10px] text-emerald-400 hover:underline">Modifier</button>
                                     </div>
@@ -417,9 +417,9 @@
 
                 </div>
 
-                <!-- PANNEAU CHRONOLOGIE VERTICALE ALIGNÉ EN HAUTEUR (480px) -->
-                <div id="timeline-column" class="lg:col-span-4 transition-all duration-300">
-                    <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-borderBg space-y-3 h-[480px] flex flex-col">
+                <!-- PANNEAU CHRONOLOGIE ALIGNÉ SUR LA HAUTEUR GLOBALE DU CADRAN -->
+                <div id="timeline-column" class="lg:col-span-4 transition-all duration-300 flex flex-col">
+                    <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-borderBg space-y-3 flex-1 min-h-[520px] flex flex-col">
                         <div class="flex items-center justify-between border-b border-borderBg pb-2.5">
                             <h3 id="timeline-title" class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
                                 <i class="fa-solid fa-timeline text-emerald-400"></i>
@@ -428,8 +428,8 @@
                             <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Planning</span>
                         </div>
 
-                        <!-- AJUSTEMENT : Hauteur fixe avec défilement interne pour s'aligner exactement à 480px -->
-                        <div id="timeline-container" class="space-y-4 flex-1 overflow-y-auto pr-1">
+                        <!-- DEFILEMENT INTERNE FLUIDE AJUSTE SANS DÉPASSER -->
+                        <div id="timeline-container" class="space-y-4 flex-1 h-0 overflow-y-auto pr-1">
                             <p class="text-xs text-gray-400 italic text-center py-6">Chargement des courses...</p>
                         </div>
                     </div>
@@ -587,7 +587,7 @@
 
             if (url) {
                 container.innerHTML = `
-                    <a href="${url}" target="_blank" class="w-full text-center bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-semibold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1">
+                    <a href="${url}" target="_blank" class="w-full text-center bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-semibold py-1 rounded-lg text-xs transition flex items-center justify-center gap-1">
                         🗺️ Ouvrir la trace GPX ↗
                     </a>
                 `;
@@ -623,7 +623,7 @@
 
             if (url) {
                 container.innerHTML = `
-                    <a href="${url}" target="_blank" class="w-full text-center bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/40 font-semibold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1">
+                    <a href="${url}" target="_blank" class="w-full text-center bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/40 font-semibold py-1 rounded-lg text-xs transition flex items-center justify-center gap-1">
                         <i class="fa-brands fa-strava"></i> Ouvrir l'activité ↗
                     </a>
                 `;
