@@ -566,12 +566,18 @@
         }
 
         async function initAuthListener() {
-            const { data: { session } } = await window.dbClient.auth.getSession();
-            handleSessionChange(session);
+            try {
+                const { data: { session } } = await window.dbClient.auth.getSession();
+                if (session) {
+                    await handleSessionChange(session);
+                }
 
-            window.dbClient.auth.onAuthStateChange((_event, session) => {
-                handleSessionChange(session);
-            });
+                window.dbClient.auth.onAuthStateChange(async (_event, session) => {
+                    await handleSessionChange(session);
+                });
+            } catch (err) {
+                console.warn("Auth initialization skipped/error:", err);
+            }
         }
 
         async function handleSessionChange(session) {
@@ -634,7 +640,7 @@
         }
 
         async function saveUserProfile() {
-            // Sauvegarde dans localStorage dans tous les cas
+            // Toujours enregistrer en local
             localStorage.setItem('pacepulse_favs', JSON.stringify(favorites));
             localStorage.setItem('pacepulse_meta', JSON.stringify(raceMetaStates));
             localStorage.setItem('pacepulse_gpx', JSON.stringify(raceGpxLinks));
@@ -643,46 +649,54 @@
             localStorage.setItem('pacepulse_budgets', JSON.stringify(categoryBudgets));
             localStorage.setItem('pacepulse_custom_budgets_list', JSON.stringify(customBudgetsList));
 
-            // Si l'utilisateur est connecté, on synchronise avec Supabase
-            if (currentUser) {
-                const profilePayload = {
-                    id: currentUser.id,
-                    updated_at: new Date().toISOString(),
-                    favorites: favorites,
-                    meta: raceMetaStates,
-                    gpx: raceGpxLinks,
-                    strava: raceStravaLinks,
-                    links: customLinks,
-                    budgets: categoryBudgets,
-                    custom_budgets_list: customBudgetsList
-                };
+            // Synchronisation Supabase UNIQUEMENT si connecté
+            if (currentUser && currentUser.id) {
+                try {
+                    const profilePayload = {
+                        id: currentUser.id,
+                        updated_at: new Date().toISOString(),
+                        favorites: favorites,
+                        meta: raceMetaStates,
+                        gpx: raceGpxLinks,
+                        strava: raceStravaLinks,
+                        links: customLinks,
+                        budgets: categoryBudgets,
+                        custom_budgets_list: customBudgetsList
+                    };
 
-                await window.dbClient.from('profiles').upsert(profilePayload);
+                    await window.dbClient.from('profiles').upsert(profilePayload);
+                } catch (e) {
+                    console.error("Erreur de sauvegarde profil Supabase:", e);
+                }
             }
         }
 
         async function loadUserProfile() {
-            if (!currentUser) return;
+            if (!currentUser || !currentUser.id) return;
 
-            const { data, error } = await window.dbClient
-                .from('profiles')
-                .select('*')
-                .eq('id', currentUser.id)
-                .single();
+            try {
+                const { data, error } = await window.dbClient
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .maybeSingle();
 
-            if (data && !error) {
-                if (data.favorites) favorites = data.favorites;
-                if (data.meta) raceMetaStates = data.meta;
-                if (data.gpx) raceGpxLinks = data.gpx;
-                if (data.strava) raceStravaLinks = data.strava;
-                if (data.links) customLinks = data.links;
-                if (data.budgets) Object.assign(categoryBudgets, data.budgets);
-                if (data.custom_budgets_list) customBudgetsList = data.custom_budgets_list;
+                if (data && !error) {
+                    if (data.favorites) favorites = data.favorites;
+                    if (data.meta) raceMetaStates = data.meta;
+                    if (data.gpx) raceGpxLinks = data.gpx;
+                    if (data.strava) raceStravaLinks = data.strava;
+                    if (data.links) customLinks = data.links;
+                    if (data.budgets) Object.assign(categoryBudgets, data.budgets);
+                    if (data.custom_budgets_list) customBudgetsList = data.custom_budgets_list;
 
-                renderBudgetGrid();
-                renderCustomLinks();
-                updateFavoritesUI();
-                applyFilters();
+                    renderBudgetGrid();
+                    renderCustomLinks();
+                    updateFavoritesUI();
+                    applyFilters();
+                }
+            } catch (e) {
+                console.error("Erreur lors du chargement du profil Supabase:", e);
             }
         }
 
