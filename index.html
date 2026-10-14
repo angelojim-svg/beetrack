@@ -1071,43 +1071,58 @@
         }
 
         async function fetchRacesFromSupabase() {
-            const { data: races, error } = await window.dbClient
-                .from('races')
-                .select('*')
-                .limit(15000);
+            try {
+                const { data: races, error } = await window.dbClient
+                    .from('races')
+                    .select('*')
+                    .limit(15000);
 
-            if (error) {
-                console.error("Erreur Supabase :", error.message);
-                return;
-            }
+                if (error) throw error;
 
-            if (races) {
-                racesData = races.map(r => {
-                    const title = r.title || '';
-                    const loc = r.location || 'France';
-                    const rDate = r.race_date || r.raceDate || null;
-                    const oDate = r.opening_date || r.openingDate || null;
-                    return {
-                        id: r.id,
-                        title: title,
-                        category: r.category || 'Trail',
-                        distance: Number(r.distance) || 0,
-                        elevation: Number(r.elevation) || 0,
-                        location: loc,
-                        region: r.region || 'France',
-                        lat: r.lat !== null ? parseFloat(r.lat) : null,
-                        lng: r.lng !== null ? parseFloat(r.lng) : null,
-                        price: parseFloat(r.price) || 0,
-                        openingDate: oDate,
-                        raceDate: rDate,
-                        status: r.status,
-                        url: r.organizer_url || r.url,
-                        searchNorm: normalizeStr(title + ' ' + loc)
-                    };
-                });
+                if (races && races.length > 0) {
+                    racesData = races.map(r => {
+                        const title = r.title || '';
+                        const loc = r.location || 'France';
+                        const rDate = r.race_date || r.raceDate || null;
+                        const oDate = r.opening_date || r.openingDate || null;
+                        return {
+                            id: r.id,
+                            title: title,
+                            category: r.category || 'Trail',
+                            distance: Number(r.distance) || 0,
+                            elevation: Number(r.elevation) || 0,
+                            location: loc,
+                            region: r.region || 'France',
+                            lat: r.lat !== null ? parseFloat(r.lat) : null,
+                            lng: r.lng !== null ? parseFloat(r.lng) : null,
+                            price: parseFloat(r.price) || 0,
+                            openingDate: oDate,
+                            raceDate: rDate,
+                            status: r.status,
+                            url: r.organizer_url || r.url,
+                            searchNorm: normalizeStr(title + ' ' + loc)
+                        };
+                    });
 
-                updateFavoritesUI();
-                applyFilters();
+                    updateFavoritesUI();
+                    applyFilters();
+                } else {
+                    document.getElementById('timeline-container').innerHTML = `
+                        <div class="text-center py-6 space-y-2">
+                            <p class="text-xs text-amber-400">Aucune course enregistrée dans la base de données.</p>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                console.error("Erreur de connexion Supabase :", err.message || err);
+                document.getElementById('timeline-container').innerHTML = `
+                    <div class="text-center py-6 space-y-2">
+                        <p class="text-xs text-red-400 font-bold">Erreur de chargement des courses.</p>
+                        <button onclick="fetchRacesFromSupabase()" class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-3 py-1 rounded-lg hover:bg-emerald-500/30">
+                            🔄 Réessayer
+                        </button>
+                    </div>
+                `;
             }
         }
 
