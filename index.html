@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
 
     <!-- JS de MarkerCluster -->
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -640,7 +640,6 @@
         }
 
         async function saveUserProfile() {
-            // Toujours enregistrer en local
             localStorage.setItem('pacepulse_favs', JSON.stringify(favorites));
             localStorage.setItem('pacepulse_meta', JSON.stringify(raceMetaStates));
             localStorage.setItem('pacepulse_gpx', JSON.stringify(raceGpxLinks));
@@ -649,7 +648,6 @@
             localStorage.setItem('pacepulse_budgets', JSON.stringify(categoryBudgets));
             localStorage.setItem('pacepulse_custom_budgets_list', JSON.stringify(customBudgetsList));
 
-            // Synchronisation Supabase UNIQUEMENT si connecté
             if (currentUser && currentUser.id) {
                 try {
                     const profilePayload = {
@@ -1691,6 +1689,12 @@
 
             if (markerClusterGroup) {
                 leafletMap.removeLayer(markerClusterGroup);
+            }
+
+            // Vérification de sécurité pour éviter l'erreur si le script du plugin met du temps à charger
+            if (typeof L.markerClusterGroup !== 'function') {
+                console.warn("MarkerCluster plugin non chargé, utilisation de marqueurs simples.");
+                return;
             }
 
             markerClusterGroup = L.markerClusterGroup({
