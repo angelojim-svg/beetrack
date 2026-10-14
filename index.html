@@ -21,7 +21,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Chart.js pour les graphiques (Camembert & Courbe de charge) -->
+    <!-- Chart.js pour les graphiques -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Google Fonts -->
@@ -133,11 +133,9 @@
                     <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-darkBg font-black text-lg shadow-lg shadow-emerald-500/20">
                         <i class="fa-solid font-bold fa-stopwatch"></i>
                     </div>
-                    <div>
-                        <div class="flex items-center space-x-2">
-                            <span class="text-lg sm:text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-gray-200 to-amber-400 bg-clip-text text-transparent">BeeTrack</span>
-                            <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">PILOTAGE SAISON</span>
-                        </div>
+                    <div class="flex flex-col">
+                        <span class="text-lg sm:text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-gray-200 to-amber-400 bg-clip-text text-transparent leading-none">BeeTrack</span>
+                        <span class="text-[10px] font-mono tracking-wider font-bold text-amber-400 mt-1 uppercase">PILOTAGE SAISON</span>
                     </div>
                 </div>
             </div>
@@ -207,7 +205,6 @@
                         <i class="fa-solid fa-magnifying-glass absolute right-3 top-2.5 text-gray-500 text-xs"></i>
                     </div>
 
-                    <!-- DROPDOWN SUGGESTIONS INTELLIGENT BETRAIL STYLE -->
                     <div id="search-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-cardBg border border-borderBg rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto divide-y divide-borderBg/50 text-xs">
                     </div>
                 </div>
@@ -287,7 +284,7 @@
                     <!-- LISTE DES COURSES -->
                     <div id="container-list-view" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden"></div>
 
-                    <!-- GESTION DU BUDGET SAISON AVEC CAMEMBERT DE REPARTITION -->
+                    <!-- GESTION DU BUDGET SAISON -->
                     <div id="container-budget-view" class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6 hidden">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-borderBg pb-3">
                             <div>
@@ -415,16 +412,16 @@
                         </div>
                     </div>
 
-                    <!-- COURBE CUMULEE : DISTANCE + D+/10 -->
-                    <div class="glass-panel p-4 rounded-2xl border border-borderBg space-y-3">
+                    <!-- COURBE CUMULEE (UNIQUEMENT VISIBLE EN MODE FAVORIS / CHRONOLOGIE SAISON) -->
+                    <div id="container-load-chart" class="glass-panel p-4 rounded-2xl border border-borderBg space-y-3 hidden">
                         <div class="flex justify-between items-center border-b border-borderBg pb-2">
                             <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
                                 <i class="fa-solid fa-chart-line text-emerald-400"></i>
                                 Cumul Charge Saison (km + D+/10)
                             </h4>
-                            <span class="text-[9px] font-mono text-gray-400">Formule Trail</span>
+                            <span class="text-[9px] font-mono text-amber-400 font-bold">Vue Favoris</span>
                         </div>
-                        <div class="h-44 relative">
+                        <div class="h-48 relative">
                             <canvas id="loadChart"></canvas>
                         </div>
                     </div>
@@ -700,7 +697,6 @@
             renderBudgetPieChart(totalDossards);
         }
 
-        // TÉLÉCHARGEMENT & RENDU DU CAMEMBERT DU BUDGET
         function renderBudgetPieChart(totalDossards) {
             const canvas = document.getElementById('budgetPieChart');
             if (!canvas) return;
@@ -730,7 +726,6 @@
 
             const total = dataValues.reduce((a, b) => a + b, 0);
 
-            // Légende dynamique
             const legendContainer = document.getElementById('budget-pie-legend');
             if (legendContainer) {
                 let legendHtml = '';
@@ -788,31 +783,53 @@
             });
         }
 
-        // GRAPHIQUE DE CHARGE CUMULEE : DISTANCE + D+/10
+        // COURBE DE CHARGE CUMULEE : UNIQUEMENT SUR FAVORIS + TOOLTIP SURVOL DE LA COURSE
         function renderLoadChart() {
+            const chartContainer = document.getElementById('container-load-chart');
+            if (!chartContainer) return;
+
+            // Masquer complètement la courbe si on est sur "afficher toutes les courses"
+            if (!onlyShowFavorites) {
+                chartContainer.classList.add('hidden');
+                if (loadChartInstance) loadChartInstance.destroy();
+                return;
+            }
+
+            // Afficher le conteneur du graphique si on est sur la vue favoris
+            chartContainer.classList.remove('hidden');
+
             const canvas = document.getElementById('loadChart');
             if (!canvas) return;
 
-            const validRaces = filteredRaces
+            // Filtrer uniquement les courses favoris datées et trier par date
+            const validFavRaces = filteredRaces
                 .filter(r => r.raceDate && !isNaN(new Date(r.raceDate).getTime()))
                 .sort((a, b) => new Date(a.raceDate) - new Date(b.raceDate));
 
-            if (validRaces.length === 0) {
+            if (validFavRaces.length === 0) {
                 if (loadChartInstance) loadChartInstance.destroy();
                 return;
             }
 
             const labels = [];
             const cumulativeData = [];
+            const racesDetailsMeta = [];
             let currentCumul = 0;
 
-            validRaces.forEach(r => {
+            validFavRaces.forEach(r => {
                 const dateLabel = formatDateFR(r.raceDate, r.status);
-                const chargeCourse = r.distance + (r.elevation / 10);
-                currentCumul += chargeCourse;
+                const raceCharge = r.distance + (r.elevation / 10);
+                currentCumul += raceCharge;
 
                 labels.push(dateLabel);
                 cumulativeData.push(Math.round(currentCumul));
+                racesDetailsMeta.push({
+                    title: r.title,
+                    dist: r.distance,
+                    elev: r.elevation,
+                    raceCharge: Math.round(raceCharge),
+                    totalCumul: Math.round(currentCumul)
+                });
             });
 
             if (loadChartInstance) {
@@ -824,15 +841,17 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Cumul (Dist + D+/10)',
+                        label: 'Charge cumulée',
                         data: cumulativeData,
                         borderColor: '#10b981',
                         backgroundColor: 'rgba(16, 185, 129, 0.15)',
                         fill: true,
-                        tension: 0.3,
+                        tension: 0.25,
                         pointBackgroundColor: '#eab308',
                         pointBorderColor: '#0b0f17',
-                        pointRadius: 4
+                        pointRadius: 5,
+                        pointHoverRadius: 8,
+                        pointHoverBackgroundColor: '#34d399'
                     }]
                 },
                 options: {
@@ -841,9 +860,28 @@
                     plugins: {
                         legend: { display: false },
                         tooltip: {
+                            backgroundColor: 'rgba(19, 27, 46, 0.95)',
+                            titleColor: '#34d399',
+                            bodyColor: '#ffffff',
+                            borderColor: '#10b981',
+                            borderWidth: 1,
+                            padding: 10,
+                            displayColors: false,
                             callbacks: {
-                                label: function(ctx) {
-                                    return ` Charge cumulée : ${ctx.raw} pts`;
+                                title: function(context) {
+                                    const index = context[0].dataIndex;
+                                    const meta = racesDetailsMeta[index];
+                                    return meta ? `🏃 ${meta.title}` : context[0].label;
+                                },
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    const meta = racesDetailsMeta[index];
+                                    if (!meta) return `Charge: ${context.raw}`;
+                                    return [
+                                        `📅 Date : ${context.label}`,
+                                        `📏 Course : ${meta.dist} km | D+ ${meta.elev}m (+${meta.raceCharge} pts)`,
+                                        `📊 Cumul Saison : ${meta.totalCumul} pts`
+                                    ];
                                 }
                             }
                         }
@@ -1147,7 +1185,6 @@
             document.getElementById('detail-race-loc').innerText = location;
             document.getElementById('detail-race-price').innerText = price > 0 ? `${price} €` : 'N/C';
 
-            // GOOGLE MAPS : DESTINATION SUR LE LIEU
             const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=Marseille&destination=${encodeURIComponent(location)}`;
             document.getElementById('detail-race-gmaps-container').innerHTML = `
                 <a href="${gmapsUrl}" target="_blank" class="w-full text-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold py-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
@@ -1155,7 +1192,6 @@
                 </a>
             `;
 
-            // LIENS HEBERGEMENT
             const airbnbUrl = `https://www.airbnb.fr/s/${encodeURIComponent(location)}/homes`;
             const bookingUrl = `https://www.booking.com/searchresults.fr.html?ss=${encodeURIComponent(location)}`;
 
@@ -1434,7 +1470,7 @@
 
                     popupHtml += `
                         <div style="padding-bottom: 6px; margin-bottom: 6px; ${idx < racesAtLocation.length - 1 ? 'border-bottom: 1px solid rgba(255,255,255,0.1);' : ''}">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; justify-between; align-items: center;">
                                 <strong style="color: #fff;">${r.title}</strong>
                                 <button onclick="toggleFavorite('${r.title.replace(/'/g, "\\'")}', '${r.raceDate}')" style="background:none; border:none; color: ${isFav ? '#ef4444' : '#9ca3af'}; cursor:pointer;">♥</button>
                             </div>
