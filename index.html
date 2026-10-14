@@ -142,7 +142,6 @@
             <!-- BLOCS BUDGET ET FAVORIS -->
             <div class="w-full lg:w-auto flex flex-wrap items-center justify-between lg:justify-end gap-2 text-sm">
                
-                <!-- AFFICHAGE BUDGET SAISON -->
                 <div class="relative group z-40">
                     <div class="flex items-center space-x-2 bg-darkBg/90 px-3 py-2 rounded-xl border border-borderBg cursor-pointer">
                         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
@@ -151,7 +150,6 @@
                         <i class="fa-solid fa-chevron-down text-[10px] text-gray-400 ml-1"></i>
                     </div>
 
-                    <!-- POPUP DETAIL DES DEPENSES SAISON -->
                     <div class="absolute top-12 left-0 sm:left-auto sm:right-0 w-60 glass-panel p-3 rounded-xl border border-borderBg hidden group-hover:block z-50 shadow-2xl space-y-1.5 text-xs">
                         <div class="font-bold text-white border-b border-borderBg pb-1 flex justify-between">
                             <span>Détail du Budget</span>
@@ -165,7 +163,6 @@
                     </div>
                 </div>
 
-                <!-- SELECTION ET EDITION DU POSTE DE BUDGET -->
                 <div class="flex items-center space-x-1 bg-cardBg p-1 rounded-xl border border-borderBg">
                     <select id="budget-category-select" onchange="changeBudgetCategory(this.value)" class="bg-transparent text-gray-200 px-1 py-1 text-xs focus:outline-none cursor-pointer">
                         <option value="dossards" class="bg-cardBg">🎟️ Dossards</option>
@@ -181,7 +178,6 @@
                     </div>
                 </div>
 
-                <!-- MENU FAVORIS -->
                 <div class="relative">
                     <select id="favorites-dropdown" onchange="filterByFavoriteSelection(this.value)" class="bg-cardBg hover:bg-borderBg text-gray-200 border border-borderBg px-3 py-2 rounded-xl text-xs sm:text-sm focus:outline-none cursor-pointer">
                         <option value="ALL">Afficher toutes les courses</option>
@@ -211,7 +207,6 @@
                 </div>
             </div>
 
-            <!-- RECHERCHE ET STATUT D'OUVERTURE -->
             <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
                 <div class="md:col-span-7">
                     <label class="block text-[11px] font-semibold uppercase text-gray-400 mb-1.5">Recherche par nom ou ville</label>
@@ -228,10 +223,7 @@
                 </div>
             </div>
 
-            <!-- CURSEURS DE FILTRES CONTINUS -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-3 border-t border-borderBg/50">
-               
-                <!-- 1. DISTANCE -->
                 <div class="space-y-1.5">
                     <div class="flex justify-between text-xs font-semibold">
                         <span class="text-gray-400">Distance : <b id="slider-dist-min-val" class="text-emerald-400">0 km</b></span>
@@ -244,7 +236,6 @@
                     </div>
                 </div>
 
-                <!-- 2. DÉNIVELÉ POSITIF D+ -->
                 <div class="space-y-1.5">
                     <div class="flex justify-between text-xs font-semibold">
                         <span class="text-gray-400">D+ : <b id="slider-elev-min-val" class="text-emerald-400">0 m</b></span>
@@ -257,7 +248,6 @@
                     </div>
                 </div>
 
-                <!-- 3. ÉCHÉANCE -->
                 <div class="space-y-1.5">
                     <div class="flex justify-between text-xs font-semibold">
                         <span class="text-gray-400">Échéance : <b id="slider-horizon-min-val" class="text-emerald-400">0 mois</b></span>
@@ -269,9 +259,35 @@
                         <input type="range" id="filter-horizon-max" min="0" max="24" step="1" value="24" oninput="handleDualSlider('horizon'); applyFilters();">
                     </div>
                 </div>
-
             </div>
         </section>
+
+        <!-- CADRAN INTERACTIF ENTRE LA CHRONOLOGIE ET LA CARTE -->
+        <div id="interactive-detail-panel" class="hidden glass-panel p-4 sm:p-6 rounded-2xl border border-emerald-500/40 bg-emerald-950/20 space-y-3">
+            <div class="flex justify-between items-center border-b border-borderBg pb-2">
+                <h3 class="text-sm sm:text-base font-bold text-emerald-400 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info"></i>
+                    Détail de l'épreuve : <span id="detail-race-title" class="text-white underline"></span>
+                </h3>
+                <button onclick="closeInteractiveDetail()" class="text-xs text-gray-400 hover:text-white bg-darkBg px-2.5 py-1 rounded-lg border border-borderBg">Fermer ✕</button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                <div class="flex items-center space-x-3 bg-darkBg/80 p-3 rounded-xl border border-borderBg">
+                    <span class="text-gray-300 font-semibold">Inscription OK ?</span>
+                    <input type="checkbox" id="check-reg-ok" onchange="toggleRaceStatusMeta('registered')" class="w-4 h-4 accent-emerald-500 cursor-pointer">
+                </div>
+                <div class="flex items-center space-x-3 bg-darkBg/80 p-3 rounded-xl border border-borderBg">
+                    <span class="text-gray-300 font-semibold">Course terminée ?</span>
+                    <input type="checkbox" id="check-done" onchange="toggleRaceStatusMeta('completed')" class="w-4 h-4 accent-amber-500 cursor-pointer">
+                </div>
+                <div class="flex items-center space-x-2 bg-darkBg/80 p-3 rounded-xl border border-borderBg">
+                    <span class="text-gray-400">Lieu :</span> <b id="detail-race-loc" class="text-white">-</b>
+                </div>
+                <div class="flex items-center space-x-2 bg-darkBg/80 p-3 rounded-xl border border-borderBg">
+                    <span class="text-gray-400">Prix :</span> <b id="detail-race-price" class="text-amber-400">-</b>
+                </div>
+            </div>
+        </div>
 
         <!-- MAP & LIST SECTION WITH CHRONOLOGY SIDEBAR -->
         <section class="space-y-6">
@@ -328,9 +344,13 @@
         let racesData = [];
         let filteredRaces = [];
         let favorites = JSON.parse(localStorage.getItem('pacepulse_favs') || '[]');
+        let raceMetaStates = JSON.parse(localStorage.getItem('pacepulse_meta') || '{}'); // ex: { "Title_Date": { registered: true, completed: false } }
         let onlyShowFavorites = false;
         let leafletMap = null;
         let markerClusterGroup = null;
+        let markersMapRef = {}; // stocke les marqueurs Leaflet par clé unique
+        let activeSelectedRaceKey = null; // course actuellement sélectionnée pour le cadran
+
         let currentDisplayLimit = 50;
         let currentBudgetCategory = 'dossards';
 
@@ -535,6 +555,78 @@
             return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
         }
 
+        // GESTION DU SURVOL ET DU CLIC SUR LA CHRONOLOGIE
+        function highlightMapMarker(raceKey, highlight) {
+            const marker = markersMapRef[raceKey];
+            if (!marker) return;
+            const iconElem = marker.getElement();
+            if (iconElem) {
+                const innerDiv = iconElem.querySelector('div');
+                if (innerDiv) {
+                    if (highlight) {
+                        innerDiv.style.background = '#eab308'; // Jaune néon au survol
+                        innerDiv.style.transform = 'scale(1.4)';
+                        innerDiv.style.zIndex = '1000';
+                    } else {
+                        innerDiv.style.background = marker.defaultColor || '#10b981';
+                        innerDiv.style.transform = 'scale(1)';
+                        innerDiv.style.zIndex = '1';
+                    }
+                }
+            }
+        }
+
+        function handleTimelineClick(title, raceDate, location, price, url) {
+            const raceKey = `${title}_${raceDate}`;
+            const panel = document.getElementById('interactive-detail-panel');
+
+            if (activeSelectedRaceKey === raceKey) {
+                // Reclic : refermer le cadran
+                activeSelectedRaceKey = null;
+                panel.classList.add('hidden');
+                return;
+            }
+
+            activeSelectedRaceKey = raceKey;
+            panel.classList.remove('hidden');
+
+            document.getElementById('detail-race-title').innerText = title;
+            document.getElementById('detail-race-loc').innerText = location;
+            document.getElementById('detail-race-price').innerText = price > 0 ? `${price} €` : 'N/C';
+
+            const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
+            document.getElementById('check-reg-ok').checked = meta.registered;
+            document.getElementById('check-done').checked = meta.completed;
+
+            // Centrer la carte sur le marqueur correspondant si dispo
+            const marker = markersMapRef[raceKey];
+            if (marker && leafletMap) {
+                leafletMap.setView(marker.getLatLng(), 10);
+                marker.openPopup();
+            }
+        }
+
+        function closeInteractiveDetail() {
+            activeSelectedRaceKey = null;
+            document.getElementById('interactive-detail-panel').classList.add('hidden');
+        }
+
+        function toggleRaceStatusMeta(type) {
+            if (!activeSelectedRaceKey) return;
+            if (!raceMetaStates[activeSelectedRaceKey]) {
+                raceMetaStates[activeSelectedRaceKey] = { registered: false, completed: false };
+            }
+
+            if (type === 'registered') {
+                raceMetaStates[activeSelectedRaceKey].registered = document.getElementById('check-reg-ok').checked;
+            } else if (type === 'completed') {
+                raceMetaStates[activeSelectedRaceKey].completed = document.getElementById('check-done').checked;
+            }
+
+            localStorage.setItem('pacepulse_meta', JSON.stringify(raceMetaStates));
+            renderTimeline();
+        }
+
         function renderTimeline() {
             const container = document.getElementById('timeline-container');
             const titleElement = document.getElementById('timeline-title');
@@ -561,9 +653,23 @@
             let html = '<div class="relative border-l-2 border-emerald-500/30 ml-3 space-y-4 my-2">';
 
             validRaces.forEach((race, idx) => {
+                const raceKey = `${race.title}_${race.raceDate}`;
                 const dateObj = new Date(race.raceDate);
                 const formattedDate = formatDateFR(race.raceDate, race.status);
-                const isFav = favorites.includes(`${race.title}_${race.raceDate}`);
+                const isFav = favorites.includes(raceKey);
+                const displayPrice = race.price > 0 ? `${race.price} €` : 'N/C';
+                const statusBadge = renderOpeningStatus(race.status, race.openingDate);
+
+                // États métas (inscription ok / course terminée)
+                const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
+               
+                // Couleur de fond dynamique de la carte chronologique
+                let cardBgClass = 'bg-darkBg/90';
+                if (meta.completed) {
+                    cardBgClass = 'bg-blue-950/40 border-blue-500/50'; // Fond pour course terminée
+                } else if (meta.registered) {
+                    cardBgClass = 'bg-emerald-950/40 border-emerald-500/50'; // Fond pour inscription OK
+                }
 
                 let gapHtml = '';
                 if (idx > 0) {
@@ -582,20 +688,34 @@
                     `;
                 }
 
+                const linkBtn = race.url ? `
+                    <a href="${race.url}" target="_blank" onclick="event.stopPropagation();" class="text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-lg transition inline-flex items-center">
+                        S'inscrire ↗
+                    </a>
+                ` : '';
+
                 html += `
                     ${gapHtml}
                     <div class="relative pl-5">
                         <span class="absolute -left-[7px] top-1 w-3.5 h-3.5 rounded-full ${isFav ? 'bg-amber-400 ring-3 ring-amber-400/20' : 'bg-emerald-500 ring-3 ring-emerald-500/20'}"></span>
-                        <div class="bg-darkBg/90 p-3 rounded-xl border border-borderBg">
+                        <div onmouseenter="highlightMapMarker('${raceKey}', true)" onmouseleave="highlightMapMarker('${raceKey}', false)" onclick="handleTimelineClick('${race.title.replace(/'/g, "\\'")}', '${race.raceDate}', '${race.location}', ${race.price}, '${race.url || ''}')" class="${cardBgClass} p-3 rounded-xl border border-borderBg cursor-pointer transition hover:border-emerald-400">
                             <div class="flex justify-between items-start">
                                 <span class="text-[10px] font-bold text-emerald-400 font-mono">${formattedDate}</span>
-                                ${isFav ? '<span class="text-red-400 text-xs">♥</span>' : ''}
+                                <div class="flex items-center gap-1">
+                                    ${statusBadge}
+                                    ${isFav ? '<span class="text-red-400 text-xs">♥</span>' : ''}
+                                </div>
                             </div>
                             <h4 class="text-xs font-bold text-white mt-1">${race.title}</h4>
                             <div class="flex flex-wrap items-center gap-2 text-[10px] text-gray-400 mt-1.5">
                                 <span>📏 ${race.distance} km</span>
                                 <span>📈 +${race.elevation} m</span>
                                 <span>📍 ${race.location}</span>
+                                <span class="text-amber-400 font-bold">💶 ${displayPrice}</span>
+                            </div>
+                            <div class="mt-2.5 flex items-center justify-between pt-2 border-t border-borderBg/50">
+                                <span class="text-[9px] text-gray-400">Cliquez pour options de suivi</span>
+                                ${linkBtn}
                             </div>
                         </div>
                     </div>
@@ -668,6 +788,7 @@
                 maxClusterRadius: 35
             });
 
+            markersMapRef = {};
             const groupedRaces = {};
 
             filteredRaces.forEach(race => {
@@ -686,12 +807,19 @@
 
                 const customIcon = L.divIcon({
                     className: 'custom-pin',
-                    html: `<div style="background:${color}; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 0 4px rgba(0,0,0,0.5);"></div>`,
+                    html: `<div style="background:${color}; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 0 4px rgba(0,0,0,0.5); transition: all 0.2s ease;"></div>`,
                     iconSize: [12, 12],
                     iconAnchor: [6, 6]
                 });
 
                 const marker = L.marker([mainRace.lat, mainRace.lng], { icon: customIcon });
+                marker.defaultColor = color;
+
+                // Enregistrer chaque course de ce cluster dans le dictionnaire de référence
+                racesAtLocation.forEach(r => {
+                    const rKey = `${r.title}_${r.raceDate}`;
+                    markersMapRef[rKey] = marker;
+                });
 
                 let popupHtml = `<div style="max-height: 200px; overflow-y: auto; padding: 2px; color: #f3f4f6; font-size: 12px;">`;
                 racesAtLocation.forEach((r, idx) => {
