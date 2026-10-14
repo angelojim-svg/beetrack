@@ -414,7 +414,7 @@
 
                 </div>
 
-                <!-- PANNEAU CHRONOLOGIE VERTICALE -->
+                <!-- PANNEAU CHRONOLOGIE VERTICALE SAISISSANT TOUTE LA HAUTEUR DU CADRAN -->
                 <div id="timeline-column" class="lg:col-span-4 space-y-4 flex flex-col">
                     <div class="glass-panel p-4 sm:p-6 rounded-2xl border border-borderBg space-y-3 flex-grow flex flex-col">
                         <div class="flex items-center justify-between border-b border-borderBg pb-3">
@@ -425,7 +425,8 @@
                             <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Planning</span>
                         </div>
 
-                        <div id="timeline-container" class="space-y-4 flex-grow max-h-[500px] overflow-y-auto pr-1">
+                        <!-- AJUSTEMENT : flex-1 h-full supprime la limite max-h-[500px] pour afficher jusqu'en bas -->
+                        <div id="timeline-container" class="space-y-4 flex-1 h-full overflow-y-auto pr-1">
                             <p class="text-xs text-gray-400 italic text-center py-6">Chargement des courses...</p>
                         </div>
                     </div>
@@ -433,7 +434,7 @@
 
             </div>
 
-            <!-- COURBE CUMULÉE SUR TOUTE LA LARGEUR (EXTRÉMITÉ GAUCHE CARTE JUSQU'À EXTRÉMITÉ DROITE CHRONOLOGIE) -->
+            <!-- COURBE CUMULÉE SUR TOUTE LA LARGEUR -->
             <div id="container-load-chart" class="glass-panel p-4 sm:p-6 rounded-2xl border border-borderBg space-y-3 hidden w-full">
                 <div class="flex justify-between items-center border-b border-borderBg pb-2">
                     <h4 class="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
@@ -930,7 +931,7 @@
                                     if (!meta) return `Charge: ${context.raw}`;
                                     return [
                                         `📅 Date : ${context.label}`,
-                                        `📏 Course : ${meta.dist} km | D+ ${meta.elevation}m (+${meta.raceCharge} pts)`,
+                                        `📏 Course : ${meta.dist} km | D+ ${meta.elev}m (+${meta.raceCharge} pts)`,
                                         `📊 Cumul Saison : ${meta.totalCumul} pts`
                                     ];
                                 }
