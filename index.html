@@ -285,20 +285,20 @@
                 </div>
             </div>
 
-            <!-- LAYOUT GRILLE DE HAUTEUR ÉGALISÉE À 440PX -->
+            <!-- LAYOUT GRILLE DE HAUTEUR UNIFORMISÉE (520px) -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
                
-                <!-- ZONE PRINCIPALE (CARTE) DE MÊME HAUTEUR EXACTE (440px) -->
+                <!-- ZONE PRINCIPALE (CARTE / LISTE / BUDGET / LIENS) -->
                 <div id="main-view-column" class="lg:col-span-8 space-y-4 transition-all duration-300">
-                    <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden h-[440px]">
+                    <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden h-[520px]">
                         <div id="map" class="w-full h-full rounded-xl z-10"></div>
                     </div>
 
                     <!-- LISTE DES COURSES -->
-                    <div id="container-list-view" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden h-[440px] overflow-y-auto"></div>
+                    <div id="container-list-view" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden h-[520px] overflow-y-auto"></div>
 
                     <!-- GESTION DU BUDGET SAISON -->
-                    <div id="container-budget-view" class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6 hidden h-[440px] overflow-y-auto">
+                    <div id="container-budget-view" class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6 hidden h-[520px] overflow-y-auto">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-borderBg pb-3">
                             <div>
                                 <h3 class="text-lg font-bold text-white flex items-center gap-2">
@@ -331,7 +331,7 @@
                     </div>
 
                     <!-- ONGLET LIENS & OUTILS UTILES -->
-                    <div id="container-links-view" class="glass-panel p-6 rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 via-cardBg to-darkBg space-y-4 hidden h-[440px] overflow-y-auto">
+                    <div id="container-links-view" class="glass-panel p-6 rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 via-cardBg to-darkBg space-y-4 hidden h-[520px] overflow-y-auto">
                         <div class="flex justify-between items-center border-b border-emerald-500/20 pb-3">
                             <h3 class="text-lg font-bold text-white flex items-center gap-2">
                                 <i class="fa-solid fa-link text-emerald-400"></i>
@@ -343,13 +343,13 @@
                     </div>
                 </div>
 
-                <!-- COLONNE CENTRALE (SUIVI DE LA SAISON) -->
+                <!-- COLONNE CENTRALE (SUIVI DE LA SAISON) UNIFORMISÉE À 520PX -->
                 <div id="middle-column" class="hidden lg:col-span-3 transition-all duration-300">
-                    <div id="interactive-detail-panel" class="glass-panel p-4 rounded-2xl border border-emerald-500/50 bg-emerald-950/30 space-y-2.5 h-[440px] flex flex-col justify-between">
-                        <div class="space-y-2">
+                    <div id="interactive-detail-panel" class="glass-panel p-4 rounded-2xl border border-emerald-500/50 bg-emerald-950/30 space-y-2 h-[520px] flex flex-col justify-between">
+                        <div class="space-y-2 overflow-y-auto pr-1">
                             <div class="flex justify-between items-start border-b border-borderBg pb-1.5">
                                 <div>
-                                    <span class="text-xs font-mono text-emerald-400 uppercase font-bold tracking-wider">Suivi de la saison</span>
+                                    <span class="text-[10px] font-mono text-emerald-400 uppercase font-bold tracking-wider">Suivi de la saison</span>
                                     <h3 id="detail-race-title" class="text-sm font-extrabold text-white leading-snug mt-0.5"></h3>
                                 </div>
                                 <button onclick="closeInteractiveDetail()" class="text-xs text-gray-400 hover:text-white bg-darkBg px-2 py-0.5 rounded border border-borderBg">✕</button>
@@ -411,13 +411,14 @@
                             </div>
                         </div>
 
-                        <div id="detail-race-link-container" class="pt-1"></div>
+                        <!-- BOUTON INSCRIPTION FIXÉ EN BAS SANS DÉBORDEMENT -->
+                        <div id="detail-race-link-container" class="pt-2 border-t border-borderBg mt-1"></div>
                     </div>
                 </div>
 
-                <!-- PANNEAU CHRONOLOGIE -->
+                <!-- PANNEAU CHRONOLOGIE UNIFORMISÉ À 520PX -->
                 <div id="timeline-column" class="lg:col-span-4 transition-all duration-300">
-                    <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-borderBg space-y-3 h-[440px] flex flex-col">
+                    <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-borderBg space-y-3 h-[520px] flex flex-col">
                         <div class="flex items-center justify-between border-b border-borderBg pb-2">
                             <h3 id="timeline-title" class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
                                 <i class="fa-solid fa-timeline text-emerald-400"></i>
@@ -1238,7 +1239,7 @@
 
             const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=Marseille&destination=${encodeURIComponent(location)}`;
             document.getElementById('detail-race-gmaps-container').innerHTML = `
-                <a href="${gmapsUrl}" target="_blank" class="w-full text-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold py-1.5 rounded-xl text-xs transition flex items-center justify-center gap-1">
+                <a href="${gmapsUrl}" target="_blank" class="w-full text-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold py-1 rounded-xl text-xs transition flex items-center justify-center gap-1">
                     <i class="fa-solid fa-route"></i> Trajet & temps (Google Maps) ↗
                 </a>
             `;
@@ -1258,7 +1259,7 @@
             const linkContainer = document.getElementById('detail-race-link-container');
             if (url) {
                 linkContainer.innerHTML = `
-                    <a href="${url}" target="_blank" class="w-full text-center bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold py-1.5 rounded-lg text-xs transition block">
+                    <a href="${url}" target="_blank" class="w-full text-center bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-semibold py-1.5 rounded-lg text-xs transition block">
                         Page Inscription ↗
                     </a>
                 `;
@@ -1643,7 +1644,6 @@
             btnSec.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
             btnLinks.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
 
-            // S'assurer que l'état du bouton Budget dépend exclusivement du mode Favoris
             if (onlyShowFavorites) {
                 if (btnBudget) btnBudget.classList.remove('hidden');
             } else {
