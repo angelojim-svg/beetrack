@@ -188,7 +188,7 @@
     <!-- MAIN CONTAINER -->
     <main class="flex-grow max-w-[1600px] w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4 space-y-3">
 
-        <!-- CADRAN LIENS ET OUTILS UTILES AVEC DÉGRADÉ HARMONISÉ -->
+        <!-- CADRAN LIENS ET OUTILS UTILES -->
         <section class="glass-panel p-3.5 sm:p-4 rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 via-cardBg to-darkBg space-y-2.5 shadow-xl">
             <div class="flex justify-between items-center border-b border-emerald-500/20 pb-2">
                 <h2 class="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
@@ -293,19 +293,19 @@
             </div>
 
             <!-- LAYOUT GRILLE RESPONSIVE UNIFORMISÉ -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
                
                 <!-- ZONE PRINCIPALE (CARTE / LISTE / GESTION BUDGET) -->
-                <div id="main-view-column" class="lg:col-span-8 space-y-4 transition-all duration-300 flex flex-col">
-                    <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden flex-grow flex flex-col">
-                        <div id="map" class="w-full flex-grow min-h-[480px] sm:min-h-[580px] rounded-xl z-10"></div>
+                <div id="main-view-column" class="lg:col-span-8 space-y-4 transition-all duration-300">
+                    <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden h-[480px]">
+                        <div id="map" class="w-full h-full rounded-xl z-10"></div>
                     </div>
 
                     <!-- LISTE DES COURSES -->
-                    <div id="container-list-view" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden"></div>
+                    <div id="container-list-view" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden max-h-[480px] overflow-y-auto"></div>
 
                     <!-- GESTION DU BUDGET SAISON -->
-                    <div id="container-budget-view" class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6 hidden">
+                    <div id="container-budget-view" class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6 hidden max-h-[480px] overflow-y-auto">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-borderBg pb-3">
                             <div>
                                 <h3 class="text-lg font-bold text-white flex items-center gap-2">
@@ -342,11 +342,11 @@
                     </div>
                 </div>
 
-                <!-- COLONNE DU MILIEU (SUIVI DE SAISON + LOGEMENT) -->
-                <div id="middle-column" class="hidden lg:col-span-3 space-y-4 transition-all duration-300 flex flex-col">
+                <!-- COLONNE DU MILIEU (SUIVI DE LA SAISON) -->
+                <div id="middle-column" class="hidden lg:col-span-3 transition-all duration-300">
                    
                     <!-- CADRAN SUIVI DE LA SAISON -->
-                    <div id="interactive-detail-panel" class="glass-panel p-4 rounded-2xl border border-emerald-500/50 bg-emerald-950/30 space-y-4 flex-grow flex flex-col justify-between">
+                    <div id="interactive-detail-panel" class="glass-panel p-4 rounded-2xl border border-emerald-500/50 bg-emerald-950/30 space-y-4 h-[480px] flex flex-col justify-between overflow-y-auto">
                         <div class="space-y-4">
                             <div class="flex justify-between items-start border-b border-borderBg pb-3">
                                 <div>
@@ -417,10 +417,10 @@
 
                 </div>
 
-                <!-- PANNEAU CHRONOLOGIE VERTICALE SAISISSANT TOUTE LA HAUTEUR DU CADRAN -->
-                <div id="timeline-column" class="lg:col-span-4 space-y-4 flex flex-col">
-                    <div class="glass-panel p-4 sm:p-6 rounded-2xl border border-borderBg space-y-3 flex-grow flex flex-col">
-                        <div class="flex items-center justify-between border-b border-borderBg pb-3">
+                <!-- PANNEAU CHRONOLOGIE VERTICALE ALIGNÉ EN HAUTEUR (480px) -->
+                <div id="timeline-column" class="lg:col-span-4 transition-all duration-300">
+                    <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-borderBg space-y-3 h-[480px] flex flex-col">
+                        <div class="flex items-center justify-between border-b border-borderBg pb-2.5">
                             <h3 id="timeline-title" class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
                                 <i class="fa-solid fa-timeline text-emerald-400"></i>
                                 Chronologie des épreuves
@@ -428,7 +428,8 @@
                             <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Planning</span>
                         </div>
 
-                        <div id="timeline-container" class="space-y-4 flex-1 h-full overflow-y-auto pr-1">
+                        <!-- AJUSTEMENT : Hauteur fixe avec défilement interne pour s'aligner exactement à 480px -->
+                        <div id="timeline-container" class="space-y-4 flex-1 overflow-y-auto pr-1">
                             <p class="text-xs text-gray-400 italic text-center py-6">Chargement des courses...</p>
                         </div>
                     </div>
@@ -1548,7 +1549,7 @@
 
                     popupHtml += `
                         <div style="padding-bottom: 6px; margin-bottom: 6px; ${idx < racesAtLocation.length - 1 ? 'border-bottom: 1px solid rgba(255,255,255,0.1);' : ''}">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; justify-between; align-items: center;">
                                 <strong style="color: #fff;">${r.title}</strong>
                                 <button onclick="toggleFavorite('${r.title.replace(/'/g, "\\'")}', '${r.raceDate}')" style="background:none; border:none; color: ${isFav ? '#ef4444' : '#9ca3af'}; cursor:pointer;">♥</button>
                             </div>
