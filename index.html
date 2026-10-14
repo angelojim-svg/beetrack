@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
 
     <!-- JS de MarkerCluster -->
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.js"></script>
 
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -124,37 +124,37 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- HEADER / NAVIGATION -->
-    <header class="sticky top-0 z-50 glass-panel border-b border-borderBg">
-        <div class="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-3 lg:py-0 lg:h-24 flex flex-col lg:flex-row items-center justify-between gap-3">
+    <!-- HEADER / NAVIGATION (HAUTEUR ET PADDING REDUITS) -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-borderBg shadow-lg">
+        <div class="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-2.5 lg:py-0 lg:h-16 flex flex-col lg:flex-row items-center justify-between gap-2">
            
             <div class="w-full lg:w-auto flex items-center justify-between">
                 <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-darkBg font-black text-xl shadow-lg shadow-emerald-500/20">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-darkBg font-black text-base shadow-md shadow-emerald-500/20">
                         <i class="fa-solid font-bold fa-stopwatch"></i>
                     </div>
                     <div class="flex flex-col">
-                        <div class="flex items-center space-x-3">
-                            <span class="text-xl sm:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-white via-gray-200 to-amber-400 bg-clip-text text-transparent leading-none">BeeTrack</span>
-                            <span class="text-[11px] font-mono tracking-wider font-bold text-amber-400 uppercase bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">PILOTAGE SAISON</span>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-lg sm:text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-gray-200 to-amber-400 bg-clip-text text-transparent leading-none">BeeTrack</span>
+                            <span class="text-[10px] font-mono tracking-wider font-bold text-amber-400 uppercase bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">PILOTAGE SAISON</span>
                         </div>
-                        <p class="text-xs text-gray-400 font-medium mt-1">Planifie tes trails, pilote tes inscriptions et maîtrise le budget de ta saison.</p>
+                        <p class="text-[11px] text-gray-400 font-medium">Planifie tes trails, pilote tes inscriptions et maîtrise le budget de ta saison.</p>
                     </div>
                 </div>
             </div>
 
             <!-- BLOCS BUDGET ET FAVORIS -->
-            <div class="w-full lg:w-auto flex flex-wrap items-center justify-between lg:justify-end gap-2 text-sm">
+            <div class="w-full lg:w-auto flex flex-wrap items-center justify-between lg:justify-end gap-2 text-xs">
                
                 <div class="relative group z-40">
-                    <div class="flex items-center space-x-2 bg-darkBg/90 px-3 py-2 rounded-xl border border-borderBg cursor-pointer">
+                    <div class="flex items-center space-x-2 bg-darkBg/90 px-3 py-1.5 rounded-xl border border-borderBg cursor-pointer">
                         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                        <span class="text-gray-300 text-xs sm:text-sm font-medium">Budget Saison :</span>
-                        <span class="font-extrabold text-amber-400 text-sm sm:text-base" id="stat-total-budget">0 €</span>
+                        <span class="text-gray-300 text-xs font-medium">Budget Saison :</span>
+                        <span class="font-extrabold text-amber-400 text-xs sm:text-sm" id="stat-total-budget">0 €</span>
                         <i class="fa-solid fa-chevron-down text-[10px] text-gray-400 ml-1"></i>
                     </div>
 
-                    <div class="absolute top-12 left-0 sm:left-auto sm:right-0 w-64 glass-panel p-3 rounded-xl border border-borderBg hidden group-hover:block z-50 shadow-2xl space-y-1.5 text-xs">
+                    <div class="absolute top-10 left-0 sm:left-auto sm:right-0 w-64 glass-panel p-3 rounded-xl border border-borderBg hidden group-hover:block z-50 shadow-2xl space-y-1.5 text-xs">
                         <div class="font-bold text-white border-b border-borderBg pb-1 flex justify-between">
                             <span>Détail du Budget</span>
                             <span class="text-amber-400" id="detail-total-budget">0 €</span>
@@ -172,7 +172,7 @@
                 </div>
 
                 <div class="relative">
-                    <select id="favorites-dropdown" onchange="filterByFavoriteSelection(this.value)" class="bg-cardBg hover:bg-borderBg text-gray-200 border border-borderBg px-3 py-2 rounded-xl text-xs sm:text-sm focus:outline-none cursor-pointer">
+                    <select id="favorites-dropdown" onchange="filterByFavoriteSelection(this.value)" class="bg-cardBg hover:bg-borderBg text-gray-200 border border-borderBg px-3 py-1.5 rounded-xl text-xs focus:outline-none cursor-pointer">
                         <option value="ALL">Afficher toutes les courses</option>
                         <option value="ONLY_FAV">♥ Afficher uniquement mes favoris (<span id="fav-count">0</span>)</option>
                     </select>
@@ -182,44 +182,44 @@
         </div>
     </header>
 
-    <!-- MAIN CONTAINER -->
-    <main class="flex-grow max-w-[1600px] w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6">
+    <!-- MAIN CONTAINER (ESPACEMENT AMÉLIORÉ & RESSERRÉ) -->
+    <main class="flex-grow max-w-[1600px] w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4 space-y-3">
 
-        <!-- CADRAN LIENS ET OUTILS UTILES (AU-DESSUS DE RECHERCHE ET RADAR) -->
-        <section class="glass-panel p-4 rounded-2xl border border-borderBg space-y-3">
-            <div class="flex justify-between items-center border-b border-borderBg pb-2">
-                <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+        <!-- CADRAN LIENS ET OUTILS UTILES (COLORÉ & BORDURE ÉMERAUDE) -->
+        <section class="glass-panel p-3.5 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/20 via-cardBg to-cardBg space-y-2.5 shadow-lg">
+            <div class="flex justify-between items-center border-b border-emerald-500/20 pb-1.5">
+                <h4 class="text-xs font-bold text-emerald-300 flex items-center gap-2">
                     <i class="fa-solid fa-link text-emerald-400"></i>
                     Liens & Outils Utiles
                 </h4>
-                <button onclick="addNewCustomLink()" class="text-[10px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-lg transition font-semibold">+ Ajouter un outil</button>
+                <button onclick="addNewCustomLink()" class="text-[10px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-lg transition font-semibold">+ Ajouter un outil</button>
             </div>
 
-            <div id="custom-links-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <div id="custom-links-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-xs">
             </div>
         </section>
 
-        <!-- SEARCH & FILTER PANEL (A SA PLACE INITIALE EN HAUT) -->
-        <section class="glass-panel p-4 sm:p-6 rounded-2xl border border-borderBg space-y-5">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-borderBg pb-3">
-                <h2 class="text-base sm:text-xl font-extrabold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-filter text-emerald-400"></i>
-                    Recherche & Radar
+        <!-- SEARCH & FILTER PANEL (CADRAN RECHERCHE ET RADAR DYNAMISÉ ET COLORÉ) -->
+        <section class="glass-panel p-4 sm:p-5 rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 via-cardBg to-darkBg space-y-4 shadow-xl">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-500/20 pb-2.5">
+                <h2 class="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-filter text-emerald-400 animate-pulse"></i>
+                    <span class="bg-gradient-to-r from-emerald-400 to-amber-300 bg-clip-text text-transparent">Recherche & Radar</span>
                 </h2>
                 <div class="flex items-center justify-between sm:justify-end space-x-3">
-                    <button onclick="resetFilters()" class="text-xs text-gray-400 hover:text-white underline">Réinitialiser</button>
-                    <span class="text-xs bg-darkBg px-2.5 py-1 rounded-lg border border-borderBg text-gray-300 font-mono">
+                    <button onclick="resetFilters()" class="text-xs text-gray-400 hover:text-emerald-400 underline transition">Réinitialiser</button>
+                    <span class="text-xs bg-darkBg px-2.5 py-1 rounded-lg border border-emerald-500/30 text-gray-300 font-mono">
                         <span id="filtered-count" class="text-emerald-400 font-bold">0</span> épreuve(s)
                     </span>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
                 <div class="md:col-span-7 relative">
-                    <label class="block text-[11px] font-semibold uppercase text-gray-400 mb-1.5">Recherche (Nom de course, ville...)</label>
+                    <label class="block text-[11px] font-semibold uppercase text-emerald-400/80 mb-1">Recherche (Nom de course, ville...)</label>
                     <div class="relative">
-                        <input type="text" id="filter-keyword" oninput="handleFastSearch(this.value)" placeholder="Tapez 2 lettres (ex: too, tou, sainte...)" class="w-full px-3 py-2 bg-darkBg border border-borderBg rounded-xl text-sm text-white focus:outline-none focus:border-emerald-400">
-                        <i class="fa-solid fa-magnifying-glass absolute right-3 top-2.5 text-gray-500 text-xs"></i>
+                        <input type="text" id="filter-keyword" oninput="handleFastSearch(this.value)" placeholder="Tapez 2 lettres (ex: too, tou, sainte...)" class="w-full px-3 py-2 bg-darkBg border border-emerald-500/30 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-400">
+                        <i class="fa-solid fa-magnifying-glass absolute right-3 top-2.5 text-emerald-500/60 text-xs"></i>
                     </div>
 
                     <div id="search-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-cardBg border border-borderBg rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto divide-y divide-borderBg/50 text-xs">
@@ -227,8 +227,8 @@
                 </div>
 
                 <div class="md:col-span-5">
-                    <label class="block text-[11px] font-semibold uppercase text-gray-400 mb-1.5">Statut d'ouverture</label>
-                    <select id="filter-status" onchange="applyFilters()" class="w-full px-3 py-2 bg-darkBg border border-borderBg rounded-xl text-sm text-white font-medium cursor-pointer">
+                    <label class="block text-[11px] font-semibold uppercase text-emerald-400/80 mb-1">Statut d'ouverture</label>
+                    <select id="filter-status" onchange="applyFilters()" class="w-full px-3 py-2 bg-darkBg border border-emerald-500/30 rounded-xl text-sm text-white font-medium cursor-pointer">
                         <option value="ALL">Tous les statuts</option>
                         <option value="Open">Ouvertes</option>
                         <option value="Opening Soon">Prochaines (Bientôt)</option>
@@ -237,8 +237,8 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-3 border-t border-borderBg/50">
-                <div class="space-y-1.5">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2 border-t border-borderBg/50">
+                <div class="space-y-1">
                     <div class="flex justify-between text-xs font-semibold">
                         <span class="text-gray-400">Distance : <b id="slider-dist-min-val" class="text-emerald-400">0 km</b></span>
                         <span class="text-gray-400">à <b id="slider-dist-max-val" class="text-emerald-400">200 km</b></span>
@@ -250,7 +250,7 @@
                     </div>
                 </div>
 
-                <div class="space-y-1.5">
+                <div class="space-y-1">
                     <div class="flex justify-between text-xs font-semibold">
                         <span class="text-gray-400">D+ : <b id="slider-elev-min-val" class="text-emerald-400">0 m</b></span>
                         <span class="text-gray-400">à <b id="slider-elev-max-val" class="text-emerald-400">15 000 m</b></span>
@@ -262,7 +262,7 @@
                     </div>
                 </div>
 
-                <div class="space-y-1.5">
+                <div class="space-y-1">
                     <div class="flex justify-between text-xs font-semibold">
                         <span class="text-gray-400">Échéance : <b id="slider-horizon-min-val" class="text-emerald-400">0 mois</b></span>
                         <span class="text-gray-400">à <b id="slider-horizon-max-val" class="text-emerald-400">24 mois</b></span>
@@ -277,7 +277,7 @@
         </section>
 
         <!-- MAP, DETAIL PANEL & CHRONOLOGY SECTION -->
-        <section class="space-y-6">
+        <section class="space-y-4">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div class="flex items-center space-x-2 bg-darkBg p-1 rounded-xl border border-borderBg">
                     <button id="btn-view-map" onclick="resetMapAndSwitchView('map')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow">
@@ -290,7 +290,7 @@
             </div>
 
             <!-- LAYOUT GRILLE RESPONSIVE -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
                
                 <!-- ZONE PRINCIPALE (CARTE / LISTE / GESTION BUDGET) -->
                 <div id="main-view-column" class="lg:col-span-8 space-y-4 transition-all duration-300">
@@ -1011,12 +1011,12 @@
             let html = '';
             customLinks.forEach((link, i) => {
                 html += `
-                    <div class="flex justify-between items-center bg-darkBg/90 p-2.5 rounded-xl border border-borderBg hover:border-emerald-500/40 transition">
+                    <div class="flex justify-between items-center bg-darkBg/90 p-2 rounded-xl border border-emerald-500/20 hover:border-emerald-500/50 transition">
                         <a href="${link.url}" target="_blank" class="flex items-center gap-2 text-gray-200 hover:text-emerald-400 font-medium truncate">
-                            <i class="${link.icon || 'fa-solid fa-globe text-gray-400'} text-sm"></i>
+                            <i class="${link.icon || 'fa-solid fa-globe text-gray-400'} text-xs"></i>
                             <span class="truncate">${link.name}</span>
                         </a>
-                        <button onclick="removeCustomLink(${i})" class="text-[10px] text-gray-500 hover:text-red-400 px-1.5 py-0.5">✕</button>
+                        <button onclick="removeCustomLink(${i})" class="text-[10px] text-gray-500 hover:text-red-400 px-1">✕</button>
                     </div>
                 `;
             });
