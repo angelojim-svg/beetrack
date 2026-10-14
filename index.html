@@ -275,7 +275,7 @@
                     <button id="btn-view-secondary" onclick="switchMainView('secondary')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white">
                         <i id="btn-secondary-icon" class="fa-solid fa-list-ul mr-1"></i> <span id="btn-secondary-text">Liste</span>
                     </button>
-                    <!-- BOUTON MASQUÉ PAR DÉFAUT EN MODE TOUTES LES COURSES -->
+                    <!-- BOUTON HIDE MASQUÉ PAR DÉFAUT -->
                     <button id="btn-view-budget" onclick="switchMainView('budget')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white hidden">
                         <i class="fa-solid fa-wallet mr-1"></i> Gestion du Budget
                     </button>
@@ -1641,8 +1641,14 @@
 
             btnMap.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
             btnSec.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
-            if (btnBudget) btnBudget.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white hidden";
             btnLinks.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
+
+            // S'assurer que l'état du bouton Budget dépend exclusivement du mode Favoris
+            if (onlyShowFavorites) {
+                if (btnBudget) btnBudget.classList.remove('hidden');
+            } else {
+                if (btnBudget) btnBudget.classList.add('hidden');
+            }
 
             if (v === 'map') {
                 mapV.classList.remove('hidden');
@@ -1662,10 +1668,6 @@
             } else if (v === 'links') {
                 linksV.classList.remove('hidden');
                 btnLinks.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
-            }
-
-            if (onlyShowFavorites && btnBudget) {
-                btnBudget.classList.remove('hidden');
             }
         }
 
