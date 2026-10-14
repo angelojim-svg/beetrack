@@ -287,28 +287,28 @@
                     <div id="container-list-view" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden"></div>
                 </div>
 
-                <!-- CADRAN DÉTAIL INTERACTIF VERTICAL (S'INSERE ENTRE LA CARTE ET LA CHRONOLOGIE) -->
-                <div id="interactive-detail-panel" class="hidden lg:col-span-3 glass-panel p-4 rounded-2xl border border-emerald-500/40 bg-emerald-950/20 space-y-4 transition-all duration-300">
+                <!-- CADRAN DÉTAIL INTERACTIF VERTICAL (S'INSERE ENTRE LA CARTE ET LA CHRONOLOGIE DANS LE MODE FAVORIS) -->
+                <div id="interactive-detail-panel" class="hidden lg:col-span-3 glass-panel p-4 rounded-2xl border border-emerald-500/50 bg-emerald-950/30 space-y-4 transition-all duration-300">
                     <div class="flex justify-between items-start border-b border-borderBg pb-3">
                         <div>
-                            <span class="text-[10px] font-mono text-emerald-400 uppercase font-bold tracking-wider">Suivi d'épreuve</span>
+                            <span class="text-[10px] font-mono text-emerald-400 uppercase font-bold tracking-wider">Suivi de la saison</span>
                             <h3 id="detail-race-title" class="text-sm font-bold text-white mt-0.5 leading-snug"></h3>
                         </div>
                         <button onclick="closeInteractiveDetail()" class="text-xs text-gray-400 hover:text-white bg-darkBg p-1.5 rounded-lg border border-borderBg flex items-center justify-center">✕</button>
                     </div>
 
                     <div class="space-y-3 text-xs">
-                        <div class="flex items-center justify-between bg-darkBg/80 p-3 rounded-xl border border-borderBg">
-                            <span class="text-gray-300 font-semibold">Inscription OK ?</span>
-                            <input type="checkbox" id="check-reg-ok" onchange="toggleRaceStatusMeta('registered')" class="w-4 h-4 accent-emerald-500 cursor-pointer">
+                        <div class="flex items-center justify-between bg-emerald-900/40 p-3 rounded-xl border border-emerald-500/40">
+                            <span class="text-emerald-200 font-bold">Inscription OK ?</span>
+                            <input type="checkbox" id="check-reg-ok" onchange="toggleRaceStatusMeta('registered')" class="w-4 h-4 accent-emerald-400 cursor-pointer">
                         </div>
 
-                        <div class="flex items-center justify-between bg-darkBg/80 p-3 rounded-xl border border-borderBg">
-                            <span class="text-gray-300 font-semibold">Course terminée ?</span>
-                            <input type="checkbox" id="check-done" onchange="toggleRaceStatusMeta('completed')" class="w-4 h-4 accent-amber-500 cursor-pointer">
+                        <div class="flex items-center justify-between bg-blue-900/40 p-3 rounded-xl border border-blue-500/40">
+                            <span class="text-blue-200 font-bold">Course terminée ?</span>
+                            <input type="checkbox" id="check-done" onchange="toggleRaceStatusMeta('completed')" class="w-4 h-4 accent-blue-400 cursor-pointer">
                         </div>
 
-                        <div class="bg-darkBg/80 p-3 rounded-xl border border-borderBg space-y-2">
+                        <div class="bg-darkBg/90 p-3 rounded-xl border border-borderBg space-y-2">
                             <div class="flex justify-between">
                                 <span class="text-gray-400">📍 Lieu :</span>
                                 <b id="detail-race-loc" class="text-white text-right font-medium">-</b>
@@ -446,6 +446,9 @@
 
         function filterByFavoriteSelection(val) {
             onlyShowFavorites = (val === 'ONLY_FAV');
+            if (!onlyShowFavorites) {
+                closeInteractiveDetail();
+            }
             applyFilters();
         }
 
@@ -585,6 +588,16 @@
         }
 
         function handleTimelineClick(title, raceDate, location, price, url) {
+            // Le cadran ne s'affiche QUE dans le mode "Chronologie de ta saison" (Favoris)
+            if (!onlyShowFavorites) {
+                const marker = markersMapRef[`${title}_${raceDate}`];
+                if (marker && leafletMap) {
+                    leafletMap.setView(marker.getLatLng(), 10);
+                    marker.openPopup();
+                }
+                return;
+            }
+
             const raceKey = `${title}_${raceDate}`;
             const panel = document.getElementById('interactive-detail-panel');
             const mainCol = document.getElementById('main-view-column');
@@ -596,7 +609,7 @@
 
             activeSelectedRaceKey = raceKey;
 
-            // Décaler la vue principale de 8 à 5 colonnes pour insérer le cadran vertical de 3 colonnes
+            // Décaler la vue principale de 8 à 5 colonnes pour insérer le cadran vertical de 3 colonnes entre la carte et la chronologie
             mainCol.classList.remove('lg:col-span-8');
             mainCol.classList.add('lg:col-span-5');
             panel.classList.remove('hidden');
@@ -620,7 +633,6 @@
             document.getElementById('check-reg-ok').checked = meta.registered;
             document.getElementById('check-done').checked = meta.completed;
 
-            // Redimensionner la carte Leaflet suite au décalage
             setTimeout(() => {
                 if (leafletMap) leafletMap.invalidateSize();
                 const marker = markersMapRef[raceKey];
@@ -696,11 +708,12 @@
 
                 const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
                
-                let cardBgClass = 'bg-darkBg/90';
+                // COULEURS DE FOND MARQUÉES POUR INSCRIPTION OK / COURSE TERMINÉE
+                let cardBgClass = 'bg-darkBg/90 border-borderBg';
                 if (meta.completed) {
-                    cardBgClass = 'bg-blue-950/40 border-blue-500/50';
+                    cardBgClass = 'bg-blue-900/80 border-blue-400 shadow-lg shadow-blue-950/50';
                 } else if (meta.registered) {
-                    cardBgClass = 'bg-emerald-950/40 border-emerald-500/50';
+                    cardBgClass = 'bg-emerald-900/80 border-emerald-400 shadow-lg shadow-emerald-950/50';
                 }
 
                 let gapHtml = '';
@@ -721,32 +734,38 @@
                 }
 
                 const linkBtn = race.url ? `
-                    <a href="${race.url}" target="_blank" onclick="event.stopPropagation();" class="text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-lg transition inline-flex items-center">
+                    <a href="${race.url}" target="_blank" onclick="event.stopPropagation();" class="text-xs bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-lg transition inline-flex items-center font-semibold">
                         S'inscrire ↗
                     </a>
                 ` : '';
+
+                const favBtn = `
+                    <button onclick="event.stopPropagation(); toggleFavorite('${race.title.replace(/'/g, "\\'")}', '${race.raceDate}')" class="text-sm font-bold transition px-1.5 py-0.5 rounded hover:bg-white/10 ${isFav ? 'text-red-400' : 'text-gray-400 hover:text-red-400'}">
+                        ♥
+                    </button>
+                `;
 
                 html += `
                     ${gapHtml}
                     <div class="relative pl-5">
                         <span class="absolute -left-[7px] top-1 w-3.5 h-3.5 rounded-full ${isFav ? 'bg-amber-400 ring-3 ring-amber-400/20' : 'bg-emerald-500 ring-3 ring-emerald-500/20'}"></span>
-                        <div onmouseenter="highlightMapMarker('${raceKey}', true)" onmouseleave="highlightMapMarker('${raceKey}', false)" onclick="handleTimelineClick('${race.title.replace(/'/g, "\\'")}', '${race.raceDate}', '${race.location}', ${race.price}, '${race.url || ''}')" class="${cardBgClass} p-3 rounded-xl border border-borderBg cursor-pointer transition hover:border-emerald-400">
+                        <div onmouseenter="highlightMapMarker('${raceKey}', true)" onmouseleave="highlightMapMarker('${raceKey}', false)" onclick="handleTimelineClick('${race.title.replace(/'/g, "\\'")}', '${race.raceDate}', '${race.location}', ${race.price}, '${race.url || ''}')" class="${cardBgClass} p-3 rounded-xl border cursor-pointer transition hover:border-amber-400">
                             <div class="flex justify-between items-start">
                                 <span class="text-[10px] font-bold text-emerald-400 font-mono">${formattedDate}</span>
-                                <div class="flex items-center gap-1">
+                                <div class="flex items-center gap-1.5">
                                     ${statusBadge}
-                                    ${isFav ? '<span class="text-red-400 text-xs">♥</span>' : ''}
+                                    ${favBtn}
                                 </div>
                             </div>
                             <h4 class="text-xs font-bold text-white mt-1">${race.title}</h4>
-                            <div class="flex flex-wrap items-center gap-2 text-[10px] text-gray-400 mt-1.5">
+                            <div class="flex flex-wrap items-center gap-2 text-[10px] text-gray-300 mt-1.5">
                                 <span>📏 ${race.distance} km</span>
                                 <span>📈 +${race.elevation} m</span>
                                 <span>📍 ${race.location}</span>
                                 <span class="text-amber-400 font-bold">💶 ${displayPrice}</span>
                             </div>
-                            <div class="mt-2.5 flex items-center justify-between pt-2 border-t border-borderBg/50">
-                                <span class="text-[9px] text-gray-400">Options de suivi</span>
+                            <div class="mt-2.5 flex items-center justify-between pt-2 border-t border-white/10">
+                                <span class="text-[9px] text-gray-400">${onlyShowFavorites ? 'Options de suivi' : 'Voir sur la carte'}</span>
                                 ${linkBtn}
                             </div>
                         </div>
@@ -860,7 +879,7 @@
 
                     popupHtml += `
                         <div style="padding-bottom: 6px; margin-bottom: 6px; ${idx < racesAtLocation.length - 1 ? 'border-bottom: 1px solid rgba(255,255,255,0.1);' : ''}">
-                            <div style="display: flex; justify-between; align-items: center;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <strong style="color: #fff;">${r.title}</strong>
                                 <button onclick="toggleFavorite('${r.title.replace(/'/g, "\\'")}', '${r.raceDate}')" style="background:none; border:none; color: ${isFav ? '#ef4444' : '#9ca3af'}; cursor:pointer;">♥</button>
                             </div>
