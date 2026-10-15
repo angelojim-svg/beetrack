@@ -594,7 +594,7 @@
             if (meta.registered) {
                 return '#10b981'; // Vert si inscription OK
             }
-            return '#f59e0b'; // Orange par défaut (prévue sans action)
+            return '#f59e0b'; // Orange par défaut
         }
 
         /* ==================== SYSTEME DE GESTION DU PROFIL & AUTH ==================== */
@@ -630,6 +630,9 @@
                 document.getElementById('auth-logged-in').classList.remove('hidden');
                 document.getElementById('user-email-display').innerText = currentUser.email.split('@')[0];
                 await loadUserProfile();
+               
+                // BASCEULE AUTOMATIQUE SUR LA VUE "MES COURSES PRÉVUES" APRES CONNEXION
+                setFavoritesFilter(true);
             } else {
                 currentUser = null;
                 document.getElementById('auth-logged-in').classList.add('hidden');
@@ -672,12 +675,13 @@
                 errorDiv.innerText = "Erreur d'inscription : " + error.message;
                 errorDiv.classList.remove('hidden');
             } else {
-                alert("Compte créé avec succès ! Vos configurations locales ont été intégrées à votre nouveau profil.");
+                alert("Compte créé avec succès ! Vous êtes connecté sur vos courses prévues.");
                 closeAuthModal();
 
                 if (data.session && data.session.user) {
                     currentUser = data.session.user;
                     await saveUserProfile();
+                    setFavoritesFilter(true);
                 }
             }
         }
@@ -1187,7 +1191,7 @@
 
                 labels.push(dateLabel);
                 cumulativeData.push(Math.round(currentCumul));
-                pointColors.push(getRaceStatusColor(raceKey)); // Application dynamique de la couleur (Orange/Vert/Bleu)
+                pointColors.push(getRaceStatusColor(raceKey));
 
                 racesDetailsMeta.push({
                     title: r.title,
@@ -1213,7 +1217,7 @@
                         backgroundColor: 'rgba(16, 185, 129, 0.15)',
                         fill: true,
                         tension: 0.25,
-                        pointBackgroundColor: pointColors, // Couleurs des points dynamiques selon statut
+                        pointBackgroundColor: pointColors,
                         pointBorderColor: '#0b0f17',
                         pointRadius: 6,
                         pointHoverRadius: 9
@@ -1516,9 +1520,7 @@
         function handleTimelineClick(title, raceDate, location, price, url) {
             const raceKey = `${title}_${raceDate}`;
 
-            // N'AFFICHER LE SUIVI DE SAISON QUE LORSQU'ON EST DANS L'ONGLET "MES COURSES PRÉVUES"
             if (!onlyShowFavorites) {
-                // Si on est dans "Toutes les courses", on se contente de surligner le marqueur sur la carte
                 highlightMapMarker(raceKey, true);
                 return;
             }
@@ -1620,7 +1622,7 @@
             }
 
             saveUserProfile();
-            applyFilters(); // Re-filtre pour mettre à jour automatiquement la carte et la courbe
+            applyFilters();
         }
 
         function renderTimeline() {
@@ -1662,14 +1664,14 @@
                 const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
                
                 let cardBgClass = 'bg-darkBg/90 border-borderBg';
-                let statusPinColor = '#f59e0b'; // Orange par défaut
+                let statusPinColor = '#f59e0b';
 
                 if (meta.completed) {
                     cardBgClass = 'bg-blue-900/80 border-blue-400 shadow-lg shadow-blue-950/50';
-                    statusPinColor = '#3b82f6'; // Bleu
+                    statusPinColor = '#3b82f6';
                 } else if (meta.registered) {
                     cardBgClass = 'bg-emerald-900/80 border-emerald-400 shadow-lg shadow-emerald-950/50';
-                    statusPinColor = '#10b981'; // Vert
+                    statusPinColor = '#10b981';
                 }
 
                 let gapHtml = '';
@@ -1792,7 +1794,6 @@
             renderTimeline();
         }
 
-        /* ==================== MISE À JOUR MARQUEURS CARTE AVEC COULEURS DYNAMIQUES ==================== */
         function updateMapMarkers() {
             if (!leafletMap) return;
 
@@ -1826,8 +1827,6 @@
             Object.values(groupedRaces).forEach(racesAtLocation => {
                 const mainRace = racesAtLocation[0];
                 const rKeyMain = `${mainRace.title}_${mainRace.raceDate}`;
-               
-                // Couleur basée sur le statut du suivi de saison (Orange / Vert / Bleu) si c'est une course prévue, sinon couleur du statut général
                 let color = getRaceStatusColor(rKeyMain);
 
                 const customIcon = L.divIcon({
