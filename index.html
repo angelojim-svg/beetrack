@@ -652,7 +652,7 @@
         // L'utilisateur est connecté : Déterminer le type d'alerte
         const alertType = raceStatus === 'TBD' ? 'tbd' : 'opening_soon';
 
-        // 1. Enregistrement en base de données Supabase
+        // 1. Enregistrement de l'alerte dans la base de données Supabase
         try {
             await window.dbClient.from('race_alerts').insert({
                 user_id: currentUser.id,
@@ -661,10 +661,10 @@
                 alert_type: alertType
             });
         } catch(e) {
-            console.error("Erreur d'enregistrement d'alerte en BDD:", e);
+            console.error("Erreur d'enregistrement d'alerte en BDD :", e);
         }
 
-        // 2. ÉTAPE 4 : APPEL DE LA EDGE FUNCTION POUR ENVOYER LE MAIL RESEND DIRECTEMENT
+        // 2. Envoi direct du mail via l'Edge Function Supabase (Resend)
         try {
             await window.dbClient.functions.invoke('send-race-alert', {
                 body: {
@@ -673,16 +673,16 @@
                     alert_type: alertType
                 }
             });
-            console.log("Mail d'alerte envoyé avec succès !");
+            console.log("Mail d'alerte envoyé avec succès via Edge Function !");
         } catch(e) {
-            console.error("Erreur d'envoi mail via Edge Function:", e);
+            console.error("Erreur d'envoi du mail via Edge Function :", e);
         }
 
-        // 3. Affichage du message de confirmation sur la modale
+        // 3. Affichage de la confirmation dans la modale
         if (raceStatus === 'TBD') {
             titleElem.innerText = "Alerte de statut activée 🔔";
             bodyElem.innerHTML = `
-                Alerte enregistrée ! Un e-mail de confirmation vient de vous être envoyé à <b class="text-blue-400">${currentUser.email}</b>. Vous serez réinformé dès la confirmation de la date officielle de <b class="text-emerald-400">${title}</b>.
+                Alerte enregistrée ! Un e-mail de confirmation vient de vous être envoyé à <b class="text-blue-400">${currentUser.email}</b>. Vous serez informé dès la confirmation de la date officielle de <b class="text-emerald-400">${title}</b>.
             `;
         } else {
             titleElem.innerText = "Alerte Ouverture Inscriptions 🔔";
