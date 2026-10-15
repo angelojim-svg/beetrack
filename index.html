@@ -139,7 +139,7 @@
                             <span class="text-[10px] font-mono tracking-wider font-bold text-amber-400 uppercase bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">PILOTAGE SAISON</span>
                         </div>
                         <p class="text-xs text-white font-medium bg-blue-600/90 px-2 py-0.5 rounded inline-block shadow-sm">
-                            Planifie tes trails, pilote tes inscriptions et maîtrise le budget de ta saison.
+                            Planifie tes courses, pilote tes inscriptions et maîtrise le budget de ta saison.
                         </p>
                     </div>
                 </div>
@@ -281,7 +281,7 @@
                     <span class="bg-gradient-to-r from-emerald-400 to-amber-300 bg-clip-text text-transparent">Recherche & Radar</span>
                 </h2>
                 <div class="flex items-center justify-between sm:justify-end space-x-3">
-                    <button onclick="resetFilters()" class="text-xs text-gray-400 hover:text-emerald-400 underline transition">Réinitialiser</button>
+                    <button id="btn-reset-filters" onclick="resetFilters()" class="text-xs text-gray-400 hover:text-emerald-400 underline transition">Réinitialiser</button>
                     <span class="text-xs bg-darkBg px-2.5 py-1 rounded-lg border border-emerald-500/30 text-gray-300 font-mono">
                         <span id="filtered-count" class="text-emerald-400 font-bold">0</span> épreuve(s)
                     </span>
@@ -822,6 +822,7 @@
 
         function resetMapAndSwitchView(v) {
             switchMainView(v);
+            activeSelectedRaceKey = null;
             if (leafletMap) {
                 setTimeout(() => {
                     leafletMap.invalidateSize();
@@ -845,29 +846,37 @@
 
         function setFavoritesFilter(showOnlyFavs) {
             onlyShowFavorites = showOnlyFavs;
+            activeSelectedRaceKey = null;
            
             const btnAll = document.getElementById('btn-toggle-all');
             const btnFav = document.getElementById('btn-toggle-fav');
             const btnBudget = document.getElementById('btn-view-budget');
             const btnSec = document.getElementById('btn-view-secondary');
+            const btnReset = document.getElementById('btn-reset-filters');
 
             if (onlyShowFavorites) {
                 btnFav.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition flex items-center gap-1.5";
                 btnAll.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition";
                 if (btnBudget) btnBudget.classList.remove('hidden');
                
-                // MASQUER LE BOUTON LISTE DANS "MES COURSES PRÉVUES"
+                // MASQUER L'ONGLET LISTE DANS MES COURSES PRÉVUES
                 if (btnSec) btnSec.classList.add('hidden');
                
-                // Si l'utilisateur était sur la vue "secondary" (liste), on bascule sur "map"
+                // MASQUER LE BOUTON RÉINITIALISER DANS MES COURSES PRÉVUES
+                if (btnReset) btnReset.classList.add('hidden');
+
+                // Si l'utilisateur était sur l'onglet "liste", on repasse sur "carte"
                 if (activeMainTab === 'secondary') switchMainView('map');
             } else {
                 btnAll.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition";
                 btnFav.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5";
                 if (btnBudget) btnBudget.classList.add('hidden');
                
-                // AFFICHER LE BOUTON LISTE DANS "TOUTES LES COURSES"
+                // AFFICHER L'ONGLET LISTE DANS TOUTES LES COURSES
                 if (btnSec) btnSec.classList.remove('hidden');
+
+                // AFFICHER LE BOUTON RÉINITIALISER DANS TOUTES LES COURSES
+                if (btnReset) btnReset.classList.remove('hidden');
                
                 if (activeMainTab === 'budget') switchMainView('map');
                 closeInteractiveDetail();
@@ -1530,19 +1539,37 @@
         function handleTimelineClick(title, raceDate, location, price, url) {
             const raceKey = `${title}_${raceDate}`;
 
-            // DANS "TOUTES LES COURSES" : ZOOMER SUR LA CARTE
+            // DANS "TOUTES LES COURSES" :
+            // Clic 1 : bascule sur la carte, zoome fort (niveau 13) et ouvre le popup.
+            // Clic 2 sur la même épreuve : dézoome et réinitialise la vue France.
             if (!onlyShowFavorites) {
                 switchMainView('map');
+               
+                if (activeSelectedRaceKey === raceKey) {
+                    // Deuxième clic : retour à la vue d'ensemble France
+                    activeSelectedRaceKey = null;
+                    if (leafletMap) {
+                        leafletMap.setView([46.603354, 1.888334], 5, { animate: true });
+                        leafletMap.closePopup();
+                    }
+                    return;
+                }
+
+                activeSelectedRaceKey = raceKey;
                 const marker = markersMapRef[raceKey];
                 if (marker && leafletMap) {
                     const latLng = marker.getLatLng();
-                    leafletMap.setView(latLng, 10, { animate: true }); // Zoom de niveau 10 centré sur l'épreuve
-                    marker.openPopup();
+                    leafletMap.setView(latLng, 13, { animate: true }); // Zoom fort (niveau 13)
+                    setTimeout(() => {
+                        marker.openPopup();
+                    }, 300);
+                } else {
+                    highlightMapMarker(raceKey, true);
                 }
                 return;
             }
 
-            // DANS "MES COURSES PRÉVUES" : OUVRIR LE PANNEAU DE SUIVI DE SAISON
+            // DANS "MES COURSES PRÉVUES" : OUVERTURE DU PANNEAU INTERACTIF DE SUIVI
             const middleCol = document.getElementById('middle-column');
             const mainCol = document.getElementById('main-view-column');
 
@@ -1572,10 +1599,10 @@
             const bookingUrl = `https://www.booking.com/searchresults.fr.html?ss=${encodeURIComponent(location)}`;
 
             document.getElementById('detail-race-lodging-container').innerHTML = `
-                <a href="${airbnbUrl}" target="_blank" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold py-1 rounded-lg text-xs transition flex items-center justify-center gap-1">
+                <a href="${airbnbUrl}" target="_blank" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1">
                     🏠 Airbnb ↗
                 </a>
-                <a href="${bookingUrl}" target="_blank" class="bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 font-semibold py-1 rounded-lg text-xs transition flex items-center justify-center gap-1">
+                <a href="${bookingUrl}" target="_blank" class="bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 font-semibold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1">
                     🏨 Booking ↗
                 </a>
             `;
