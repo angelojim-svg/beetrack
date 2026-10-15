@@ -173,26 +173,24 @@
                     </div>
                 </div>
 
-                <!-- SWITCH VISUEL FAVORIS / TOUTES LES COURSES -->
+                <!-- SWITCH VISUEL MES COURSES PRÉVUES / TOUTES LES COURSES -->
                 <div class="flex items-center bg-darkBg p-1 rounded-xl border border-borderBg">
                     <button id="btn-toggle-all" onclick="setFavoritesFilter(false)" class="px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition">
                         Toutes les courses
                     </button>
                     <button id="btn-toggle-fav" onclick="setFavoritesFilter(true)" class="px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5">
-                        <span class="text-red-400 font-bold">♥</span> Mes favoris (<span id="fav-count">0</span>)
+                        <span class="text-amber-400 font-bold">♥</span> Mes courses prévues (<span id="fav-count">0</span>)
                     </button>
                 </div>
 
                 <!-- MODULE AUTHENTIFICATION & SAUVEGARDE PROFIL -->
                 <div id="auth-container" class="flex items-center bg-darkBg p-1 rounded-xl border border-borderBg">
-                    <!-- Non connecté -->
                     <div id="auth-logged-out" class="flex items-center space-x-2 px-2 py-0.5">
                         <button onclick="openAuthModal()" class="text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1">
                             <i class="fa-solid fa-user"></i> Sauvegarder profil
                         </button>
                     </div>
 
-                    <!-- Connecté -->
                     <div id="auth-logged-in" class="hidden flex items-center space-x-2 px-2 py-0.5">
                         <span class="text-xs text-emerald-400 font-mono font-bold flex items-center gap-1">
                             <i class="fa-solid fa-cloud-check text-emerald-400"></i> <span id="user-email-display" class="max-w-[100px] truncate">Profil</span>
@@ -207,7 +205,7 @@
         </div>
     </header>
 
-    <!-- MODAL AUTHENTIFICATION (CONNEXION / INSCRIPTION) -->
+    <!-- MODAL AUTHENTIFICATION -->
     <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="glass-panel p-6 rounded-2xl border border-emerald-500/40 max-w-sm w-full space-y-4 shadow-2xl relative">
             <button onclick="closeAuthModal()" class="absolute top-3 right-3 text-gray-400 hover:text-white text-xs bg-darkBg px-2 py-1 rounded border border-borderBg">✕</button>
@@ -217,7 +215,7 @@
                     <i class="fa-solid fa-user-shield text-emerald-400"></i>
                     Sauvegarde de Profil
                 </h3>
-                <p class="text-xs text-gray-400">Retrouvez vos favoris et votre tableau de bord sur tous vos appareils.</p>
+                <p class="text-xs text-gray-400">Retrouvez vos courses prévues et votre tableau de bord sur tous vos appareils.</p>
             </div>
 
             <form onsubmit="handleAuthSubmit(event)" class="space-y-3 text-xs">
@@ -240,7 +238,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE CHOIX DE CONFLICT DE PROFIL (FUSION / ÉCRASER / CONSERVER LOCAL) -->
+    <!-- MODAL DE CHOIX DE CONFLIT DE PROFIL -->
     <div id="profile-conflict-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="glass-panel p-6 rounded-2xl border border-amber-500/40 max-w-md w-full space-y-4 shadow-2xl relative">
             <div class="text-center space-y-2">
@@ -249,24 +247,24 @@
                 </div>
                 <h3 class="text-base font-extrabold text-white">Données locales et Cloud différentes</h3>
                 <p class="text-xs text-gray-300 leading-relaxed">
-                    Vous possédez des favoris et réglages sur cet appareil (local) ainsi que sur votre compte cloud. Que souhaitez-vous faire ?
+                    Vous possédez des courses prévues sur cet appareil ainsi que sur votre compte cloud. Que souhaitez-vous faire ?
                 </p>
             </div>
 
             <div class="space-y-2 pt-2 text-xs">
                 <button onclick="resolveProfileConflict('merge')" class="w-full text-left p-3 rounded-xl bg-darkBg hover:bg-cardBg border border-emerald-500/40 transition group">
                     <div class="font-bold text-emerald-400 group-hover:underline">🔀 Fusionner les deux</div>
-                    <div class="text-[11px] text-gray-400 mt-0.5">Combine vos favoris et budgets locaux avec ceux du cloud (recommandé).</div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">Combine vos épreuves locales et cloud.</div>
                 </button>
 
                 <button onclick="resolveProfileConflict('overwrite')" class="w-full text-left p-3 rounded-xl bg-darkBg hover:bg-cardBg border border-borderBg transition group">
                     <div class="font-bold text-amber-400 group-hover:underline">☁️ Remplacer par le Cloud</div>
-                    <div class="text-[11px] text-gray-400 mt-0.5">Ignore les réglages locaux et charge uniquement le profil cloud.</div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">Charge uniquement le profil enregistré sur le cloud.</div>
                 </button>
 
                 <button onclick="resolveProfileConflict('keep_local')" class="w-full text-left p-3 rounded-xl bg-darkBg hover:bg-cardBg border border-borderBg transition group">
                     <div class="font-bold text-blue-400 group-hover:underline">💻 Conserver le Local et écraser le Cloud</div>
-                    <div class="text-[11px] text-gray-400 mt-0.5">Conserve uniquement vos réglages actuels sur cet appareil et les pousse sur le cloud.</div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">Conserve vos épreuves locales et les enregistre sur le cloud.</div>
                 </button>
             </div>
         </div>
@@ -374,7 +372,7 @@
             <!-- LAYOUT GRILLE DE HAUTEUR UNIFORMISÉE (520px) -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
                
-                <!-- ZONE PRINCIPALE (CARTE / LISTE / BUDGET / LIENS) -->
+                <!-- ZONE PRINCIPALE -->
                 <div id="main-view-column" class="lg:col-span-8 space-y-4 transition-all duration-300">
                     <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden h-[520px]">
                         <div id="map" class="w-full h-full rounded-xl z-10"></div>
@@ -429,7 +427,7 @@
                     </div>
                 </div>
 
-                <!-- COLONNE CENTRALE (SUIVI DE LA SAISON) UNIFORMISÉE À 520PX -->
+                <!-- COLONNE CENTRALE (SUIVI DE LA SAISON) -->
                 <div id="middle-column" class="hidden lg:col-span-3 transition-all duration-300">
                     <div id="interactive-detail-panel" class="glass-panel p-4 rounded-2xl border border-emerald-500/50 bg-emerald-950/30 space-y-2 h-[520px] flex flex-col justify-between">
                         <div class="space-y-2 overflow-y-auto pr-1">
@@ -502,7 +500,7 @@
                     </div>
                 </div>
 
-                <!-- PANNEAU CHRONOLOGIE UNIFORMISÉ À 520PX -->
+                <!-- PANNEAU CHRONOLOGIE -->
                 <div id="timeline-column" class="lg:col-span-4 transition-all duration-300">
                     <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-borderBg space-y-3 h-[520px] flex flex-col">
                         <div class="flex items-center justify-between border-b border-borderBg pb-2">
@@ -528,7 +526,7 @@
                         <i class="fa-solid fa-chart-line text-emerald-400"></i>
                         Cumul Charge Saison (km + D+/10)
                     </h4>
-                    <span class="text-[10px] font-mono text-amber-400 font-bold bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/20">Vue Favoris - Globale</span>
+                    <span class="text-[10px] font-mono text-amber-400 font-bold bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/20">Vue Courses Prévues</span>
                 </div>
                 <div class="h-56 sm:h-64 relative w-full">
                     <canvas id="loadChart"></canvas>
@@ -546,7 +544,7 @@
         window.dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = null;
-        let pendingCloudData = null; // Stocke les données cloud en cas de conflit
+        let pendingCloudData = null;
 
         let racesData = [];
         let filteredRaces = [];
@@ -586,6 +584,18 @@
             coaching: 0,
             assurances: 0
         }));
+
+        /* ==================== HELPER COULEUR STATUT COURSE ==================== */
+        function getRaceStatusColor(raceKey) {
+            const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
+            if (meta.completed) {
+                return '#3b82f6'; // Bleu si terminée
+            }
+            if (meta.registered) {
+                return '#10b981'; // Vert si inscription OK
+            }
+            return '#f59e0b'; // Orange par défaut (prévue sans action)
+        }
 
         /* ==================== SYSTEME DE GESTION DU PROFIL & AUTH ==================== */
 
@@ -657,7 +667,6 @@
                 return;
             }
 
-            // Inscription : On intègre directement les données locales existantes dans le nouveau profil
             const { data, error } = await window.dbClient.auth.signUp({ email, password });
             if (error) {
                 errorDiv.innerText = "Erreur d'inscription : " + error.message;
@@ -668,7 +677,7 @@
 
                 if (data.session && data.session.user) {
                     currentUser = data.session.user;
-                    await saveUserProfile(); // Sauvegarde l'état local actuel sur le profil cloud distant
+                    await saveUserProfile();
                 }
             }
         }
@@ -722,17 +731,14 @@
                     const cloudHasFavorites = data.favorites && data.favorites.length > 0;
                     const localHasFavorites = favorites.length > 0;
 
-                    // Si le cloud a des favoris et que le local en a aussi des différents, on demande à l'utilisateur
                     if (cloudHasFavorites && localHasFavorites && JSON.stringify(data.favorites.sort()) !== JSON.stringify(favorites.sort())) {
                         pendingCloudData = data;
                         document.getElementById('profile-conflict-modal').classList.remove('hidden');
                         return;
                     }
 
-                    // Sinon, chargement automatique normal
                     applyCloudProfile(data);
                 } else {
-                    // Si le profil cloud est vide, on y pousse les données locales actuelles
                     await saveUserProfile();
                 }
             } catch (e) {
@@ -761,7 +767,6 @@
             if (!pendingCloudData) return;
 
             if (action === 'merge') {
-                // Fusion intelligente des favoris et métas
                 favorites = Array.from(new Set([...favorites, ...(pendingCloudData.favorites || [])]));
                 Object.assign(raceMetaStates, pendingCloudData.meta || {});
                 Object.assign(raceGpxLinks, pendingCloudData.gpx || {});
@@ -772,11 +777,9 @@
 
                 saveUserProfile();
             } else if (action === 'overwrite') {
-                // Écraser le local par le cloud
                 applyCloudProfile(pendingCloudData);
                 return;
             } else if (action === 'keep_local') {
-                // Conserver le local et écraser le cloud avec
                 saveUserProfile();
             }
 
@@ -964,7 +967,7 @@
             if (!grid) return;
 
             const standardCategories = [
-                { key: 'dossards', name: '🎟️ Dossards (Favoris)', desc: 'Calculé automatiquement depuis tes favoris.', isCalc: true },
+                { key: 'dossards', name: '🎟️ Dossards (Courses Prévues)', desc: 'Calculé automatiquement depuis tes courses prévues.', isCalc: true },
                 { key: 'materiel', name: '🎒 Matériel' },
                 { key: 'transport', name: '🚗 Transport' },
                 { key: 'hebergement', name: '⛺ Hébergement' },
@@ -1107,7 +1110,6 @@
                 labels.forEach((lbl, idx) => {
                     const val = dataValues[idx];
                     if (val > 0 || total === 0) {
-                        const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
                         legendHtml += `
                             <div class="flex items-center justify-between bg-darkBg/90 px-2 py-1 rounded-lg border border-borderBg">
                                 <span class="flex items-center gap-1.5 text-gray-300 text-xs">
@@ -1146,6 +1148,7 @@
             });
         }
 
+        /* ==================== COURBE CUMULÉE AVEC COULEURS DYNAMIQUES ==================== */
         function renderLoadChart() {
             const chartContainer = document.getElementById('container-load-chart');
             if (!chartContainer) return;
@@ -1172,16 +1175,20 @@
 
             const labels = [];
             const cumulativeData = [];
+            const pointColors = [];
             const racesDetailsMeta = [];
             let currentCumul = 0;
 
             validFavRaces.forEach(r => {
+                const raceKey = `${r.title}_${r.raceDate}`;
                 const dateLabel = formatDateFR(r.raceDate, r.status);
                 const raceCharge = r.distance + (r.elevation / 10);
                 currentCumul += raceCharge;
 
                 labels.push(dateLabel);
                 cumulativeData.push(Math.round(currentCumul));
+                pointColors.push(getRaceStatusColor(raceKey)); // Application dynamique de la couleur (Orange/Vert/Bleu)
+
                 racesDetailsMeta.push({
                     title: r.title,
                     dist: r.distance,
@@ -1206,7 +1213,7 @@
                         backgroundColor: 'rgba(16, 185, 129, 0.15)',
                         fill: true,
                         tension: 0.25,
-                        pointBackgroundColor: '#eab308',
+                        pointBackgroundColor: pointColors, // Couleurs des points dynamiques selon statut
                         pointBorderColor: '#0b0f17',
                         pointRadius: 6,
                         pointHoverRadius: 9
@@ -1497,7 +1504,7 @@
                         innerDiv.style.zIndex = '1000';
                         marker.openPopup();
                     } else {
-                        innerDiv.style.background = marker.defaultColor || '#10b981';
+                        innerDiv.style.background = marker.defaultColor || '#f59e0b';
                         innerDiv.style.transform = 'scale(1)';
                         innerDiv.style.zIndex = '1';
                         marker.closePopup();
@@ -1508,6 +1515,14 @@
 
         function handleTimelineClick(title, raceDate, location, price, url) {
             const raceKey = `${title}_${raceDate}`;
+
+            // N'AFFICHER LE SUIVI DE SAISON QUE LORSQU'ON EST DANS L'ONGLET "MES COURSES PRÉVUES"
+            if (!onlyShowFavorites) {
+                // Si on est dans "Toutes les courses", on se contente de surligner le marqueur sur la carte
+                highlightMapMarker(raceKey, true);
+                return;
+            }
+
             const middleCol = document.getElementById('middle-column');
             const mainCol = document.getElementById('main-view-column');
 
@@ -1605,7 +1620,7 @@
             }
 
             saveUserProfile();
-            renderTimeline();
+            applyFilters(); // Re-filtre pour mettre à jour automatiquement la carte et la courbe
         }
 
         function renderTimeline() {
@@ -1614,7 +1629,7 @@
 
             if (titleElement) {
                 if (onlyShowFavorites) {
-                    titleElement.innerHTML = `<i class="fa-solid fa-timeline text-emerald-400"></i> Chronologie de ta saison`;
+                    titleElement.innerHTML = `<i class="fa-solid fa-timeline text-emerald-400"></i> Chronologie de tes courses prévues`;
                 } else {
                     titleElement.innerHTML = `<i class="fa-solid fa-timeline text-emerald-400"></i> Chronologie des épreuves`;
                 }
@@ -1647,10 +1662,14 @@
                 const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
                
                 let cardBgClass = 'bg-darkBg/90 border-borderBg';
+                let statusPinColor = '#f59e0b'; // Orange par défaut
+
                 if (meta.completed) {
                     cardBgClass = 'bg-blue-900/80 border-blue-400 shadow-lg shadow-blue-950/50';
+                    statusPinColor = '#3b82f6'; // Bleu
                 } else if (meta.registered) {
                     cardBgClass = 'bg-emerald-900/80 border-emerald-400 shadow-lg shadow-emerald-950/50';
+                    statusPinColor = '#10b981'; // Vert
                 }
 
                 let gapHtml = '';
@@ -1677,7 +1696,7 @@
                 ` : '';
 
                 const favBtn = `
-                    <button onclick="event.stopPropagation(); toggleFavorite('${race.title.replace(/'/g, "\\'")}', '${race.raceDate}')" class="text-xs font-bold transition px-1 py-0.5 rounded hover:bg-white/10 ${isFav ? 'text-red-400' : 'text-gray-400 hover:text-red-400'}">
+                    <button onclick="event.stopPropagation(); toggleFavorite('${race.title.replace(/'/g, "\\'")}', '${race.raceDate}')" class="text-xs font-bold transition px-1 py-0.5 rounded hover:bg-white/10 ${isFav ? 'text-amber-400' : 'text-gray-400 hover:text-amber-400'}">
                         ♥
                     </button>
                 `;
@@ -1685,7 +1704,7 @@
                 html += `
                     ${gapHtml}
                     <div class="relative pl-4">
-                        <span class="absolute -left-[7px] top-1 w-3 h-3 rounded-full ${isFav ? 'bg-amber-400 ring-2 ring-amber-400/20' : 'bg-emerald-500 ring-2 ring-emerald-500/20'}"></span>
+                        <span class="absolute -left-[7px] top-1 w-3 h-3 rounded-full" style="background-color: ${statusPinColor}; box-shadow: 0 0 6px ${statusPinColor}88;"></span>
                         <div onmouseenter="highlightMapMarker('${raceKey}', true)" onmouseleave="highlightMapMarker('${raceKey}', false)" onclick="handleTimelineClick('${race.title.replace(/'/g, "\\'")}', '${race.raceDate}', '${race.location}', ${race.price}, '${race.url || ''}')" class="${cardBgClass} p-2.5 rounded-xl border cursor-pointer transition hover:border-amber-400">
                             <div class="flex justify-between items-start">
                                 <span class="text-xs font-bold text-emerald-400 font-mono">${formattedDate}</span>
@@ -1773,6 +1792,7 @@
             renderTimeline();
         }
 
+        /* ==================== MISE À JOUR MARQUEURS CARTE AVEC COULEURS DYNAMIQUES ==================== */
         function updateMapMarkers() {
             if (!leafletMap) return;
 
@@ -1805,13 +1825,16 @@
 
             Object.values(groupedRaces).forEach(racesAtLocation => {
                 const mainRace = racesAtLocation[0];
-                let color = mainRace.status === 'Open' ? '#10b981' : (mainRace.status === 'TBD' ? '#f59e0b' : '#3b82f6');
+                const rKeyMain = `${mainRace.title}_${mainRace.raceDate}`;
+               
+                // Couleur basée sur le statut du suivi de saison (Orange / Vert / Bleu) si c'est une course prévue, sinon couleur du statut général
+                let color = getRaceStatusColor(rKeyMain);
 
                 const customIcon = L.divIcon({
                     className: 'custom-pin',
-                    html: `<div style="background:${color}; width:10px; height:10px; border-radius:50%; border:2px solid white; box-shadow:0 0 4px rgba(0,0,0,0.5); transition: all 0.2s ease;"></div>`,
-                    iconSize: [10, 10],
-                    iconAnchor: [5, 5]
+                    html: `<div style="background:${color}; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 0 5px rgba(0,0,0,0.5); transition: all 0.2s ease;"></div>`,
+                    iconSize: [12, 12],
+                    iconAnchor: [6, 6]
                 });
 
                 const marker = L.marker([mainRace.lat, mainRace.lng], { icon: customIcon });
@@ -1832,7 +1855,7 @@
                         <div style="padding-bottom: 4px; margin-bottom: 4px; ${idx < racesAtLocation.length - 1 ? 'border-bottom: 1px solid rgba(255,255,255,0.1);' : ''}">
                             <div style="display: flex; justify-between; align-items: center;">
                                 <strong style="color: #fff;">${r.title}</strong>
-                                <button onclick="toggleFavorite('${r.title.replace(/'/g, "\\'")}', '${r.raceDate}')" style="background:none; border:none; color: ${isFav ? '#ef4444' : '#9ca3af'}; cursor:pointer;">♥</button>
+                                <button onclick="toggleFavorite('${r.title.replace(/'/g, "\\'")}', '${r.raceDate}')" style="background:none; border:none; color: ${isFav ? '#f59e0b' : '#9ca3af'}; cursor:pointer;">♥</button>
                             </div>
                             <div style="color: #9ca3af; font-size: 10px; margin-top: 1px;">📅 ${formattedDate}</div>
                             <div style="color: #34d399; font-size: 10px; margin-top: 1px;">📏 ${r.distance}km | 📈 +${r.elevation}m | 💶 ${displayPrice}</div>
@@ -1869,7 +1892,7 @@
                 ` : '';
 
                 const favBtn = `
-                    <button onclick="toggleFavorite('${race.title.replace(/'/g, "\\'")}', '${race.raceDate}')" class="px-2.5 py-1.5 rounded-xl text-xs font-bold border transition flex items-center justify-center ${isFav ? 'bg-red-500/20 text-red-400 border-red-500/40' : 'bg-darkBg text-gray-400 border-borderBg hover:text-red-400'}">
+                    <button onclick="toggleFavorite('${race.title.replace(/'/g, "\\'")}', '${race.raceDate}')" class="px-2.5 py-1.5 rounded-xl text-xs font-bold border transition flex items-center justify-center ${isFav ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'bg-darkBg text-gray-400 border-borderBg hover:text-amber-400'}">
                         ♥
                     </button>
                 `;
