@@ -187,7 +187,7 @@
                 <div id="auth-container" class="flex items-center bg-darkBg p-1 rounded-xl border border-borderBg">
                     <div id="auth-logged-out" class="flex items-center space-x-2 px-2 py-0.5">
                         <button onclick="openAuthModal()" class="text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1">
-                            <i class="fa-solid fa-user"></i> Sauvegarder profil
+                            <i class="fa-solid fa-user"></i> Sauvegarde / Connexion
                         </button>
                     </div>
 
@@ -213,7 +213,7 @@
             <div class="text-center space-y-1">
                 <h3 class="text-lg font-extrabold text-white flex items-center justify-center gap-2">
                     <i class="fa-solid fa-user-shield text-emerald-400"></i>
-                    Sauvegarde de Profil
+                    Sauvegarde / Connexion
                 </h3>
                 <p class="text-xs text-gray-400">Retrouvez vos courses prévues et votre tableau de bord sur tous vos appareils.</p>
             </div>
@@ -631,7 +631,6 @@
                 document.getElementById('user-email-display').innerText = currentUser.email.split('@')[0];
                 await loadUserProfile();
                
-                // BASCEULE AUTOMATIQUE SUR LA VUE "MES COURSES PRÉVUES" APRES CONNEXION
                 setFavoritesFilter(true);
             } else {
                 currentUser = null;
