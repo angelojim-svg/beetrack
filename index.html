@@ -145,7 +145,7 @@
                 </div>
             </div>
 
-            <!-- BLOCS BUDGET, FAVORIS, ALERTES & PROFIL / AUTH -->
+            <!-- BLOCS BUDGET, FAVORIS & PROFIL / AUTH -->
             <div class="w-full lg:w-auto flex flex-wrap items-center justify-between lg:justify-end gap-3 text-xs">
               
                 <div class="relative group z-40">
@@ -173,18 +173,13 @@
                     </div>
                 </div>
 
-                <!-- SWITCH VISUEL MES COURSES PRÉVUES / TOUTES LES COURSES / MES ALERTES -->
-                <div class="flex items-center bg-darkBg p-1 rounded-xl border border-borderBg gap-1">
+                <!-- SWITCH VISUEL MES COURSES PRÉVUES / TOUTES LES COURSES -->
+                <div class="flex items-center bg-darkBg p-1 rounded-xl border border-borderBg">
                     <button id="btn-toggle-all" onclick="setFavoritesFilter(false)" class="px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition">
                         Toutes les courses
                     </button>
                     <button id="btn-toggle-fav" onclick="setFavoritesFilter(true)" class="px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5">
                         <span class="text-amber-400 font-bold">♥</span> Mes courses prévues (<span id="fav-count">0</span>)
-                    </button>
-                    <!-- ONGLET MES ALERTES -->
-                    <button id="btn-toggle-alerts" onclick="switchMainTab('alerts')" class="px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5">
-                        <span>🔔 Mes alertes</span>
-                        <span id="alerts-count-badge" class="bg-amber-500/20 text-amber-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold hidden">0</span>
                     </button>
                 </div>
 
@@ -376,12 +371,17 @@
         <!-- MAP, DETAIL PANEL & CHRONOLOGY SECTION -->
         <section class="space-y-4">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div class="flex items-center space-x-2 bg-darkBg p-1 rounded-xl border border-borderBg">
+                <!-- BARRE D'ONGLETS DE VUE (CARTE, LISTE, MES ALERTES, BUDGET, LIENS & OUTILS) -->
+                <div class="flex items-center space-x-2 bg-darkBg p-1 rounded-xl border border-borderBg flex-wrap gap-y-1">
                     <button id="btn-view-map" onclick="resetMapAndSwitchView('map')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow">
                         <i class="fa-solid fa-map-location-dot mr-1"></i> Carte
                     </button>
                     <button id="btn-view-secondary" onclick="switchMainView('secondary')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white">
                         <i id="btn-secondary-icon" class="fa-solid fa-list-ul mr-1"></i> <span id="btn-secondary-text">Liste</span>
+                    </button>
+                    <button id="btn-view-alerts" onclick="switchMainView('alerts')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white flex items-center gap-1.5">
+                        <i class="fa-solid fa-bell text-amber-400"></i> Mes alertes
+                        <span id="alerts-count-badge" class="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold hidden">0</span>
                     </button>
                     <button id="btn-view-budget" onclick="switchMainView('budget')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white hidden">
                         <i class="fa-solid fa-wallet mr-1"></i> Gestion du Budget
@@ -437,16 +437,22 @@
                         <div id="budget-categories-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
                     </div>
 
-                    <!-- ONGLET HISTORIQUE DES ALERTES (NOUVELle VUE PRINCIPALE) -->
-                    <div id="container-alerts-view" class="glass-panel p-6 rounded-2xl border border-amber-500/40 bg-gradient-to-b from-amber-950/20 via-cardBg to-darkBg space-y-4 hidden h-[520px] overflow-y-auto">
-                        <div class="flex justify-between items-center border-b border-amber-500/20 pb-3">
-                            <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                                <i class="fa-solid fa-bell text-amber-400"></i>
-                                <span class="bg-gradient-to-r from-amber-400 to-emerald-300 bg-clip-text text-transparent">Historique de tes alertes e-mail</span>
-                            </h3>
-                            <span id="alerts-total-text" class="text-xs text-gray-400 font-mono">0 alerte(s) active(s)</span>
+                    <!-- ONGLET HISTORIQUE DES ALERTES (MODERNE) -->
+                    <div id="container-alerts-view" class="glass-panel p-6 rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-950/20 via-cardBg to-darkBg space-y-4 hidden h-[520px] overflow-y-auto">
+                        <div class="flex justify-between items-center border-b border-borderBg pb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                                    <i class="fa-solid fa-bell"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-extrabold text-white">Mes Alertes E-mail</h3>
+                                    <p class="text-xs text-gray-400">Gère tes rappels d'ouverture d'inscription et de dates de course.</p>
+                                </div>
+                            </div>
+                            <span id="alerts-total-text" class="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-3 py-1 rounded-xl border border-amber-500/20">0 alerte(s)</span>
                         </div>
-                        <div id="alerts-list-container" class="space-y-3 pt-1">
+
+                        <div id="alerts-list-container" class="space-y-2.5 pt-1">
                             <!-- Rempli dynamiquement -->
                         </div>
                     </div>
@@ -668,7 +674,7 @@
                     userAlerts = data;
                     updateAlertsBadge();
                     renderUserAlertsList();
-                    applyFilters(); // Actualise l'affichage des boutons dans la chronologie
+                    applyFilters();
                 }
             } catch (e) {
                 console.error("Erreur chargement alertes:", e);
@@ -692,130 +698,141 @@
         }
 
         async function handleEmailAlertRequest(title, raceStatus, raceDateFormatted, raceId) {
-    const alertModal = document.getElementById('alert-modal');
-    const titleElem = document.getElementById('alert-modal-title');
-    const bodyElem = document.getElementById('alert-modal-body');
-    const actionsElem = document.getElementById('alert-modal-actions');
+            const alertModal = document.getElementById('alert-modal');
+            const titleElem = document.getElementById('alert-modal-title');
+            const bodyElem = document.getElementById('alert-modal-body');
+            const actionsElem = document.getElementById('alert-modal-actions');
 
-    if (!currentUser) {
-        titleElem.innerText = "S'inscrire aux alertes BeeTrack";
-        bodyElem.innerHTML = `
-            Afin d'être prévenu par e-mail pour <b class="text-emerald-400">${title}</b>, vous devez être connecté à votre profil BeeTrack.
-        `;
-        actionsElem.innerHTML = `
-            <div class="flex gap-2">
-                <button onclick="closeAlertModal(); openAuthModal();" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold py-2 rounded-xl transition text-xs">Se connecter / Créer un compte</button>
-                <button onclick="closeAlertModal()" class="px-4 bg-darkBg hover:bg-cardBg text-gray-400 border border-borderBg py-2 rounded-xl transition text-xs">Annuler</button>
-            </div>
-        `;
-    } else {
-        const alertType = raceStatus === 'TBD' ? 'tbd' : 'opening_soon';
+            if (!currentUser) {
+                titleElem.innerText = "S'inscrire aux alertes BeeTrack";
+                bodyElem.innerHTML = `
+                    Afin d'être prévenu par e-mail pour <b class="text-emerald-400">${title}</b>, vous devez être connecté à votre profil BeeTrack.
+                `;
+                actionsElem.innerHTML = `
+                    <div class="flex gap-2">
+                        <button onclick="closeAlertModal(); openAuthModal();" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold py-2 rounded-xl transition text-xs">Se connecter / Créer un compte</button>
+                        <button onclick="closeAlertModal()" class="px-4 bg-darkBg hover:bg-cardBg text-gray-400 border border-borderBg py-2 rounded-xl transition text-xs">Annuler</button>
+                    </div>
+                `;
+            } else {
+                const alertType = raceStatus === 'TBD' ? 'tbd' : 'opening_soon';
 
-        // 1. MISE À JOUR IMMÉDIATE DU BOUTON ET DE L'ONGLET HISTORIQUE
-        const newAlertObj = {
-            id: 'temp_' + Date.now(),
-            user_id: currentUser.id,
-            user_email: currentUser.email,
-            race_title: title,
-            alert_type: alertType
-        };
-
-        // Ajout local direct pour rafraîchir l'interface sans attendre Supabase
-        if (!hasAlertForRace(title)) {
-            userAlerts.push(newAlertObj);
-            updateAlertsBadge();
-            renderUserAlertsList();
-            renderTimeline(); // Force le changement de couleur et de texte du bouton
-        }
-
-        // 2. Enregistrement Supabase en arrière-plan
-        try {
-            const { data, error } = await window.dbClient.from('race_alerts').insert({
-                user_id: currentUser.id,
-                user_email: currentUser.email,
-                race_title: title,
-                alert_type: alertType
-            }).select();
-
-            if (!error && data && data.length > 0) {
-                // Remplacer l'ID temporaire par l'ID réel BDD
-                const index = userAlerts.findIndex(a => a.id === newAlertObj.id);
-                if (index !== -1) userAlerts[index] = data[0];
-            }
-        } catch(e) {
-            console.error("Erreur BDD Supabase :", e);
-        }
-
-        // 3. Appel Edge Function pour expédier l'e-mail
-        try {
-            await window.dbClient.functions.invoke('send-race-alert', {
-                body: {
+                // Mise à jour immédiate locale
+                const newAlertObj = {
+                    id: 'temp_' + Date.now(),
+                    user_id: currentUser.id,
                     user_email: currentUser.email,
                     race_title: title,
                     alert_type: alertType
+                };
+
+                if (!hasAlertForRace(title)) {
+                    userAlerts.push(newAlertObj);
+                    updateAlertsBadge();
+                    renderUserAlertsList();
+                    renderTimeline();
                 }
-            });
-        } catch(e) {
-            console.error("Erreur Edge Function :", e);
+
+                // Enregistrement BDD Supabase
+                try {
+                    const { data, error } = await window.dbClient.from('race_alerts').insert({
+                        user_id: currentUser.id,
+                        user_email: currentUser.email,
+                        race_title: title,
+                        alert_type: alertType
+                    }).select();
+
+                    if (!error && data && data.length > 0) {
+                        const index = userAlerts.findIndex(a => a.id === newAlertObj.id);
+                        if (index !== -1) userAlerts[index] = data[0];
+                    }
+                } catch(e) {
+                    console.error("Erreur d'enregistrement d'alerte en BDD :", e);
+                }
+
+                // Envoi Edge Function Resend
+                try {
+                    await window.dbClient.functions.invoke('send-race-alert', {
+                        body: {
+                            user_email: currentUser.email,
+                            race_title: title,
+                            alert_type: alertType
+                        }
+                    });
+                } catch(e) {
+                    console.error("Erreur d'envoi du mail via Edge Function :", e);
+                }
+
+                if (raceStatus === 'TBD') {
+                    titleElem.innerText = "Alerte de statut activée 🔔";
+                    bodyElem.innerHTML = `
+                        Alerte enregistrée ! Un e-mail de confirmation vient de vous être envoyé à <b class="text-blue-400">${currentUser.email}</b>. Vous serez informé dès la confirmation de la date officielle de <b class="text-emerald-400">${title}</b>.
+                    `;
+                } else {
+                    titleElem.innerText = "Alerte Ouverture Inscriptions 🔔";
+                    bodyElem.innerHTML = `
+                        Alerte enregistrée ! Un e-mail de confirmation vient de vous être envoyé à <b class="text-blue-400">${currentUser.email}</b>. Vous recevrez également un rappel à l'ouverture des inscriptions pour <b class="text-emerald-400">${title}</b>.
+                    `;
+                }
+
+                actionsElem.innerHTML = `
+                    <button onclick="closeAlertModal()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold py-2 rounded-xl transition text-xs">Parfait, merci !</button>
+                `;
+            }
+
+            alertModal.classList.remove('hidden');
         }
-
-        // 4. Modale de confirmation
-        if (raceStatus === 'TBD') {
-            titleElem.innerText = "Alerte de statut activée 🔔";
-            bodyElem.innerHTML = `
-                Alerte enregistrée ! Un e-mail de confirmation vient d'être envoyé à <b class="text-blue-400">${currentUser.email}</b>. Vous serez informé dès la confirmation de la date officielle de <b class="text-emerald-400">${title}</b>.
-            `;
-        } else {
-            titleElem.innerText = "Alerte Ouverture Inscriptions 🔔";
-            bodyElem.innerHTML = `
-                Alerte enregistrée ! Un e-mail de confirmation vient d'être envoyé à <b class="text-blue-400">${currentUser.email}</b>. Vous recevrez un rappel à l'ouverture des inscriptions pour <b class="text-emerald-400">${title}</b>.
-            `;
-        }
-
-        actionsElem.innerHTML = `
-            <button onclick="closeAlertModal()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold py-2 rounded-xl transition text-xs">Parfait, merci !</button>
-        `;
-    }
-
-    alertModal.classList.remove('hidden');
-}
 
         function renderUserAlertsList() {
             const container = document.getElementById('alerts-list-container');
             const totalElem = document.getElementById('alerts-total-text');
             if (!container) return;
 
-            if (totalElem) totalElem.innerText = `${userAlerts.length} alerte(s) active(s)`;
+            if (totalElem) totalElem.innerText = `${userAlerts.length} alerte(s)`;
 
             if (userAlerts.length === 0) {
                 container.innerHTML = `
-                    <div class="text-center py-12 text-gray-500 text-xs italic">
-                        Aucune alerte e-mail enregistrée pour le moment.<br>Activez une alerte depuis la chronologie des épreuves.
+                    <div class="text-center py-16 space-y-2">
+                        <div class="w-12 h-12 mx-auto rounded-full bg-darkBg border border-borderBg flex items-center justify-center text-gray-500">
+                            <i class="fa-solid fa-bell-slash text-base"></i>
+                        </div>
+                        <p class="text-xs text-gray-400">Aucune alerte configurée.</p>
+                        <p class="text-[11px] text-gray-500">Cliquez sur <b class="text-amber-400">🔔 Être alerté</b> sur une carte de course pour recevoir un rappel par e-mail.</p>
                     </div>
                 `;
                 return;
             }
 
-            container.innerHTML = userAlerts.map(alert => `
-                <div class="flex justify-between items-center p-3.5 bg-darkBg border border-borderBg rounded-xl hover:border-amber-500/50 transition">
-                    <div class="flex items-center gap-3">
-                        <span class="text-lg">${alert.alert_type === 'tbd' ? '📅' : '🔔'}</span>
-                        <div>
-                            <div class="text-xs font-bold text-white">${alert.race_title}</div>
-                            <div class="text-[11px] text-gray-400 mt-0.5">
-                                Type : <span class="text-amber-400">${alert.alert_type === 'tbd' ? 'Confirmation de la date' : 'Ouverture des inscriptions'}</span>
+            container.innerHTML = userAlerts.map(alert => {
+                const isTbd = alert.alert_type === 'tbd';
+                const badgeColor = isTbd
+                    ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                    : 'bg-blue-500/10 text-blue-300 border-blue-500/30';
+                const icon = isTbd ? 'fa-calendar-day' : 'fa-envelope-circle-check';
+                const label = isTbd ? 'Confirmation de la date' : 'Ouverture des inscriptions';
+
+                return `
+                    <div class="group flex items-center justify-between p-3.5 bg-darkBg/90 hover:bg-cardBg border border-borderBg hover:border-amber-500/40 rounded-xl transition duration-200">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl bg-cardBg border border-borderBg flex items-center justify-center text-amber-400 group-hover:scale-105 transition">
+                                <i class="fa-solid ${icon} text-sm"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold text-white group-hover:text-amber-300 transition">${alert.race_title}</h4>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md border ${badgeColor}">
+                                        ${label}
+                                    </span>
+                                </div>
                             </div>
                         </div>
+
+                        <button onclick="deleteRaceAlert('${alert.id}')" title="Supprimer l'alerte" class="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition">
+                            <i class="fa-solid fa-xmark text-xs"></i>
+                        </button>
                     </div>
-                   
-                    <!-- Bouton de suppression (Croix) -->
-                    <button onclick="deleteRaceAlert('${alert.id}')" title="Supprimer l'alerte" class="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         async function deleteRaceAlert(alertId) {
@@ -829,7 +846,7 @@
                     userAlerts = userAlerts.filter(a => a.id !== alertId);
                     updateAlertsBadge();
                     renderUserAlertsList();
-                    applyFilters(); // Remet le bouton d'alerte initial dans la chronologie
+                    applyFilters();
                 }
             } catch (e) {
                 console.error("Erreur lors de la suppression de l'alerte :", e);
@@ -1083,7 +1100,6 @@
           
             const btnAll = document.getElementById('btn-toggle-all');
             const btnFav = document.getElementById('btn-toggle-fav');
-            const btnAlertsTab = document.getElementById('btn-toggle-alerts');
             const btnBudget = document.getElementById('btn-view-budget');
             const btnSec = document.getElementById('btn-view-secondary');
             const btnReset = document.getElementById('btn-reset-filters');
@@ -1091,7 +1107,6 @@
 
             btnAll.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition";
             btnFav.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5";
-            btnAlertsTab.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5";
 
             if (showOnlyFavs) {
                 btnFav.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition flex items-center gap-1.5";
@@ -1100,7 +1115,7 @@
                 if (btnReset) btnReset.classList.add('hidden');
                 if (searchSection) searchSection.classList.remove('hidden');
 
-                if (activeMainTab === 'secondary' || activeMainTab === 'alerts') switchMainView('map');
+                if (activeMainTab === 'secondary') switchMainView('map');
             } else {
                 btnAll.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition";
                 if (btnBudget) btnBudget.classList.add('hidden');
@@ -1108,7 +1123,7 @@
                 if (btnReset) btnReset.classList.remove('hidden');
                 if (searchSection) searchSection.classList.remove('hidden');
               
-                if (activeMainTab === 'budget' || activeMainTab === 'alerts') switchMainView('map');
+                if (activeMainTab === 'budget') switchMainView('map');
                 closeInteractiveDetail();
             }
 
@@ -1973,31 +1988,31 @@
                     </button>
                 `;
 
-                // LOGIQUE BOUTON D'ALERTE CHANGÉ SI DÉJÀ ACTIVÉ
                 let followUpHtml = '';
-const isAlerted = hasAlertForRace(race.title);
+                const isAlerted = hasAlertForRace(race.title);
 
-if (isAlerted) {
-    followUpHtml = `
-        <span class="px-2.5 py-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold rounded-lg flex items-center gap-1 cursor-default">
-            ✅ Alerte activée
-        </span>
-    `;
-} else if (race.status === 'Open') {
-    followUpHtml = `<span class="text-[10px] text-gray-400">Options de suivi</span>`;
-} else if (race.status === 'TBD') {
-    followUpHtml = `
-        <button onclick="event.stopPropagation(); handleEmailAlertRequest('${race.title.replace(/'/g, "\\'")}', '${race.status}', '${formattedDate}')" class="text-[10px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-lg transition flex items-center gap-1 font-semibold">
-            🔔 Être alerté de la date
-        </button>
-    `;
-} else {
-    followUpHtml = `
-        <button onclick="event.stopPropagation(); handleEmailAlertRequest('${race.title.replace(/'/g, "\\'")}', '${race.status}', '${formattedDate}')" class="text-[10px] bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 px-2 py-0.5 rounded-lg transition flex items-center gap-1 font-semibold">
-            🔔 Être alerté par mail
-        </button>
-    `;
-}
+                if (isAlerted) {
+                    followUpHtml = `
+                        <span class="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-semibold rounded-lg flex items-center gap-1 cursor-default">
+                            ✅ Alerte activée
+                        </span>
+                    `;
+                } else if (race.status === 'Open') {
+                    followUpHtml = `<span class="text-[10px] text-gray-400">Options de suivi</span>`;
+                } else if (race.status === 'TBD') {
+                    followUpHtml = `
+                        <button onclick="event.stopPropagation(); handleEmailAlertRequest('${race.title.replace(/'/g, "\\'")}', '${race.status}', '${formattedDate}')" class="text-[10px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-lg transition flex items-center gap-1 font-semibold">
+                            🔔 Être alerté de la date
+                        </button>
+                    `;
+                } else {
+                    followUpHtml = `
+                        <button onclick="event.stopPropagation(); handleEmailAlertRequest('${race.title.replace(/'/g, "\\'")}', '${race.status}', '${formattedDate}')" class="text-[10px] bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 px-2 py-0.5 rounded-lg transition flex items-center gap-1 font-semibold">
+                            🔔 Être alerté par mail
+                        </button>
+                    `;
+                }
+
                 html += `
                     ${gapHtml}
                     <div class="relative pl-4">
@@ -2232,54 +2247,6 @@ if (isAlerted) {
             applyFilters();
         }
 
-        function switchMainTab(tab) {
-            activeMainTab = tab;
-            const mapV = document.getElementById('container-map-view');
-            const listV = document.getElementById('container-list-view');
-            const budgetV = document.getElementById('container-budget-view');
-            const alertsV = document.getElementById('container-alerts-view');
-            const linksV = document.getElementById('container-links-view');
-            const searchSection = document.getElementById('search-filter-section');
-
-            const btnMap = document.getElementById('btn-view-map');
-            const btnSec = document.getElementById('btn-view-secondary');
-            const btnBudget = document.getElementById('btn-view-budget');
-            const btnLinks = document.getElementById('btn-view-links');
-            const btnAlertsTab = document.getElementById('btn-toggle-alerts');
-
-            if (!mapV || !listV || !budgetV || !alertsV || !linksV) return;
-
-            mapV.classList.add('hidden');
-            listV.classList.add('hidden');
-            budgetV.classList.add('hidden');
-            alertsV.classList.add('hidden');
-            linksV.classList.add('hidden');
-
-            const inactiveStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
-            const activeStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
-
-            btnMap.className = inactiveStyle;
-            btnSec.className = inactiveStyle;
-            btnLinks.className = inactiveStyle;
-            if (btnBudget) btnBudget.className = inactiveStyle;
-
-            if (btnAlertsTab) {
-                if (tab === 'alerts') {
-                    btnAlertsTab.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-amber-500 text-darkBg shadow transition flex items-center gap-1.5";
-                } else {
-                    btnAlertsTab.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5";
-                }
-            }
-
-            if (tab === 'alerts') {
-                alertsV.classList.remove('hidden');
-                if (searchSection) searchSection.classList.add('hidden');
-                renderUserAlertsList();
-            } else {
-                switchMainView(tab);
-            }
-        }
-
         function switchMainView(v) {
             activeMainTab = v;
             const mapV = document.getElementById('container-map-view');
@@ -2293,27 +2260,18 @@ if (isAlerted) {
             const btnSec = document.getElementById('btn-view-secondary');
             const btnBudget = document.getElementById('btn-view-budget');
             const btnLinks = document.getElementById('btn-view-links');
-            const btnAlertsTab = document.getElementById('btn-toggle-alerts');
+            const btnAlerts = document.getElementById('btn-view-alerts');
 
             if (!mapV || !listV || !budgetV || !alertsV || !linksV) return;
 
-            mapV.classList.add('hidden');
-            listV.classList.add('hidden');
-            budgetV.classList.add('hidden');
-            alertsV.classList.add('hidden');
-            linksV.classList.add('hidden');
+            [mapV, listV, budgetV, alertsV, linksV].forEach(el => el.classList.add('hidden'));
 
             const inactiveStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
             const activeStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
 
-            btnMap.className = inactiveStyle;
-            btnSec.className = inactiveStyle;
-            btnLinks.className = inactiveStyle;
-            if (btnBudget) btnBudget.className = inactiveStyle;
-
-            if (btnAlertsTab) {
-                btnAlertsTab.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5";
-            }
+            [btnMap, btnSec, btnLinks, btnBudget, btnAlerts].forEach(btn => {
+                if (btn) btn.className = inactiveStyle;
+            });
 
             if (onlyShowFavorites) {
                 if (btnBudget) btnBudget.classList.remove('hidden');
@@ -2325,24 +2283,25 @@ if (isAlerted) {
 
             if (v === 'map') {
                 mapV.classList.remove('hidden');
-                btnMap.className = activeStyle;
+                if (btnMap) btnMap.className = activeStyle;
                 if (searchSection) searchSection.classList.remove('hidden');
-                if (leafletMap) {
-                    setTimeout(() => {
-                        leafletMap.invalidateSize();
-                    }, 100);
-                }
+                if (leafletMap) setTimeout(() => leafletMap.invalidateSize(), 100);
             } else if (v === 'secondary' && !onlyShowFavorites) {
                 listV.classList.remove('hidden');
-                btnSec.className = activeStyle;
+                if (btnSec) btnSec.className = activeStyle;
                 if (searchSection) searchSection.classList.remove('hidden');
-            } else if (v === 'budget') {
+            } else if (v === 'alerts') {
+                alertsV.classList.remove('hidden');
+                if (btnAlerts) btnAlerts.className = activeStyle;
+                if (searchSection) searchSection.classList.add('hidden');
+                renderUserAlertsList();
+            } else if (v === 'budget' && onlyShowFavorites) {
                 budgetV.classList.remove('hidden');
                 if (btnBudget) btnBudget.className = activeStyle;
                 if (searchSection) searchSection.classList.add('hidden');
             } else if (v === 'links') {
                 linksV.classList.remove('hidden');
-                btnLinks.className = activeStyle;
+                if (btnLinks) btnLinks.className = activeStyle;
                 if (searchSection) searchSection.classList.add('hidden');
             }
         }
