@@ -2248,64 +2248,63 @@
         }
 
         function switchMainView(v) {
-            activeMainTab = v;
-            const mapV = document.getElementById('container-map-view');
-            const listV = document.getElementById('container-list-view');
-            const budgetV = document.getElementById('container-budget-view');
-            const alertsV = document.getElementById('container-alerts-view');
-            const linksV = document.getElementById('container-links-view');
-            const searchSection = document.getElementById('search-filter-section');
+    activeMainTab = v;
+    const mapV = document.getElementById('container-map-view');
+    const listV = document.getElementById('container-list-view');
+    const budgetV = document.getElementById('container-budget-view');
+    const alertsV = document.getElementById('container-alerts-view');
+    const linksV = document.getElementById('container-links-view');
+    const searchSection = document.getElementById('search-filter-section');
 
-            const btnMap = document.getElementById('btn-view-map');
-            const btnSec = document.getElementById('btn-view-secondary');
-            const btnBudget = document.getElementById('btn-view-budget');
-            const btnLinks = document.getElementById('btn-view-links');
-            const btnAlerts = document.getElementById('btn-view-alerts');
+    if (!mapV || !listV || !budgetV || !alertsV || !linksV) return;
 
-            if (!mapV || !listV || !budgetV || !alertsV || !linksV) return;
+    // Masquer l'ensemble des conteneurs
+    [mapV, listV, budgetV, alertsV, linksV].forEach(el => el.classList.add('hidden'));
 
-            [mapV, listV, budgetV, alertsV, linksV].forEach(el => el.classList.add('hidden'));
+    // Conserver systématiquement la section Recherche & Radar visible
+    if (searchSection) searchSection.classList.remove('hidden');
 
-            const inactiveStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
-            const activeStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
+    const inactiveStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
+    const activeStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
 
-            [btnMap, btnSec, btnLinks, btnBudget, btnAlerts].forEach(btn => {
-                if (btn) btn.className = inactiveStyle;
-            });
+    const btnMap = document.getElementById('btn-view-map');
+    const btnSec = document.getElementById('btn-view-secondary');
+    const btnBudget = document.getElementById('btn-view-budget');
+    const btnLinks = document.getElementById('btn-view-links');
+    const btnAlerts = document.getElementById('btn-view-alerts');
 
-            if (onlyShowFavorites) {
-                if (btnBudget) btnBudget.classList.remove('hidden');
-                if (btnSec) btnSec.classList.add('hidden');
-            } else {
-                if (btnBudget) btnBudget.classList.add('hidden');
-                if (btnSec) btnSec.classList.remove('hidden');
-            }
+    [btnMap, btnSec, btnLinks, btnBudget, btnAlerts].forEach(btn => {
+        if (btn) btn.className = inactiveStyle;
+    });
 
-            if (v === 'map') {
-                mapV.classList.remove('hidden');
-                if (btnMap) btnMap.className = activeStyle;
-                if (searchSection) searchSection.classList.remove('hidden');
-                if (leafletMap) setTimeout(() => leafletMap.invalidateSize(), 100);
-            } else if (v === 'secondary' && !onlyShowFavorites) {
-                listV.classList.remove('hidden');
-                if (btnSec) btnSec.className = activeStyle;
-                if (searchSection) searchSection.classList.remove('hidden');
-            } else if (v === 'alerts') {
-                alertsV.classList.remove('hidden');
-                if (btnAlerts) btnAlerts.className = activeStyle;
-                if (searchSection) searchSection.classList.add('hidden');
-                renderUserAlertsList();
-            } else if (v === 'budget' && onlyShowFavorites) {
-                budgetV.classList.remove('hidden');
-                if (btnBudget) btnBudget.className = activeStyle;
-                if (searchSection) searchSection.classList.add('hidden');
-            } else if (v === 'links') {
-                linksV.classList.remove('hidden');
-                if (btnLinks) btnLinks.className = activeStyle;
-                if (searchSection) searchSection.classList.add('hidden');
-            }
-        }
+    if (onlyShowFavorites) {
+        if (btnBudget) btnBudget.classList.remove('hidden');
+        if (btnSec) btnSec.classList.add('hidden');
+    } else {
+        if (btnBudget) btnBudget.classList.add('hidden');
+        if (btnSec) btnSec.classList.remove('hidden');
+    }
 
+    // Afficher la vue sélectionnée et appliquer le style actif au bouton
+    if (v === 'map') {
+        mapV.classList.remove('hidden');
+        if (btnMap) btnMap.className = activeStyle;
+        if (leafletMap) setTimeout(() => leafletMap.invalidateSize(), 100);
+    } else if (v === 'secondary' && !onlyShowFavorites) {
+        listV.classList.remove('hidden');
+        if (btnSec) btnSec.className = activeStyle;
+    } else if (v === 'alerts') {
+        alertsV.classList.remove('hidden');
+        if (btnAlerts) btnAlerts.className = activeStyle;
+        renderUserAlertsList();
+    } else if (v === 'budget' && onlyShowFavorites) {
+        budgetV.classList.remove('hidden');
+        if (btnBudget) btnBudget.className = activeStyle;
+    } else if (v === 'links') {
+        linksV.classList.remove('hidden');
+        if (btnLinks) btnLinks.className = activeStyle;
+    }
+}
         document.addEventListener('click', (e) => {
             const sugg = document.getElementById('search-suggestions');
             const input = document.getElementById('filter-keyword');
