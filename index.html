@@ -849,15 +849,26 @@
             const btnAll = document.getElementById('btn-toggle-all');
             const btnFav = document.getElementById('btn-toggle-fav');
             const btnBudget = document.getElementById('btn-view-budget');
+            const btnSec = document.getElementById('btn-view-secondary');
 
             if (onlyShowFavorites) {
                 btnFav.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition flex items-center gap-1.5";
                 btnAll.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition";
                 if (btnBudget) btnBudget.classList.remove('hidden');
+               
+                // MASQUER LE BOUTON LISTE DANS "MES COURSES PRÉVUES"
+                if (btnSec) btnSec.classList.add('hidden');
+               
+                // Si l'utilisateur était sur la vue "secondary" (liste), on bascule sur "map"
+                if (activeMainTab === 'secondary') switchMainView('map');
             } else {
                 btnAll.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition";
                 btnFav.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5";
                 if (btnBudget) btnBudget.classList.add('hidden');
+               
+                // AFFICHER LE BOUTON LISTE DANS "TOUTES LES COURSES"
+                if (btnSec) btnSec.classList.remove('hidden');
+               
                 if (activeMainTab === 'budget') switchMainView('map');
                 closeInteractiveDetail();
             }
@@ -1519,11 +1530,19 @@
         function handleTimelineClick(title, raceDate, location, price, url) {
             const raceKey = `${title}_${raceDate}`;
 
+            // DANS "TOUTES LES COURSES" : ZOOMER SUR LA CARTE
             if (!onlyShowFavorites) {
-                highlightMapMarker(raceKey, true);
+                switchMainView('map');
+                const marker = markersMapRef[raceKey];
+                if (marker && leafletMap) {
+                    const latLng = marker.getLatLng();
+                    leafletMap.setView(latLng, 10, { animate: true }); // Zoom de niveau 10 centré sur l'épreuve
+                    marker.openPopup();
+                }
                 return;
             }
 
+            // DANS "MES COURSES PRÉVUES" : OUVRIR LE PANNEAU DE SUIVI DE SAISON
             const middleCol = document.getElementById('middle-column');
             const mainCol = document.getElementById('main-view-column');
 
@@ -1965,8 +1984,10 @@
 
             if (onlyShowFavorites) {
                 if (btnBudget) btnBudget.classList.remove('hidden');
+                if (btnSec) btnSec.classList.add('hidden');
             } else {
                 if (btnBudget) btnBudget.classList.add('hidden');
+                if (btnSec) btnSec.classList.remove('hidden');
             }
 
             if (v === 'map') {
@@ -1975,10 +1996,9 @@
                 if (leafletMap) {
                     setTimeout(() => {
                         leafletMap.invalidateSize();
-                        leafletMap.setView([46.603354, 1.888334], 5);
                     }, 100);
                 }
-            } else if (v === 'secondary') {
+            } else if (v === 'secondary' && !onlyShowFavorites) {
                 listV.classList.remove('hidden');
                 btnSec.className = activeStyle;
             } else if (v === 'budget' && onlyShowFavorites) {
