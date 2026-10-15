@@ -238,6 +238,24 @@
         </div>
     </div>
 
+    <!-- MODAL POPUP ALERTE EMAIL -->
+    <div id="alert-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel p-6 rounded-2xl border border-blue-500/40 max-w-md w-full space-y-4 shadow-2xl relative text-center">
+            <button onclick="closeAlertModal()" class="absolute top-3 right-3 text-gray-400 hover:text-white text-xs bg-darkBg px-2 py-1 rounded border border-borderBg">✕</button>
+
+            <div class="w-12 h-12 mx-auto rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400 text-xl">
+                <i id="alert-modal-icon" class="fa-solid fa-bell animate-bounce"></i>
+            </div>
+
+            <div class="space-y-2">
+                <h3 id="alert-modal-title" class="text-base font-extrabold text-white">Alerte Rappel Mail</h3>
+                <p id="alert-modal-body" class="text-xs text-gray-300 leading-relaxed"></p>
+            </div>
+
+            <div id="alert-modal-actions" class="pt-2"></div>
+        </div>
+    </div>
+
     <!-- MODAL DE CHOIX DE CONFLIT DE PROFIL -->
     <div id="profile-conflict-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="glass-panel p-6 rounded-2xl border border-amber-500/40 max-w-md w-full space-y-4 shadow-2xl relative">
@@ -606,6 +624,58 @@
 
         function closeAuthModal() {
             document.getElementById('auth-modal').classList.add('hidden');
+        }
+
+        function closeAlertModal() {
+            document.getElementById('alert-modal').classList.add('hidden');
+        }
+
+        function handleEmailAlertRequest(title, raceStatus, raceDateFormatted) {
+            const alertModal = document.getElementById('alert-modal');
+            const titleElem = document.getElementById('alert-modal-title');
+            const bodyElem = document.getElementById('alert-modal-body');
+            const actionsElem = document.getElementById('alert-modal-actions');
+
+            if (!currentUser) {
+                // Utilisateur non connecté
+                titleElem.innerText = "S'inscrire aux alertes BeeTrack";
+                bodyElem.innerHTML = `
+                    Afin d'être prévenu par e-mail pour <b class="text-emerald-400">${title}</b>, vous devez être connecté à votre profil BeeTrack.
+                `;
+                actionsElem.innerHTML = `
+                    <div class="flex gap-2">
+                        <button onclick="closeAlertModal(); openAuthModal();" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold py-2 rounded-xl transition text-xs">Se connecter / Créer un compte</button>
+                        <button onclick="closeAlertModal()" class="px-4 bg-darkBg hover:bg-cardBg text-gray-400 border border-borderBg py-2 rounded-xl transition text-xs">Annuler</button>
+                    </div>
+                `;
+            } else {
+                // Utilisateur connecté
+                if (raceStatus === 'TBD') {
+                    // Statut "Date à confirmer"
+                    titleElem.innerText = "Alerte de statut activée 🔔";
+                    bodyElem.innerHTML = `
+                        Vous serez informé par e-mail à l'adresse <b class="text-blue-400">${currentUser.email}</b> dès que la date officielle de la course <b class="text-emerald-400">${title}</b> sera confirmée par l'organisateur.
+                        <br><br>
+                        <span class="text-amber-400 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20 block text-[11px]">
+                            💡 N'hésitez pas à revenir sur BeeTrack après cette mise à jour pour vous inscrire à l'alerte e-mail de la veille de l'ouverture des inscriptions !
+                        </span>
+                    `;
+                    actionsElem.innerHTML = `
+                        <button onclick="closeAlertModal()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold py-2 rounded-xl transition text-xs">C'est noté !</button>
+                    `;
+                } else {
+                    // Statut "Ouverture prochaine / Bientôt"
+                    titleElem.innerText = "Alerte Ouverture Inscriptions 🔔";
+                    bodyElem.innerHTML = `
+                        Votre alerte est enregistrée ! Vous recevrez un e-mail à <b class="text-blue-400">${currentUser.email}</b> <b>la veille de l'ouverture des inscriptions</b> pour l'épreuve <b class="text-emerald-400">${title}</b>.
+                    `;
+                    actionsElem.innerHTML = `
+                        <button onclick="closeAlertModal()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold py-2 rounded-xl transition text-xs">Parfait, merci !</button>
+                    `;
+                }
+            }
+
+            alertModal.classList.remove('hidden');
         }
 
         async function initAuthListener() {
@@ -1539,14 +1609,10 @@
         function handleTimelineClick(title, raceDate, location, price, url) {
             const raceKey = `${title}_${raceDate}`;
 
-            // DANS "TOUTES LES COURSES" :
-            // Clic 1 : bascule sur la carte, zoome fort (niveau 13) et ouvre le popup.
-            // Clic 2 sur la même épreuve : dézoome et réinitialise la vue France.
             if (!onlyShowFavorites) {
                 switchMainView('map');
                
                 if (activeSelectedRaceKey === raceKey) {
-                    // Deuxième clic : retour à la vue d'ensemble France
                     activeSelectedRaceKey = null;
                     if (leafletMap) {
                         leafletMap.setView([46.603354, 1.888334], 5, { animate: true });
@@ -1559,7 +1625,7 @@
                 const marker = markersMapRef[raceKey];
                 if (marker && leafletMap) {
                     const latLng = marker.getLatLng();
-                    leafletMap.setView(latLng, 13, { animate: true }); // Zoom fort (niveau 13)
+                    leafletMap.setView(latLng, 13, { animate: true });
                     setTimeout(() => {
                         marker.openPopup();
                     }, 300);
@@ -1569,7 +1635,6 @@
                 return;
             }
 
-            // DANS "MES COURSES PRÉVUES" : OUVERTURE DU PANNEAU INTERACTIF DE SUIVI
             const middleCol = document.getElementById('middle-column');
             const mainCol = document.getElementById('main-view-column');
 
@@ -1748,6 +1813,24 @@
                     </button>
                 `;
 
+                // LOGIQUE OPTION DE SUIVI VS ALERTE EMAIL DYNAMIQUE
+                let followUpHtml = '';
+                if (race.status === 'Open') {
+                    followUpHtml = `<span class="text-[10px] text-gray-400">Options de suivi</span>`;
+                } else if (race.status === 'TBD') {
+                    followUpHtml = `
+                        <button onclick="event.stopPropagation(); handleEmailAlertRequest('${race.title.replace(/'/g, "\\'")}', '${race.status}', '${formattedDate}')" class="text-[10px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-lg transition flex items-center gap-1 font-semibold">
+                            🔔 Être alerté de la date
+                        </button>
+                    `;
+                } else { // Opening Soon / Upcoming / Countdown
+                    followUpHtml = `
+                        <button onclick="event.stopPropagation(); handleEmailAlertRequest('${race.title.replace(/'/g, "\\'")}', '${race.status}', '${formattedDate}')" class="text-[10px] bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 px-2 py-0.5 rounded-lg transition flex items-center gap-1 font-semibold">
+                            🔔 Être alerté par mail
+                        </button>
+                    `;
+                }
+
                 html += `
                     ${gapHtml}
                     <div class="relative pl-4">
@@ -1768,7 +1851,7 @@
                                 <span class="text-amber-400 font-bold">💶 ${displayPrice}</span>
                             </div>
                             <div class="mt-1.5 flex items-center justify-between pt-1 border-t border-white/10">
-                                <span class="text-[10px] text-gray-400">Options de suivi</span>
+                                ${followUpHtml}
                                 ${linkBtn}
                             </div>
                         </div>
