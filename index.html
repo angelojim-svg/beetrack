@@ -181,7 +181,7 @@
                     <button id="btn-toggle-fav" onclick="setFavoritesFilter(true)" class="px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5">
                         <span class="text-amber-400 font-bold">♥</span> Mes courses prévues (<span id="fav-count">0</span>)
                     </button>
-                    <!-- NOUVEL ONGLET MES ALERTES -->
+                    <!-- ONGLET MES ALERTES -->
                     <button id="btn-toggle-alerts" onclick="switchMainTab('alerts')" class="px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5">
                         <span>🔔 Mes alertes</span>
                         <span id="alerts-count-badge" class="bg-amber-500/20 text-amber-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold hidden">0</span>
@@ -437,7 +437,7 @@
                         <div id="budget-categories-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
                     </div>
 
-                    <!-- ONGLET HISTORIQUE DES ALERTES (NOUVELLE VUE PRINCIPALE) -->
+                    <!-- ONGLET HISTORIQUE DES ALERTES (NOUVELle VUE PRINCIPALE) -->
                     <div id="container-alerts-view" class="glass-panel p-6 rounded-2xl border border-amber-500/40 bg-gradient-to-b from-amber-950/20 via-cardBg to-darkBg space-y-4 hidden h-[520px] overflow-y-auto">
                         <div class="flex justify-between items-center border-b border-amber-500/20 pb-3">
                             <h3 class="text-lg font-bold text-white flex items-center gap-2">
@@ -582,7 +582,7 @@
 
         let currentUser = null;
         let pendingCloudData = null;
-        let userAlerts = []; // Tableau stockant les alertes de l'utilisateur
+        let userAlerts = [];
 
         let racesData = [];
         let filteredRaces = [];
@@ -627,12 +627,12 @@
         function getRaceStatusColor(raceKey) {
             const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
             if (meta.completed) {
-                return '#3b82f6'; // Bleu si terminée
+                return '#3b82f6';
             }
             if (meta.registered) {
-                return '#10b981'; // Vert si inscription OK
+                return '#10b981';
             }
-            return '#f59e0b'; // Orange par défaut
+            return '#f59e0b';
         }
 
         /* ==================== SYSTEME DE GESTION DU PROFIL & AUTH ==================== */
@@ -668,7 +668,7 @@
                     userAlerts = data;
                     updateAlertsBadge();
                     renderUserAlertsList();
-                    applyFilters(); // Pour actualiser les boutons d'alerte dans la chronologie
+                    applyFilters(); // Actualise l'affichage des boutons dans la chronologie
                 }
             } catch (e) {
                 console.error("Erreur chargement alertes:", e);
@@ -724,7 +724,7 @@
                         userAlerts.push(data[0]);
                         updateAlertsBadge();
                         renderUserAlertsList();
-                        applyFilters(); // Met à jour instantanément les boutons dans la chronologie
+                        applyFilters(); // Rafraîchit immédiatement le bouton sur la carte en "✅ Alerte activée"
                     }
                 } catch(e) {
                     console.error("Erreur d'enregistrement d'alerte en BDD :", e);
@@ -814,7 +814,7 @@
                     userAlerts = userAlerts.filter(a => a.id !== alertId);
                     updateAlertsBadge();
                     renderUserAlertsList();
-                    applyFilters(); // Met à jour la chronologie pour réafficher les boutons d'alerte initiaux
+                    applyFilters(); // Remet le bouton d'alerte initial dans la chronologie
                 }
             } catch (e) {
                 console.error("Erreur lors de la suppression de l'alerte :", e);
@@ -843,7 +843,7 @@
                 document.getElementById('auth-logged-in').classList.remove('hidden');
                 document.getElementById('user-email-display').innerText = currentUser.email.split('@')[0];
                 await loadUserProfile();
-                await fetchUserAlerts(); // Charger les alertes utilisateur
+                await fetchUserAlerts();
               
                 setFavoritesFilter(true);
             } else {
@@ -1074,7 +1074,6 @@
             const btnReset = document.getElementById('btn-reset-filters');
             const searchSection = document.getElementById('search-filter-section');
 
-            // Réinitialiser les styles des onglets header
             btnAll.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition";
             btnFav.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5";
             btnAlertsTab.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5";
@@ -1959,13 +1958,13 @@
                     </button>
                 `;
 
-                // LOGIQUE BOUTON D'ALERTE DYNAMIQUE (VÉRIFICATION SI ALERTE DÉJÀ ACTIVE)
+                // LOGIQUE BOUTON D'ALERTE CHANGÉ SI DÉJÀ ACTIVÉ
                 let followUpHtml = '';
                 const isAlerted = hasAlertForRace(race.title);
 
                 if (isAlerted) {
                     followUpHtml = `
-                        <span class="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-semibold rounded-lg flex items-center gap-1">
+                        <span class="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-semibold rounded-lg flex items-center gap-1 cursor-default">
                             ✅ Alerte activée
                         </span>
                     `;
@@ -1977,7 +1976,7 @@
                             🔔 Être alerté de la date
                         </button>
                     `;
-                } else { // Opening Soon / Upcoming / Countdown
+                } else {
                     followUpHtml = `
                         <button onclick="event.stopPropagation(); handleEmailAlertRequest('${race.title.replace(/'/g, "\\'")}', '${race.status}', '${formattedDate}')" class="text-[10px] bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 px-2 py-0.5 rounded-lg transition flex items-center gap-1 font-semibold">
                             🔔 Être alerté par mail
@@ -2219,6 +2218,54 @@
             applyFilters();
         }
 
+        function switchMainTab(tab) {
+            activeMainTab = tab;
+            const mapV = document.getElementById('container-map-view');
+            const listV = document.getElementById('container-list-view');
+            const budgetV = document.getElementById('container-budget-view');
+            const alertsV = document.getElementById('container-alerts-view');
+            const linksV = document.getElementById('container-links-view');
+            const searchSection = document.getElementById('search-filter-section');
+
+            const btnMap = document.getElementById('btn-view-map');
+            const btnSec = document.getElementById('btn-view-secondary');
+            const btnBudget = document.getElementById('btn-view-budget');
+            const btnLinks = document.getElementById('btn-view-links');
+            const btnAlertsTab = document.getElementById('btn-toggle-alerts');
+
+            if (!mapV || !listV || !budgetV || !alertsV || !linksV) return;
+
+            mapV.classList.add('hidden');
+            listV.classList.add('hidden');
+            budgetV.classList.add('hidden');
+            alertsV.classList.add('hidden');
+            linksV.classList.add('hidden');
+
+            const inactiveStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
+            const activeStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
+
+            btnMap.className = inactiveStyle;
+            btnSec.className = inactiveStyle;
+            btnLinks.className = inactiveStyle;
+            if (btnBudget) btnBudget.className = inactiveStyle;
+
+            if (btnAlertsTab) {
+                if (tab === 'alerts') {
+                    btnAlertsTab.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-amber-500 text-darkBg shadow transition flex items-center gap-1.5";
+                } else {
+                    btnAlertsTab.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5";
+                }
+            }
+
+            if (tab === 'alerts') {
+                alertsV.classList.remove('hidden');
+                if (searchSection) searchSection.classList.add('hidden');
+                renderUserAlertsList();
+            } else {
+                switchMainView(tab);
+            }
+        }
+
         function switchMainView(v) {
             activeMainTab = v;
             const mapV = document.getElementById('container-map-view');
@@ -2251,11 +2298,7 @@
             if (btnBudget) btnBudget.className = inactiveStyle;
 
             if (btnAlertsTab) {
-                if (v === 'alerts') {
-                    btnAlertsTab.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-amber-500 text-darkBg shadow transition flex items-center gap-1.5";
-                } else {
-                    btnAlertsTab.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5";
-                }
+                btnAlertsTab.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5";
             }
 
             if (onlyShowFavorites) {
@@ -2283,10 +2326,6 @@
                 budgetV.classList.remove('hidden');
                 if (btnBudget) btnBudget.className = activeStyle;
                 if (searchSection) searchSection.classList.add('hidden');
-            } else if (v === 'alerts') {
-                alertsV.classList.remove('hidden');
-                if (searchSection) searchSection.classList.add('hidden');
-                renderUserAlertsList();
             } else if (v === 'links') {
                 linksV.classList.remove('hidden');
                 btnLinks.className = activeStyle;
