@@ -127,7 +127,7 @@
     <!-- HEADER / NAVIGATION -->
     <header class="sticky top-0 z-50 glass-panel border-b border-borderBg shadow-lg">
         <div class="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-2.5 lg:py-0 lg:h-16 flex flex-col lg:flex-row items-center justify-between gap-2">
-           
+          
             <div class="w-full lg:w-auto flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-darkBg font-black text-base shadow-md shadow-emerald-500/20">
@@ -145,9 +145,9 @@
                 </div>
             </div>
 
-            <!-- BLOCS BUDGET, FAVORIS & PROFIL / AUTH -->
+            <!-- BLOCS BUDGET, FAVORIS, ALERTES & PROFIL / AUTH -->
             <div class="w-full lg:w-auto flex flex-wrap items-center justify-between lg:justify-end gap-3 text-xs">
-               
+              
                 <div class="relative group z-40">
                     <div class="flex items-center space-x-2 bg-darkBg/90 px-3 py-1.5 rounded-xl border border-borderBg cursor-pointer">
                         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
@@ -173,13 +173,18 @@
                     </div>
                 </div>
 
-                <!-- SWITCH VISUEL MES COURSES PRÉVUES / TOUTES LES COURSES -->
-                <div class="flex items-center bg-darkBg p-1 rounded-xl border border-borderBg">
+                <!-- SWITCH VISUEL MES COURSES PRÉVUES / TOUTES LES COURSES / MES ALERTES -->
+                <div class="flex items-center bg-darkBg p-1 rounded-xl border border-borderBg gap-1">
                     <button id="btn-toggle-all" onclick="setFavoritesFilter(false)" class="px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition">
                         Toutes les courses
                     </button>
                     <button id="btn-toggle-fav" onclick="setFavoritesFilter(true)" class="px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5">
                         <span class="text-amber-400 font-bold">♥</span> Mes courses prévues (<span id="fav-count">0</span>)
+                    </button>
+                    <!-- NOUVEL ONGLET MES ALERTES -->
+                    <button id="btn-toggle-alerts" onclick="switchMainTab('alerts')" class="px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5">
+                        <span>🔔 Mes alertes</span>
+                        <span id="alerts-count-badge" class="bg-amber-500/20 text-amber-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold hidden">0</span>
                     </button>
                 </div>
 
@@ -292,7 +297,7 @@
     <main class="flex-grow max-w-[1600px] w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4 space-y-3">
 
         <!-- SEARCH & FILTER PANEL -->
-        <section class="glass-panel p-4 sm:p-5 rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 via-cardBg to-darkBg space-y-4 shadow-xl">
+        <section id="search-filter-section" class="glass-panel p-4 sm:p-5 rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 via-cardBg to-darkBg space-y-4 shadow-xl">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-500/20 pb-2.5">
                 <h2 class="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
                     <i class="fa-solid fa-filter text-emerald-400 animate-pulse"></i>
@@ -389,7 +394,7 @@
 
             <!-- LAYOUT GRILLE DE HAUTEUR UNIFORMISÉE (520px) -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-               
+              
                 <!-- ZONE PRINCIPALE -->
                 <div id="main-view-column" class="lg:col-span-8 space-y-4 transition-all duration-300">
                     <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden h-[520px]">
@@ -430,6 +435,20 @@
                         </div>
 
                         <div id="budget-categories-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                    </div>
+
+                    <!-- ONGLET HISTORIQUE DES ALERTES (NOUVELLE VUE PRINCIPALE) -->
+                    <div id="container-alerts-view" class="glass-panel p-6 rounded-2xl border border-amber-500/40 bg-gradient-to-b from-amber-950/20 via-cardBg to-darkBg space-y-4 hidden h-[520px] overflow-y-auto">
+                        <div class="flex justify-between items-center border-b border-amber-500/20 pb-3">
+                            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-bell text-amber-400"></i>
+                                <span class="bg-gradient-to-r from-amber-400 to-emerald-300 bg-clip-text text-transparent">Historique de tes alertes e-mail</span>
+                            </h3>
+                            <span id="alerts-total-text" class="text-xs text-gray-400 font-mono">0 alerte(s) active(s)</span>
+                        </div>
+                        <div id="alerts-list-container" class="space-y-3 pt-1">
+                            <!-- Rempli dynamiquement -->
+                        </div>
                     </div>
 
                     <!-- ONGLET LIENS & OUTILS UTILES -->
@@ -563,6 +582,7 @@
 
         let currentUser = null;
         let pendingCloudData = null;
+        let userAlerts = []; // Tableau stockant les alertes de l'utilisateur
 
         let racesData = [];
         let filteredRaces = [];
@@ -570,7 +590,7 @@
         let raceMetaStates = JSON.parse(localStorage.getItem('pacepulse_meta') || '{}');
         let raceGpxLinks = JSON.parse(localStorage.getItem('pacepulse_gpx') || '{}');
         let raceStravaLinks = JSON.parse(localStorage.getItem('pacepulse_strava') || '{}');
-       
+      
         let customLinks = JSON.parse(localStorage.getItem('pacepulse_links') || JSON.stringify([
             { name: 'Strava', url: 'https://www.strava.com', icon: 'fa-brands fa-strava text-orange-500' },
             { name: 'Garmin Connect', url: 'https://connect.garmin.com', icon: 'fa-solid fa-clock text-blue-400' },
@@ -630,74 +650,177 @@
             document.getElementById('alert-modal').classList.add('hidden');
         }
 
-        async function handleEmailAlertRequest(title, raceStatus, raceDateFormatted, raceId) {
-    const alertModal = document.getElementById('alert-modal');
-    const titleElem = document.getElementById('alert-modal-title');
-    const bodyElem = document.getElementById('alert-modal-body');
-    const actionsElem = document.getElementById('alert-modal-actions');
+        /* ==================== GESTION DES ALERTES E-MAIL & SUPABASE ==================== */
+        async function fetchUserAlerts() {
+            if (!currentUser) {
+                userAlerts = [];
+                updateAlertsBadge();
+                return;
+            }
 
-    if (!currentUser) {
-        // L'utilisateur n'est pas connecté
-        titleElem.innerText = "S'inscrire aux alertes BeeTrack";
-        bodyElem.innerHTML = `
-            Afin d'être prévenu par e-mail pour <b class="text-emerald-400">${title}</b>, vous devez être connecté à votre profil BeeTrack.
-        `;
-        actionsElem.innerHTML = `
-            <div class="flex gap-2">
-                <button onclick="closeAlertModal(); openAuthModal();" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold py-2 rounded-xl transition text-xs">Se connecter / Créer un compte</button>
-                <button onclick="closeAlertModal()" class="px-4 bg-darkBg hover:bg-cardBg text-gray-400 border border-borderBg py-2 rounded-xl transition text-xs">Annuler</button>
-            </div>
-        `;
-    } else {
-        // L'utilisateur est connecté : Déterminer le type d'alerte
-        const alertType = raceStatus === 'TBD' ? 'tbd' : 'opening_soon';
+            try {
+                const { data, error } = await window.dbClient
+                    .from('race_alerts')
+                    .select('*')
+                    .eq('user_id', currentUser.id);
 
-        // 1. Enregistrement de l'alerte dans la base de données Supabase
-        try {
-            await window.dbClient.from('race_alerts').insert({
-                user_id: currentUser.id,
-                user_email: currentUser.email,
-                race_title: title,
-                alert_type: alertType
-            });
-        } catch(e) {
-            console.error("Erreur d'enregistrement d'alerte en BDD :", e);
-        }
-
-        // 2. Envoi direct du mail via l'Edge Function Supabase (Resend)
-        try {
-            await window.dbClient.functions.invoke('send-race-alert', {
-                body: {
-                    user_email: currentUser.email,
-                    race_title: title,
-                    alert_type: alertType
+                if (!error && data) {
+                    userAlerts = data;
+                    updateAlertsBadge();
+                    renderUserAlertsList();
+                    applyFilters(); // Pour actualiser les boutons d'alerte dans la chronologie
                 }
-            });
-            console.log("Mail d'alerte envoyé avec succès via Edge Function !");
-        } catch(e) {
-            console.error("Erreur d'envoi du mail via Edge Function :", e);
+            } catch (e) {
+                console.error("Erreur chargement alertes:", e);
+            }
         }
 
-        // 3. Affichage de la confirmation dans la modale
-        if (raceStatus === 'TBD') {
-            titleElem.innerText = "Alerte de statut activée 🔔";
-            bodyElem.innerHTML = `
-                Alerte enregistrée ! Un e-mail de confirmation vient de vous être envoyé à <b class="text-blue-400">${currentUser.email}</b>. Vous serez informé dès la confirmation de la date officielle de <b class="text-emerald-400">${title}</b>.
-            `;
-        } else {
-            titleElem.innerText = "Alerte Ouverture Inscriptions 🔔";
-            bodyElem.innerHTML = `
-                Alerte enregistrée ! Un e-mail de confirmation vient de vous être envoyé à <b class="text-blue-400">${currentUser.email}</b>. Vous recevrez également un rappel la veille de l'ouverture des inscriptions pour <b class="text-emerald-400">${title}</b>.
-            `;
+        function updateAlertsBadge() {
+            const badge = document.getElementById('alerts-count-badge');
+            if (!badge) return;
+           
+            if (userAlerts.length > 0) {
+                badge.innerText = userAlerts.length;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
         }
 
-        actionsElem.innerHTML = `
-            <button onclick="closeAlertModal()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold py-2 rounded-xl transition text-xs">Parfait, merci !</button>
-        `;
-    }
+        function hasAlertForRace(raceTitle) {
+            return userAlerts.some(a => a.race_title === raceTitle);
+        }
 
-    alertModal.classList.remove('hidden');
-}
+        async function handleEmailAlertRequest(title, raceStatus, raceDateFormatted, raceId) {
+            const alertModal = document.getElementById('alert-modal');
+            const titleElem = document.getElementById('alert-modal-title');
+            const bodyElem = document.getElementById('alert-modal-body');
+            const actionsElem = document.getElementById('alert-modal-actions');
+
+            if (!currentUser) {
+                titleElem.innerText = "S'inscrire aux alertes BeeTrack";
+                bodyElem.innerHTML = `
+                    Afin d'être prévenu par e-mail pour <b class="text-emerald-400">${title}</b>, vous devez être connecté à votre profil BeeTrack.
+                `;
+                actionsElem.innerHTML = `
+                    <div class="flex gap-2">
+                        <button onclick="closeAlertModal(); openAuthModal();" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold py-2 rounded-xl transition text-xs">Se connecter / Créer un compte</button>
+                        <button onclick="closeAlertModal()" class="px-4 bg-darkBg hover:bg-cardBg text-gray-400 border border-borderBg py-2 rounded-xl transition text-xs">Annuler</button>
+                    </div>
+                `;
+            } else {
+                const alertType = raceStatus === 'TBD' ? 'tbd' : 'opening_soon';
+
+                // 1. Enregistrement en base de données Supabase
+                try {
+                    const { data, error } = await window.dbClient.from('race_alerts').insert({
+                        user_id: currentUser.id,
+                        user_email: currentUser.email,
+                        race_title: title,
+                        alert_type: alertType
+                    }).select();
+
+                    if (!error && data) {
+                        userAlerts.push(data[0]);
+                        updateAlertsBadge();
+                        renderUserAlertsList();
+                        applyFilters(); // Met à jour instantanément les boutons dans la chronologie
+                    }
+                } catch(e) {
+                    console.error("Erreur d'enregistrement d'alerte en BDD :", e);
+                }
+
+                // 2. Appel Edge Function pour envoyer l'e-mail via Resend
+                try {
+                    await window.dbClient.functions.invoke('send-race-alert', {
+                        body: {
+                            user_email: currentUser.email,
+                            race_title: title,
+                            alert_type: alertType
+                        }
+                    });
+                    console.log("Mail d'alerte envoyé avec succès via Edge Function !");
+                } catch(e) {
+                    console.error("Erreur d'envoi du mail via Edge Function :", e);
+                }
+
+                // 3. Affichage confirmation dans la modale
+                if (raceStatus === 'TBD') {
+                    titleElem.innerText = "Alerte de statut activée 🔔";
+                    bodyElem.innerHTML = `
+                        Alerte enregistrée ! Un e-mail de confirmation vient de vous être envoyé à <b class="text-blue-400">${currentUser.email}</b>. Vous serez informé dès la confirmation de la date officielle de <b class="text-emerald-400">${title}</b>.
+                    `;
+                } else {
+                    titleElem.innerText = "Alerte Ouverture Inscriptions 🔔";
+                    bodyElem.innerHTML = `
+                        Alerte enregistrée ! Un e-mail de confirmation vient de vous être envoyé à <b class="text-blue-400">${currentUser.email}</b>. Vous recevrez également un rappel la veille de l'ouverture des inscriptions pour <b class="text-emerald-400">${title}</b>.
+                    `;
+                }
+
+                actionsElem.innerHTML = `
+                    <button onclick="closeAlertModal()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold py-2 rounded-xl transition text-xs">Parfait, merci !</button>
+                `;
+            }
+
+            alertModal.classList.remove('hidden');
+        }
+
+        function renderUserAlertsList() {
+            const container = document.getElementById('alerts-list-container');
+            const totalElem = document.getElementById('alerts-total-text');
+            if (!container) return;
+
+            if (totalElem) totalElem.innerText = `${userAlerts.length} alerte(s) active(s)`;
+
+            if (userAlerts.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-gray-500 text-xs italic">
+                        Aucune alerte e-mail enregistrée pour le moment.<br>Activez une alerte depuis la chronologie des épreuves.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = userAlerts.map(alert => `
+                <div class="flex justify-between items-center p-3.5 bg-darkBg border border-borderBg rounded-xl hover:border-amber-500/50 transition">
+                    <div class="flex items-center gap-3">
+                        <span class="text-lg">${alert.alert_type === 'tbd' ? '📅' : '🔔'}</span>
+                        <div>
+                            <div class="text-xs font-bold text-white">${alert.race_title}</div>
+                            <div class="text-[11px] text-gray-400 mt-0.5">
+                                Type : <span class="text-amber-400">${alert.alert_type === 'tbd' ? 'Confirmation de la date' : 'Ouverture des inscriptions'}</span>
+                            </div>
+                        </div>
+                    </div>
+                   
+                    <!-- Bouton de suppression (Croix) -->
+                    <button onclick="deleteRaceAlert('${alert.id}')" title="Supprimer l'alerte" class="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function deleteRaceAlert(alertId) {
+            try {
+                const { error } = await window.dbClient
+                    .from('race_alerts')
+                    .delete()
+                    .eq('id', alertId);
+
+                if (!error) {
+                    userAlerts = userAlerts.filter(a => a.id !== alertId);
+                    updateAlertsBadge();
+                    renderUserAlertsList();
+                    applyFilters(); // Met à jour la chronologie pour réafficher les boutons d'alerte initiaux
+                }
+            } catch (e) {
+                console.error("Erreur lors de la suppression de l'alerte :", e);
+            }
+        }
+
         async function initAuthListener() {
             try {
                 const { data: { session } } = await window.dbClient.auth.getSession();
@@ -720,10 +843,13 @@
                 document.getElementById('auth-logged-in').classList.remove('hidden');
                 document.getElementById('user-email-display').innerText = currentUser.email.split('@')[0];
                 await loadUserProfile();
-               
+                await fetchUserAlerts(); // Charger les alertes utilisateur
+              
                 setFavoritesFilter(true);
             } else {
                 currentUser = null;
+                userAlerts = [];
+                updateAlertsBadge();
                 document.getElementById('auth-logged-in').classList.add('hidden');
                 document.getElementById('auth-logged-out').classList.remove('hidden');
             }
@@ -743,6 +869,7 @@
                 errorDiv.classList.remove('hidden');
             } else {
                 closeAuthModal();
+                await fetchUserAlerts();
             }
         }
 
@@ -770,6 +897,7 @@
                 if (data.session && data.session.user) {
                     currentUser = data.session.user;
                     await saveUserProfile();
+                    await fetchUserAlerts();
                     setFavoritesFilter(true);
                 }
             }
@@ -904,7 +1032,7 @@
                 center: [46.603354, 1.888334],
                 zoom: 5
             });
-      
+     
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap contributors'
             }).addTo(leafletMap);
@@ -937,38 +1065,36 @@
         function setFavoritesFilter(showOnlyFavs) {
             onlyShowFavorites = showOnlyFavs;
             activeSelectedRaceKey = null;
-           
+          
             const btnAll = document.getElementById('btn-toggle-all');
             const btnFav = document.getElementById('btn-toggle-fav');
+            const btnAlertsTab = document.getElementById('btn-toggle-alerts');
             const btnBudget = document.getElementById('btn-view-budget');
             const btnSec = document.getElementById('btn-view-secondary');
             const btnReset = document.getElementById('btn-reset-filters');
+            const searchSection = document.getElementById('search-filter-section');
 
-            if (onlyShowFavorites) {
+            // Réinitialiser les styles des onglets header
+            btnAll.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition";
+            btnFav.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5";
+            btnAlertsTab.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5";
+
+            if (showOnlyFavs) {
                 btnFav.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition flex items-center gap-1.5";
-                btnAll.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition";
                 if (btnBudget) btnBudget.classList.remove('hidden');
-               
-                // MASQUER L'ONGLET LISTE DANS MES COURSES PRÉVUES
                 if (btnSec) btnSec.classList.add('hidden');
-               
-                // MASQUER LE BOUTON RÉINITIALISER DANS MES COURSES PRÉVUES
                 if (btnReset) btnReset.classList.add('hidden');
+                if (searchSection) searchSection.classList.remove('hidden');
 
-                // Si l'utilisateur était sur l'onglet "liste", on repasse sur "carte"
-                if (activeMainTab === 'secondary') switchMainView('map');
+                if (activeMainTab === 'secondary' || activeMainTab === 'alerts') switchMainView('map');
             } else {
                 btnAll.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition";
-                btnFav.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5";
                 if (btnBudget) btnBudget.classList.add('hidden');
-               
-                // AFFICHER L'ONGLET LISTE DANS TOUTES LES COURSES
                 if (btnSec) btnSec.classList.remove('hidden');
-
-                // AFFICHER LE BOUTON RÉINITIALISER DANS TOUTES LES COURSES
                 if (btnReset) btnReset.classList.remove('hidden');
-               
-                if (activeMainTab === 'budget') switchMainView('map');
+                if (searchSection) searchSection.classList.remove('hidden');
+              
+                if (activeMainTab === 'budget' || activeMainTab === 'alerts') switchMainView('map');
                 closeInteractiveDetail();
             }
 
@@ -980,7 +1106,7 @@
             const current = raceGpxLinks[activeSelectedRaceKey] || '';
             let url = prompt("Adresse web de la trace GPX (OpenRunner, Visorando, Komoot, Wikiloc...):", current);
             if (url === null) return;
-           
+          
             url = url.trim();
             if (url && !url.startsWith('http')) url = 'https://' + url;
 
@@ -1016,7 +1142,7 @@
             const current = raceStravaLinks[activeSelectedRaceKey] || '';
             let url = prompt("Lien web de l'activité (ex: Strava, Nolio, Garmin Connect...):", current);
             if (url === null) return;
-           
+          
             url = url.trim();
             if (url && !url.startsWith('http')) url = 'https://' + url;
 
@@ -1057,7 +1183,7 @@
             const name = prompt("Nom du nouveau poste de dépense (ex: Stage de trail, Massages...) :");
             if (!name) return;
             const key = 'custom_' + Date.now();
-           
+          
             customBudgetsList.push({ key: key, name: name });
             categoryBudgets[key] = 0;
             saveUserProfile();
@@ -1631,7 +1757,7 @@
 
             if (!onlyShowFavorites) {
                 switchMainView('map');
-               
+              
                 if (activeSelectedRaceKey === raceKey) {
                     activeSelectedRaceKey = null;
                     if (leafletMap) {
@@ -1792,7 +1918,7 @@
                 const statusBadge = renderOpeningStatus(race.status, race.openingDate);
 
                 const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
-               
+              
                 let cardBgClass = 'bg-darkBg/90 border-borderBg';
                 let statusPinColor = '#f59e0b';
 
@@ -1833,9 +1959,17 @@
                     </button>
                 `;
 
-                // LOGIQUE OPTION DE SUIVI VS ALERTE EMAIL DYNAMIQUE
+                // LOGIQUE BOUTON D'ALERTE DYNAMIQUE (VÉRIFICATION SI ALERTE DÉJÀ ACTIVE)
                 let followUpHtml = '';
-                if (race.status === 'Open') {
+                const isAlerted = hasAlertForRace(race.title);
+
+                if (isAlerted) {
+                    followUpHtml = `
+                        <span class="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-semibold rounded-lg flex items-center gap-1">
+                            ✅ Alerte activée
+                        </span>
+                    `;
+                } else if (race.status === 'Open') {
                     followUpHtml = `<span class="text-[10px] text-gray-400">Options de suivi</span>`;
                 } else if (race.status === 'TBD') {
                     followUpHtml = `
@@ -1893,13 +2027,13 @@
             const rawKeyword = document.getElementById('filter-keyword')?.value || '';
             const queryNorm = normalizeStr(rawKeyword);
             const status = document.getElementById('filter-status')?.value || 'ALL';
-           
+          
             const minDist = parseInt(document.getElementById('filter-dist-min')?.value || 0);
             const maxDist = parseInt(document.getElementById('filter-dist-max')?.value || 200);
-           
+          
             const minElev = parseInt(document.getElementById('filter-elev-min')?.value || 0);
             const maxElev = parseInt(document.getElementById('filter-elev-max')?.value || 15000);
-           
+          
             const minMonths = parseInt(document.getElementById('filter-horizon-min')?.value || 0);
             const maxMonths = parseInt(document.getElementById('filter-horizon-max')?.value || 24);
 
@@ -1910,7 +2044,7 @@
                 if (onlyShowFavorites && !favorites.includes(favKey)) return false;
 
                 const matchKw = !queryNorm || r.searchNorm.includes(queryNorm);
-              
+             
                 let matchStat = true;
                 if (status !== 'ALL') {
                     if (status === 'Opening Soon') {
@@ -1921,7 +2055,7 @@
                         matchStat = (r.status === status);
                     }
                 }
-            
+           
                 let matchDate = true;
                 if (r.raceDate) {
                     const rDate = new Date(r.raceDate);
@@ -1936,7 +2070,7 @@
 
             const countElem = document.getElementById('filtered-count');
             if (countElem) countElem.innerText = filteredRaces.length;
-      
+     
             renderListView();
             updateMapMarkers();
             renderTimeline();
@@ -2053,7 +2187,7 @@
                             </div>
                             <h3 class="text-sm font-bold text-white leading-tight">${race.title}</h3>
                             <p class="text-xs text-gray-400 mt-0.5">Course : ${formattedDate}</p>
-                       
+                      
                             <div class="grid grid-cols-3 gap-1 py-1.5 my-1.5 border-y border-borderBg text-center text-xs">
                                 <div><span class="block text-gray-500 text-[10px]">Dist.</span><span class="font-bold text-white">${race.distance}k</span></div>
                                 <div><span class="block text-gray-500 text-[10px]">D+</span><span class="font-bold text-emerald-400">+${race.elevation}m</span></div>
@@ -2090,18 +2224,22 @@
             const mapV = document.getElementById('container-map-view');
             const listV = document.getElementById('container-list-view');
             const budgetV = document.getElementById('container-budget-view');
+            const alertsV = document.getElementById('container-alerts-view');
             const linksV = document.getElementById('container-links-view');
+            const searchSection = document.getElementById('search-filter-section');
 
             const btnMap = document.getElementById('btn-view-map');
             const btnSec = document.getElementById('btn-view-secondary');
             const btnBudget = document.getElementById('btn-view-budget');
             const btnLinks = document.getElementById('btn-view-links');
+            const btnAlertsTab = document.getElementById('btn-toggle-alerts');
 
-            if (!mapV || !listV || !budgetV || !linksV) return;
+            if (!mapV || !listV || !budgetV || !alertsV || !linksV) return;
 
             mapV.classList.add('hidden');
             listV.classList.add('hidden');
             budgetV.classList.add('hidden');
+            alertsV.classList.add('hidden');
             linksV.classList.add('hidden');
 
             const inactiveStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
@@ -2111,6 +2249,14 @@
             btnSec.className = inactiveStyle;
             btnLinks.className = inactiveStyle;
             if (btnBudget) btnBudget.className = inactiveStyle;
+
+            if (btnAlertsTab) {
+                if (v === 'alerts') {
+                    btnAlertsTab.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-amber-500 text-darkBg shadow transition flex items-center gap-1.5";
+                } else {
+                    btnAlertsTab.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5";
+                }
+            }
 
             if (onlyShowFavorites) {
                 if (btnBudget) btnBudget.classList.remove('hidden');
@@ -2123,6 +2269,7 @@
             if (v === 'map') {
                 mapV.classList.remove('hidden');
                 btnMap.className = activeStyle;
+                if (searchSection) searchSection.classList.remove('hidden');
                 if (leafletMap) {
                     setTimeout(() => {
                         leafletMap.invalidateSize();
@@ -2131,12 +2278,19 @@
             } else if (v === 'secondary' && !onlyShowFavorites) {
                 listV.classList.remove('hidden');
                 btnSec.className = activeStyle;
-            } else if (v === 'budget' && onlyShowFavorites) {
+                if (searchSection) searchSection.classList.remove('hidden');
+            } else if (v === 'budget') {
                 budgetV.classList.remove('hidden');
                 if (btnBudget) btnBudget.className = activeStyle;
+                if (searchSection) searchSection.classList.add('hidden');
+            } else if (v === 'alerts') {
+                alertsV.classList.remove('hidden');
+                if (searchSection) searchSection.classList.add('hidden');
+                renderUserAlertsList();
             } else if (v === 'links') {
                 linksV.classList.remove('hidden');
                 btnLinks.className = activeStyle;
+                if (searchSection) searchSection.classList.add('hidden');
             }
         }
 
