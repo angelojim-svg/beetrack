@@ -471,7 +471,7 @@
                     </div>
                 </div>
 
-                <!-- COLONNE LATÉRALE INTERACTIVE (SUIVI DE LA SAISON) -->
+                <!-- COLONNE LATÉRALE INTERACTIVE (SUIVI DE LA SAISON OU MES ALERTES) -->
                 <div id="middle-column" class="hidden lg:col-span-3 transition-all duration-300">
                     <div id="interactive-detail-card" class="glass-panel p-4 rounded-2xl border border-borderBg space-y-3 h-[520px] flex flex-col overflow-y-auto">
                         <div class="flex items-center justify-between border-b border-borderBg pb-2">
@@ -525,6 +525,20 @@
                             </div>
 
                             <div id="detail-race-link-container" class="pt-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- PANNEAU ALTERNATIF : MES ALERTES AU CENTRE -->
+                    <div id="middle-alerts-panel" class="glass-panel p-4 rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-950/20 via-cardBg to-darkBg space-y-3 h-[520px] flex flex-col overflow-y-auto hidden">
+                        <div class="flex items-center justify-between border-b border-borderBg pb-2">
+                            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-bell text-amber-400"></i>
+                                Mes Alertes E-mail
+                            </h3>
+                            <button onclick="closeInteractiveDetail()" class="text-gray-400 hover:text-white text-xs px-2 py-0.5 rounded bg-darkBg border border-borderBg">✕</button>
+                        </div>
+                        <div id="middle-alerts-list-container" class="space-y-2 flex-1 pt-1">
+                            <!-- Rempli dynamiquement -->
                         </div>
                     </div>
                 </div>
@@ -768,85 +782,72 @@
 
         function renderUserAlertsList() {
             const container = document.getElementById('alerts-list-container');
+            const middleContainer = document.getElementById('middle-alerts-list-container');
             const totalElem = document.getElementById('alerts-total-text');
-            if (!container) return;
-
+           
             if (totalElem) totalElem.innerText = `${userAlerts.length} alerte(s)`;
 
-            if (userAlerts.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-16 space-y-2">
-                        <div class="w-12 h-12 mx-auto rounded-full bg-darkBg border border-borderBg flex items-center justify-center text-gray-500">
-                            <i class="fa-solid fa-bell-slash text-base"></i>
+            const generateHtml = (isMiddlePanel = false) => {
+                if (userAlerts.length === 0) {
+                    return `
+                        <div class="text-center py-12 space-y-2">
+                            <div class="w-10 h-10 mx-auto rounded-full bg-darkBg border border-borderBg flex items-center justify-center text-gray-500">
+                                <i class="fa-solid fa-bell-slash text-sm"></i>
+                            </div>
+                            <p class="text-xs text-gray-400">Aucune alerte configurée.</p>
                         </div>
-                        <p class="text-xs text-gray-400">Aucune alerte configurée.</p>
-                        <p class="text-[11px] text-gray-500">Cliquez sur <b class="text-amber-400">🔔 Être alerté</b> sur une carte de course pour recevoir un rappel par e-mail.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = userAlerts.map(alert => {
-                const matchedRace = racesData.find(r => r.title === alert.race_title);
-                const raceStatus = matchedRace ? matchedRace.status : '';
-                const raceUrl = matchedRace ? matchedRace.url : '';
-                const raceDate = matchedRace ? matchedRace.raceDate : '';
-                const raceKey = `${alert.race_title}_${raceDate}`;
-                const isFav = favorites.includes(raceKey);
-
-                const isTbd = alert.alert_type === 'tbd';
-                let badgeColor = 'bg-amber-500/10 text-amber-300 border-amber-500/30';
-                let label = 'Confirmation de la date';
-                let icon = 'fa-calendar-day';
-
-                if (raceStatus === 'Open') {
-                    badgeColor = 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30';
-                    label = 'Inscriptions Ouvertes !';
-                    icon = 'fa-circle-check';
-                } else if (!isTbd) {
-                    badgeColor = 'bg-blue-500/10 text-blue-300 border-blue-500/30';
-                    label = 'Ouverture des inscriptions';
-                    icon = 'fa-envelope-circle-check';
+                    `;
                 }
 
-                const registerBtn = (raceStatus === 'Open' && raceUrl) ? `
-                    <a href="${raceUrl}" target="_blank" onclick="event.stopPropagation();" class="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold rounded-lg transition flex items-center gap-1">
-                        S'inscrire ↗
-                    </a>
-                ` : '';
+                return userAlerts.map(alert => {
+                    const matchedRace = racesData.find(r => r.title === alert.race_title);
+                    const raceStatus = matchedRace ? matchedRace.status : '';
+                    const raceUrl = matchedRace ? matchedRace.url : '';
+                    const raceDate = matchedRace ? matchedRace.raceDate : '';
+                    const raceKey = `${alert.race_title}_${raceDate}`;
+                    const isFav = favorites.includes(raceKey);
+                    const isSelected = (activeSelectedRaceKey === raceKey);
 
-                const favActionBtn = matchedRace && raceDate ? `
-                    <button onclick="event.stopPropagation(); toggleFavorite('${matchedRace.title.replace(/'/g, "\\'")}', '${raceDate}')" title="${isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}" class="px-2 py-1 rounded-lg text-xs font-bold border transition flex items-center gap-1 ${isFav ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'bg-darkBg text-gray-400 border-borderBg hover:text-amber-400'}">
-                        ♥
-                    </button>
-                ` : '';
+                    const isTbd = alert.alert_type === 'tbd';
+                    let badgeColor = 'bg-amber-500/10 text-amber-300 border-amber-500/30';
+                    let label = 'Confirmation';
+                    let icon = 'fa-calendar-day';
 
-                return `
-                    <div onclick="handleAlertClick('${alert.race_title.replace(/'/g, "\\'")}')" class="group flex items-center justify-between p-3.5 bg-darkBg/90 hover:bg-cardBg border border-borderBg hover:border-amber-500/40 rounded-xl transition duration-200 cursor-pointer">
-                        <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-xl bg-cardBg border border-borderBg flex items-center justify-center text-amber-400 group-hover:scale-105 transition">
-                                <i class="fa-solid ${icon} text-sm"></i>
-                            </div>
-                            <div>
-                                <h4 class="text-xs font-bold text-white group-hover:text-amber-300 transition">${alert.race_title}</h4>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md border ${badgeColor}">
-                                        ${label}
-                                    </span>
+                    if (raceStatus === 'Open') {
+                        badgeColor = 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30';
+                        label = 'Ouvertes';
+                        icon = 'fa-circle-check';
+                    } else if (!isTbd) {
+                        badgeColor = 'bg-blue-500/10 text-blue-300 border-blue-500/30';
+                        label = 'Ouverture';
+                        icon = 'fa-envelope-circle-check';
+                    }
+
+                    const activeRing = isSelected && isMiddlePanel ? 'border-amber-400 bg-amber-500/10' : 'border-borderBg bg-darkBg/90';
+
+                    return `
+                        <div onclick="handleAlertClick('${alert.race_title.replace(/'/g, "\\'")}')" class="group flex items-center justify-between p-2.5 ${activeRing} hover:bg-cardBg border hover:border-amber-500/40 rounded-xl transition duration-200 cursor-pointer">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <div class="w-7 h-7 rounded-lg bg-cardBg border border-borderBg flex items-center justify-center text-amber-400 shrink-0">
+                                    <i class="fa-solid ${icon} text-xs"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="text-xs font-bold text-white group-hover:text-amber-300 transition truncate">${alert.race_title}</h4>
+                                    <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded border ${badgeColor} inline-block mt-0.5">${label}</span>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="flex items-center gap-2" onclick="event.stopPropagation();">
-                            ${registerBtn}
-                            ${favActionBtn}
-                            <button onclick="deleteRaceAlert('${alert.id}')" title="Supprimer l'alerte" class="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition">
-                                <i class="fa-solid fa-xmark text-xs"></i>
-                            </button>
+                            <div class="flex items-center gap-1.5 shrink-0" onclick="event.stopPropagation();">
+                                ${matchedRace && raceDate ? `<button onclick="toggleFavorite('${matchedRace.title.replace(/'/g, "\\'")}', '${raceDate}')" class="px-1.5 py-1 rounded-md text-[10px] font-bold border transition ${isFav ? 'bg-amber-500/25 text-amber-400 border-amber-500/40' : 'bg-darkBg text-gray-400 border-borderBg'}">♥</button>` : ''}
+                                <button onclick="deleteRaceAlert('${alert.id}')" class="p-1.5 text-gray-500 hover:text-red-400 rounded transition"><i class="fa-solid fa-xmark text-xs"></i></button>
+                            </div>
                         </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            };
+
+            if (container) container.innerHTML = generateHtml(false);
+            if (middleContainer) middleContainer.innerHTML = generateHtml(true);
         }
 
         /* ==================== ACTION AU CLIC SUR UNE ALERTE ==================== */
@@ -856,6 +857,7 @@
 
             const raceKey = `${targetRace.title}_${targetRace.raceDate}`;
 
+            // Si on reclique sur la course déjà sélectionnée, on retourne aux alertes (fermeture du mode détail)
             if (activeSelectedRaceKey === raceKey) {
                 closeInteractiveDetail();
                 return;
@@ -863,52 +865,18 @@
 
             activeSelectedRaceKey = raceKey;
 
-            // Basculer sur la vue 'map' pour afficher la carte à la place des alertes
+            // Basculer la vue principale sur la carte
             switchMainView('map');
 
-            // Remplir les données de la course dans le cadre "Suivi de la Saison"
-            document.getElementById('detail-race-title').innerText = targetRace.title;
-            document.getElementById('detail-race-loc').innerText = targetRace.location;
-            document.getElementById('detail-race-price').innerText = targetRace.price > 0 ? `${targetRace.price} €` : 'N/C';
+            // Afficher le panneau central "Mes Alertes" à la place de "Suivi de la Saison"
+            const detailCard = document.getElementById('interactive-detail-card');
+            const middleAlertsPanel = document.getElementById('middle-alerts-panel');
+            if (detailCard) detailCard.classList.add('hidden');
+            if (middleAlertsPanel) middleAlertsPanel.classList.remove('hidden');
 
-            const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=Marseille&destination=${encodeURIComponent(targetRace.location)}`;
-            document.getElementById('detail-race-gmaps-container').innerHTML = `
-                <a href="${gmapsUrl}" target="_blank" class="w-full text-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold py-1 rounded-xl text-xs transition flex items-center justify-center gap-1">
-                    <i class="fa-solid fa-route"></i> Trajet & temps (Google Maps) ↗
-                </a>
-            `;
+            renderUserAlertsList();
 
-            const airbnbUrl = `https://www.airbnb.fr/s/${encodeURIComponent(targetRace.location)}/homes`;
-            const bookingUrl = `https://www.booking.com/searchresults.fr.html?ss=${encodeURIComponent(targetRace.location)}`;
-
-            document.getElementById('detail-race-lodging-container').innerHTML = `
-                <a href="${airbnbUrl}" target="_blank" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1">
-                    🏠 Airbnb ↗
-                </a>
-                <a href="${bookingUrl}" target="_blank" class="bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 font-semibold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1">
-                    🏨 Booking ↗
-                </a>
-            `;
-
-            const linkContainer = document.getElementById('detail-race-link-container');
-            if (targetRace.url) {
-                linkContainer.innerHTML = `
-                    <a href="${targetRace.url}" target="_blank" class="w-full text-center bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-semibold py-1.5 rounded-lg text-xs transition block">
-                        Page Inscription ↗
-                    </a>
-                `;
-            } else {
-                linkContainer.innerHTML = '';
-            }
-
-            renderGpxLinkDisplay();
-            renderStravaLinkDisplay();
-
-            const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
-            document.getElementById('check-reg-ok').checked = meta.registered;
-            document.getElementById('check-done').checked = meta.completed;
-
-            // Adapter les colonnes : Carte (col-5) | Suivi de la saison (col-3) | Chronologie (col-4)
+            // Adapter les colonnes : Carte (col-5) | Mes Alertes (col-3) | Chronologie (col-4)
             const middleCol = document.getElementById('middle-column');
             const mainCol = document.getElementById('main-view-column');
             const timelineCol = document.getElementById('timeline-column');
@@ -961,16 +929,18 @@
         }
 
         function closeInteractiveDetail() {
-            const wasInAlertMode = (activeMainTab === 'alerts');
+            const wasFromAlerts = !document.getElementById('middle-alerts-panel').classList.contains('hidden');
             activeSelectedRaceKey = null;
 
             const middleCol = document.getElementById('middle-column');
             const mainCol = document.getElementById('main-view-column');
             const timelineCol = document.getElementById('timeline-column');
+            const detailCard = document.getElementById('interactive-detail-card');
+            const middleAlertsPanel = document.getElementById('middle-alerts-panel');
 
-            if (middleCol) {
-                middleCol.classList.add('hidden');
-            }
+            if (middleCol) middleCol.classList.add('hidden');
+            if (detailCard) detailCard.classList.remove('hidden');
+            if (middleAlertsPanel) middleAlertsPanel.classList.add('hidden');
 
             if (mainCol) {
                 mainCol.classList.remove('lg:col-span-5');
@@ -982,8 +952,7 @@
                 timelineCol.classList.add('lg:col-span-4');
             }
 
-            // Si on venait des alertes, on réaffiche l'onglet Mes Alertes à la fermeture du suivi
-            if (wasInAlertMode) {
+            if (wasFromAlerts) {
                 switchMainView('alerts');
             } else if (leafletMap) {
                 setTimeout(() => {
