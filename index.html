@@ -863,10 +863,10 @@
 
             activeSelectedRaceKey = raceKey;
 
-            // Garder la carte affichée sur la vue principale
+            // Basculer sur la vue 'map' pour afficher la carte à la place des alertes
             switchMainView('map');
 
-            // Mettre à jour les informations du panneau "Suivi de la Saison"
+            // Remplir les données de la course dans le cadre "Suivi de la Saison"
             document.getElementById('detail-race-title').innerText = targetRace.title;
             document.getElementById('detail-race-loc').innerText = targetRace.location;
             document.getElementById('detail-race-price').innerText = targetRace.price > 0 ? `${targetRace.price} €` : 'N/C';
@@ -908,7 +908,7 @@
             document.getElementById('check-reg-ok').checked = meta.registered;
             document.getElementById('check-done').checked = meta.completed;
 
-            // Configurer les colonnes pour afficher la carte à gauche, le cadre de suivi au milieu et la chronologie à droite
+            // Adapter les colonnes : Carte (col-5) | Suivi de la saison (col-3) | Chronologie (col-4)
             const middleCol = document.getElementById('middle-column');
             const mainCol = document.getElementById('main-view-column');
             const timelineCol = document.getElementById('timeline-column');
@@ -927,6 +927,7 @@
                 timelineCol.classList.add('lg:col-span-4');
             }
 
+            // Centrer la carte et ouvrir le popup
             setTimeout(() => {
                 if (leafletMap) {
                     leafletMap.invalidateSize();
@@ -960,7 +961,9 @@
         }
 
         function closeInteractiveDetail() {
+            const wasInAlertMode = (activeMainTab === 'alerts');
             activeSelectedRaceKey = null;
+
             const middleCol = document.getElementById('middle-column');
             const mainCol = document.getElementById('main-view-column');
             const timelineCol = document.getElementById('timeline-column');
@@ -979,13 +982,16 @@
                 timelineCol.classList.add('lg:col-span-4');
             }
 
-            setTimeout(() => {
-                if (leafletMap) {
+            // Si on venait des alertes, on réaffiche l'onglet Mes Alertes à la fermeture du suivi
+            if (wasInAlertMode) {
+                switchMainView('alerts');
+            } else if (leafletMap) {
+                setTimeout(() => {
                     leafletMap.invalidateSize();
                     leafletMap.setView([46.603354, 1.888334], 5);
                     leafletMap.closePopup();
-                }
-            }, 100);
+                }, 100);
+            }
         }
 
         async function deleteRaceAlert(alertId) {
