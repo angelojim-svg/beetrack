@@ -473,9 +473,10 @@
 
                 <!-- COLONNE LATÉRALE INTERACTIVE (SUIVI DE LA SAISON OU MES ALERTES) -->
                 <div id="middle-column" class="hidden lg:col-span-3 transition-all duration-300">
+                    <!-- CADRAN SUIVI DE LA SAISON -->
                     <div id="interactive-detail-card" class="glass-panel p-4 rounded-2xl border border-borderBg space-y-3 h-[520px] flex flex-col overflow-y-auto">
                         <div class="flex items-center justify-between border-b border-borderBg pb-2">
-                            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <h3 id="middle-panel-title" class="text-sm font-bold text-white flex items-center gap-2">
                                 <i class="fa-solid fa-person-running text-emerald-400"></i>
                                 Suivi de la Saison
                             </h3>
@@ -528,7 +529,7 @@
                         </div>
                     </div>
 
-                    <!-- PANNEAU ALTERNATIF : MES ALERTES AU CENTRE -->
+                    <!-- CADRAN MES ALERTES AU CENTRE -->
                     <div id="middle-alerts-panel" class="glass-panel p-4 rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-950/20 via-cardBg to-darkBg space-y-3 h-[520px] flex flex-col overflow-y-auto hidden">
                         <div class="flex items-center justify-between border-b border-borderBg pb-2">
                             <h3 class="text-sm font-bold text-white flex items-center gap-2">
@@ -802,7 +803,6 @@
                 return userAlerts.map(alert => {
                     const matchedRace = racesData.find(r => r.title === alert.race_title);
                     const raceStatus = matchedRace ? matchedRace.status : '';
-                    const raceUrl = matchedRace ? matchedRace.url : '';
                     const raceDate = matchedRace ? matchedRace.raceDate : '';
                     const raceKey = `${alert.race_title}_${raceDate}`;
                     const isFav = favorites.includes(raceKey);
@@ -857,26 +857,28 @@
 
             const raceKey = `${targetRace.title}_${targetRace.raceDate}`;
 
-            if (activeSelectedRaceKey === raceKey) {
+            // Si la course est déjà sélectionnée au centre, fermer la vue détaillée
+            if (activeSelectedRaceKey === raceKey && !document.getElementById('middle-column').classList.contains('hidden')) {
                 closeInteractiveDetail();
                 return;
             }
 
             activeSelectedRaceKey = raceKey;
 
+            // Basculer la vue principale sur la carte
             switchMainView('map');
 
-            const detailCard = document.getElementById('interactive-detail-card');
-            const middleAlertsPanel = document.getElementById('middle-alerts-panel');
-            if (detailCard) detailCard.classList.add('hidden');
-            if (middleAlertsPanel) middleAlertsPanel.classList.remove('hidden');
-
-            renderUserAlertsList();
-
+            // Afficher le cadran "Mes Alertes" au milieu
             const middleCol = document.getElementById('middle-column');
             const mainCol = document.getElementById('main-view-column');
             const timelineCol = document.getElementById('timeline-column');
+            const detailCard = document.getElementById('interactive-detail-card');
+            const middleAlertsPanel = document.getElementById('middle-alerts-panel');
 
+            if (detailCard) detailCard.classList.add('hidden');
+            if (middleAlertsPanel) middleAlertsPanel.classList.remove('hidden');
+
+            // Réorganisation de la grille à 3 colonnes : Carte (col-5) | Mes Alertes (col-3) | Chronologie (col-4)
             if (mainCol) {
                 mainCol.classList.remove('lg:col-span-8');
                 mainCol.classList.add('lg:col-span-5');
@@ -891,6 +893,10 @@
                 timelineCol.classList.add('lg:col-span-4');
             }
 
+            // Mettre à jour l'affichage de la liste des alertes pour refléter la sélection active
+            renderUserAlertsList();
+
+            // Repositionner la carte et ouvrir le popup d'information
             setTimeout(() => {
                 if (leafletMap) {
                     leafletMap.invalidateSize();
@@ -924,9 +930,6 @@
         }
 
         function closeInteractiveDetail() {
-            const wasFromAlerts = document.getElementById('middle-alerts-panel') &&
-                                  !document.getElementById('middle-alerts-panel').classList.contains('hidden');
-           
             activeSelectedRaceKey = null;
 
             const middleCol = document.getElementById('middle-column');
@@ -949,9 +952,9 @@
                 timelineCol.classList.add('lg:col-span-4');
             }
 
-            if (wasFromAlerts) {
-                switchMainView('alerts');
-            } else if (leafletMap) {
+            renderUserAlertsList();
+
+            if (leafletMap) {
                 setTimeout(() => {
                     leafletMap.invalidateSize();
                     leafletMap.setView([46.603354, 1.888334], 5);
@@ -1950,6 +1953,7 @@
             const timelineCol = document.getElementById('timeline-column');
             const mainCol = document.getElementById('main-view-column');
             const detailCard = document.getElementById('interactive-detail-card');
+            const middleAlertsPanel = document.getElementById('middle-alerts-panel');
 
             if (activeSelectedRaceKey === raceKey && !middleCol.classList.contains('hidden') && middleCol.contains(detailCard)) {
                 closeInteractiveDetail();
@@ -1958,10 +1962,8 @@
 
             activeSelectedRaceKey = raceKey;
 
-            if (detailCard && middleCol) {
-                middleCol.innerHTML = '';
-                middleCol.appendChild(detailCard);
-            }
+            if (detailCard) detailCard.classList.remove('hidden');
+            if (middleAlertsPanel) middleAlertsPanel.classList.add('hidden');
 
             if (mainCol) {
                 mainCol.classList.remove('lg:col-span-8');
@@ -1978,6 +1980,9 @@
                 timelineCol.classList.remove('hidden');
                 timelineCol.classList.add('lg:col-span-4');
             }
+
+            const titleHeader = document.getElementById('middle-panel-title');
+            if (titleHeader) titleHeader.innerHTML = `<i class="fa-solid fa-person-running text-emerald-400"></i> Suivi de la Saison`;
 
             document.getElementById('detail-race-title').innerText = title;
             document.getElementById('detail-race-loc').innerText = location;
