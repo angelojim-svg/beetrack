@@ -762,14 +762,14 @@
                 }
 
                 if (raceStatus === 'TBD') {
-                    titleElem.innerText = "Alerte de statut activée 🔔";
+                    titleElem.innerText = "Alerte de date activée 🔔";
                     bodyElem.innerHTML = `
-                        Alerte enregistrée ! Un e-mail de confirmation vient de vous être envoyé à <b class="text-blue-400">${currentUser.email}</b>. Vous serez informé dès la confirmation de la date officielle de <b class="text-emerald-400">${title}</b>.
+                        Alerte enregistrée ! Un e-mail de prise en compte vient d'être envoyé à <b class="text-blue-400">${currentUser.email}</b> : vous serez informé de la date de l'événement par mail et pourrez la consulter sur BeeTrack pour <b class="text-emerald-400">${title}</b>.
                     `;
                 } else {
                     titleElem.innerText = "Alerte Ouverture Inscriptions 🔔";
                     bodyElem.innerHTML = `
-                        Alerte enregistrée ! Un e-mail de confirmation vient de vous être envoyé à <b class="text-blue-400">${currentUser.email}</b>. Vous recevrez également un rappel à l'ouverture des inscriptions pour <b class="text-emerald-400">${title}</b>.
+                        Alerte enregistrée ! Un e-mail de prise en compte vient d'être envoyé à <b class="text-blue-400">${currentUser.email}</b> : vous serez informé de la date de l'ouverture des inscriptions par mail et pourrez la consulter sur BeeTrack pour <b class="text-emerald-400">${title}</b>.
                     `;
                 }
 
@@ -2144,13 +2144,13 @@
                 } else if (race.status === 'TBD') {
                     followUpHtml = `
                         <button onclick="event.stopPropagation(); handleEmailAlertRequest('${race.title.replace(/'/g, "\\'")}', '${race.status}', '${formattedDate}')" class="text-[10px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-lg transition flex items-center gap-1 font-semibold">
-                            🔔 Être alerté de la date
+                            🔔 Alerte date TBD
                         </button>
                     `;
                 } else {
                     followUpHtml = `
                         <button onclick="event.stopPropagation(); handleEmailAlertRequest('${race.title.replace(/'/g, "\\'")}', '${race.status}', '${formattedDate}')" class="text-[10px] bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 px-2 py-0.5 rounded-lg transition flex items-center gap-1 font-semibold">
-                            🔔 Être alerté par mail
+                            🔔 Alerte ouverture
                         </button>
                     `;
                 }
