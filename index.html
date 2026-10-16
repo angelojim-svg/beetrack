@@ -127,7 +127,7 @@
     <!-- HEADER / NAVIGATION -->
     <header class="sticky top-0 z-50 glass-panel border-b border-borderBg shadow-lg">
         <div class="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-2.5 lg:py-0 lg:h-16 flex flex-col lg:flex-row items-center justify-between gap-2">
-          
+         
             <div class="w-full lg:w-auto flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-darkBg font-black text-base shadow-md shadow-emerald-500/20">
@@ -147,7 +147,7 @@
 
             <!-- BLOCS BUDGET, FAVORIS & PROFIL / AUTH -->
             <div class="w-full lg:w-auto flex flex-wrap items-center justify-between lg:justify-end gap-3 text-xs">
-              
+             
                 <div class="relative group z-40">
                     <div class="flex items-center space-x-2 bg-darkBg/90 px-3 py-1.5 rounded-xl border border-borderBg cursor-pointer">
                         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
@@ -310,7 +310,7 @@
                 <div class="md:col-span-7 relative">
                     <label class="block text-xs font-semibold uppercase text-emerald-400/80 mb-1">Recherche (Nom de course, ville...)</label>
                     <div class="relative">
-                        <input type="text" id="filter-keyword" oninput="handleFastSearch(this.value)" placeholder="Tapez 2 lettres (ex: too, tou, sainte...)" class="w-full px-3 py-2 bg-darkBg border border-emerald-500/30 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-400">
+                        <input type="text" id="filter-keyword" oninput="handleFastSearch(this.value)" onkeydown="handleSearchKeydown(event)" placeholder="Tapez 2 lettres ou appuyez sur Entrée..." class="w-full px-3 py-2 bg-darkBg border border-emerald-500/30 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-400">
                         <i class="fa-solid fa-magnifying-glass absolute right-3 top-2.5 text-emerald-500/60 text-xs"></i>
                     </div>
 
@@ -394,7 +394,7 @@
 
             <!-- LAYOUT GRILLE DE HAUTEUR UNIFORMISÉE (520px) -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-              
+             
                 <!-- ZONE PRINCIPALE -->
                 <div id="main-view-column" class="lg:col-span-8 space-y-4 transition-all duration-300">
                     <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden h-[520px]">
@@ -437,7 +437,7 @@
                         <div id="budget-categories-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
                     </div>
 
-                    <!-- ONGLET HISTORIQUE DES ALERTES (MODERNE) -->
+                    <!-- ONGLET HISTORIQUE DES ALERTES (MIS À JOUR AVEC LIENS, STATUTS & FAVORIS) -->
                     <div id="container-alerts-view" class="glass-panel p-6 rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-950/20 via-cardBg to-darkBg space-y-4 hidden h-[520px] overflow-y-auto">
                         <div class="flex justify-between items-center border-b border-borderBg pb-3">
                             <div class="flex items-center gap-2">
@@ -596,7 +596,7 @@
         let raceMetaStates = JSON.parse(localStorage.getItem('pacepulse_meta') || '{}');
         let raceGpxLinks = JSON.parse(localStorage.getItem('pacepulse_gpx') || '{}');
         let raceStravaLinks = JSON.parse(localStorage.getItem('pacepulse_strava') || '{}');
-      
+     
         let customLinks = JSON.parse(localStorage.getItem('pacepulse_links') || JSON.stringify([
             { name: 'Strava', url: 'https://www.strava.com', icon: 'fa-brands fa-strava text-orange-500' },
             { name: 'Garmin Connect', url: 'https://connect.garmin.com', icon: 'fa-solid fa-clock text-blue-400' },
@@ -684,7 +684,7 @@
         function updateAlertsBadge() {
             const badge = document.getElementById('alerts-count-badge');
             if (!badge) return;
-           
+          
             if (userAlerts.length > 0) {
                 badge.innerText = userAlerts.length;
                 badge.classList.remove('hidden');
@@ -717,7 +717,6 @@
             } else {
                 const alertType = raceStatus === 'TBD' ? 'tbd' : 'opening_soon';
 
-                // Mise à jour immédiate locale
                 const newAlertObj = {
                     id: 'temp_' + Date.now(),
                     user_id: currentUser.id,
@@ -733,7 +732,6 @@
                     renderTimeline();
                 }
 
-                // Enregistrement BDD Supabase
                 try {
                     const { data, error } = await window.dbClient.from('race_alerts').insert({
                         user_id: currentUser.id,
@@ -750,7 +748,6 @@
                     console.error("Erreur d'enregistrement d'alerte en BDD :", e);
                 }
 
-                // Envoi Edge Function Resend
                 try {
                     await window.dbClient.functions.invoke('send-race-alert', {
                         body: {
@@ -804,15 +801,45 @@
             }
 
             container.innerHTML = userAlerts.map(alert => {
+                // Trouver la course correspondante dans racesData pour récupérer son statut exact, son URL et sa date
+                const matchedRace = racesData.find(r => r.title === alert.race_title);
+                const raceStatus = matchedRace ? matchedRace.status : '';
+                const raceUrl = matchedRace ? matchedRace.url : '';
+                const raceDate = matchedRace ? matchedRace.raceDate : '';
+                const raceKey = `${alert.race_title}_${raceDate}`;
+                const isFav = favorites.includes(raceKey);
+
                 const isTbd = alert.alert_type === 'tbd';
-                const badgeColor = isTbd
-                    ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
-                    : 'bg-blue-500/10 text-blue-300 border-blue-500/30';
-                const icon = isTbd ? 'fa-calendar-day' : 'fa-envelope-circle-check';
-                const label = isTbd ? 'Confirmation de la date' : 'Ouverture des inscriptions';
+                let badgeColor = 'bg-amber-500/10 text-amber-300 border-amber-500/30';
+                let label = 'Confirmation de la date';
+                let icon = 'fa-calendar-day';
+
+                if (raceStatus === 'Open') {
+                    badgeColor = 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30';
+                    label = 'Inscriptions Ouvertes !';
+                    icon = 'fa-circle-check';
+                } else if (!isTbd) {
+                    badgeColor = 'bg-blue-500/10 text-blue-300 border-blue-500/30';
+                    label = 'Ouverture des inscriptions';
+                    icon = 'fa-envelope-circle-check';
+                }
+
+                // Bouton d'inscription si ouvert
+                const registerBtn = (raceStatus === 'Open' && raceUrl) ? `
+                    <a href="${raceUrl}" target="_blank" class="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold rounded-lg transition flex items-center gap-1">
+                        S'inscrire ↗
+                    </a>
+                ` : '';
+
+                // Bouton de favori rapide si pas encore favori et que la course existe
+                const favActionBtn = matchedRace && raceDate ? `
+                    <button onclick="event.stopPropagation(); toggleFavorite('${matchedRace.title.replace(/'/g, "\\'")}', '${raceDate}')" title="${isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}" class="px-2 py-1 rounded-lg text-xs font-bold border transition flex items-center gap-1 ${isFav ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'bg-darkBg text-gray-400 border-borderBg hover:text-amber-400'}">
+                        ♥
+                    </button>
+                ` : '';
 
                 return `
-                    <div class="group flex items-center justify-between p-3.5 bg-darkBg/90 hover:bg-cardBg border border-borderBg hover:border-amber-500/40 rounded-xl transition duration-200">
+                    <div onclick="handleAlertClick('${alert.race_title.replace(/'/g, "\\'")}')" class="group flex items-center justify-between p-3.5 bg-darkBg/90 hover:bg-cardBg border border-borderBg hover:border-amber-500/40 rounded-xl transition duration-200 cursor-pointer">
                         <div class="flex items-center gap-3">
                             <div class="w-9 h-9 rounded-xl bg-cardBg border border-borderBg flex items-center justify-center text-amber-400 group-hover:scale-105 transition">
                                 <i class="fa-solid ${icon} text-sm"></i>
@@ -827,12 +854,99 @@
                             </div>
                         </div>
 
-                        <button onclick="deleteRaceAlert('${alert.id}')" title="Supprimer l'alerte" class="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition">
-                            <i class="fa-solid fa-xmark text-xs"></i>
-                        </button>
+                        <div class="flex items-center gap-2" onclick="event.stopPropagation();">
+                            ${registerBtn}
+                            ${favActionBtn}
+                            <button onclick="deleteRaceAlert('${alert.id}')" title="Supprimer l'alerte" class="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition">
+                                <i class="fa-solid fa-xmark text-xs"></i>
+                            </button>
+                        </div>
                     </div>
                 `;
             }).join('');
+        }
+
+        // Fonction pour gérer le clic sur une alerte de l'historique
+        function handleAlertClick(raceTitle) {
+            const targetRace = racesData.find(r => r.title === raceTitle);
+            if (!targetRace || !targetRace.raceDate) return;
+
+            const raceKey = `${targetRace.title}_${targetRace.raceDate}`;
+
+            // Si on clique à nouveau sur la même course active, on referme le panneau et réinitialise la map
+            if (activeSelectedRaceKey === raceKey && activeMainTab === 'map') {
+                closeInteractiveDetail();
+                activeSelectedRaceKey = null;
+                if (leafletMap) {
+                    leafletMap.setView([46.603354, 1.888334], 5, { animate: true });
+                    leafletMap.closePopup();
+                }
+                return;
+            }
+
+            // Basculer vers l'onglet Carte pour voir le zoom latéral
+            switchMainView('map');
+            activeSelectedRaceKey = raceKey;
+
+            const middleCol = document.getElementById('middle-column');
+            const mainCol = document.getElementById('main-view-column');
+
+            mainCol.classList.remove('lg:col-span-8');
+            mainCol.classList.add('lg:col-span-5');
+            middleCol.classList.remove('hidden');
+
+            document.getElementById('detail-race-title').innerText = targetRace.title;
+            document.getElementById('detail-race-loc').innerText = targetRace.location;
+            document.getElementById('detail-race-price').innerText = targetRace.price > 0 ? `${targetRace.price} €` : 'N/C';
+
+            const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=Marseille&destination=${encodeURIComponent(targetRace.location)}`;
+            document.getElementById('detail-race-gmaps-container').innerHTML = `
+                <a href="${gmapsUrl}" target="_blank" class="w-full text-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold py-1 rounded-xl text-xs transition flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-route"></i> Trajet & temps (Google Maps) ↗
+                </a>
+            `;
+
+            const airbnbUrl = `https://www.airbnb.fr/s/${encodeURIComponent(targetRace.location)}/homes`;
+            const bookingUrl = `https://www.booking.com/searchresults.fr.html?ss=${encodeURIComponent(targetRace.location)}`;
+
+            document.getElementById('detail-race-lodging-container').innerHTML = `
+                <a href="${airbnbUrl}" target="_blank" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1">
+                    🏠 Airbnb ↗
+                </a>
+                <a href="${bookingUrl}" target="_blank" class="bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 font-semibold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1">
+                    🏨 Booking ↗
+                </a>
+            `;
+
+            const linkContainer = document.getElementById('detail-race-link-container');
+            if (targetRace.url) {
+                linkContainer.innerHTML = `
+                    <a href="${targetRace.url}" target="_blank" class="w-full text-center bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-semibold py-1.5 rounded-lg text-xs transition block">
+                        Page Inscription ↗
+                    </a>
+                `;
+            } else {
+                linkContainer.innerHTML = '';
+            }
+
+            renderGpxLinkDisplay();
+            renderStravaLinkDisplay();
+
+            const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
+            document.getElementById('check-reg-ok').checked = meta.registered;
+            document.getElementById('check-done').checked = meta.completed;
+
+            setTimeout(() => {
+                if (leafletMap) {
+                    leafletMap.invalidateSize();
+                }
+                const marker = markersMapRef[raceKey];
+                if (marker && leafletMap) {
+                    const latLng = marker.getLatLng();
+                    leafletMap.setView(latLng, 13, { animate: true });
+                    setTimeout(() => marker.openPopup(), 300);
+                }
+            }, 100);
         }
 
         async function deleteRaceAlert(alertId) {
@@ -857,18 +971,18 @@
             try {
                 const { data: { session } } = await window.dbClient.auth.getSession();
                 if (session) {
-                    await handleSessionChange(session);
+                    await handleSessionChange(session, true); // true = connexion initiale
                 }
 
                 window.dbClient.auth.onAuthStateChange(async (_event, session) => {
-                    await handleSessionChange(session);
+                    await handleSessionChange(session, false);
                 });
             } catch (err) {
                 console.warn("Auth initialization skipped/error:", err);
             }
         }
 
-        async function handleSessionChange(session) {
+        async function handleSessionChange(session, isInitialLogin = false) {
             if (session && session.user) {
                 currentUser = session.user;
                 document.getElementById('auth-logged-out').classList.add('hidden');
@@ -876,8 +990,11 @@
                 document.getElementById('user-email-display').innerText = currentUser.email.split('@')[0];
                 await loadUserProfile();
                 await fetchUserAlerts();
-              
-                setFavoritesFilter(true);
+             
+                // Se placer sur "mes courses prévues" uniquement à la connexion initiale
+                if (isInitialLogin) {
+                    setFavoritesFilter(true);
+                }
             } else {
                 currentUser = null;
                 userAlerts = [];
@@ -1064,7 +1181,7 @@
                 center: [46.603354, 1.888334],
                 zoom: 5
             });
-     
+    
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap contributors'
             }).addTo(leafletMap);
@@ -1092,12 +1209,13 @@
             saveUserProfile();
             updateFavoritesUI();
             applyFilters();
+            renderUserAlertsList(); // Met à jour l'icône de favori dans l'onglet des alertes
         }
 
         function setFavoritesFilter(showOnlyFavs) {
             onlyShowFavorites = showOnlyFavs;
             activeSelectedRaceKey = null;
-          
+         
             const btnAll = document.getElementById('btn-toggle-all');
             const btnFav = document.getElementById('btn-toggle-fav');
             const btnBudget = document.getElementById('btn-view-budget');
@@ -1122,7 +1240,7 @@
                 if (btnSec) btnSec.classList.remove('hidden');
                 if (btnReset) btnReset.classList.remove('hidden');
                 if (searchSection) searchSection.classList.remove('hidden');
-              
+             
                 if (activeMainTab === 'budget') switchMainView('map');
                 closeInteractiveDetail();
             }
@@ -1135,7 +1253,7 @@
             const current = raceGpxLinks[activeSelectedRaceKey] || '';
             let url = prompt("Adresse web de la trace GPX (OpenRunner, Visorando, Komoot, Wikiloc...):", current);
             if (url === null) return;
-          
+         
             url = url.trim();
             if (url && !url.startsWith('http')) url = 'https://' + url;
 
@@ -1171,7 +1289,7 @@
             const current = raceStravaLinks[activeSelectedRaceKey] || '';
             let url = prompt("Lien web de l'activité (ex: Strava, Nolio, Garmin Connect...):", current);
             if (url === null) return;
-          
+         
             url = url.trim();
             if (url && !url.startsWith('http')) url = 'https://' + url;
 
@@ -1212,7 +1330,7 @@
             const name = prompt("Nom du nouveau poste de dépense (ex: Stage de trail, Massages...) :");
             if (!name) return;
             const key = 'custom_' + Date.now();
-          
+         
             customBudgetsList.push({ key: key, name: name });
             categoryBudgets[key] = 0;
             saveUserProfile();
@@ -1538,6 +1656,19 @@
             }, 200);
         }
 
+        // Gérer l'appui sur "Entrée" dans le champ de recherche
+        function handleSearchKeydown(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const sugg = document.getElementById('search-suggestions');
+                if (sugg) sugg.classList.add('hidden');
+               
+                // Forcer l'affichage sur la carte principale et appliquer les filtres
+                switchMainView('map');
+                applyFilters();
+            }
+        }
+
         function renderSearchSuggestions(val) {
             const container = document.getElementById('search-suggestions');
             if (!container) return;
@@ -1657,6 +1788,7 @@
 
                     updateFavoritesUI();
                     applyFilters();
+                    renderUserAlertsList();
                 } else {
                     document.getElementById('timeline-container').innerHTML = `
                         <div class="text-center py-6 space-y-2">
@@ -1786,7 +1918,7 @@
 
             if (!onlyShowFavorites) {
                 switchMainView('map');
-              
+             
                 if (activeSelectedRaceKey === raceKey) {
                     activeSelectedRaceKey = null;
                     if (leafletMap) {
@@ -1947,7 +2079,7 @@
                 const statusBadge = renderOpeningStatus(race.status, race.openingDate);
 
                 const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
-              
+             
                 let cardBgClass = 'bg-darkBg/90 border-borderBg';
                 let statusPinColor = '#f59e0b';
 
@@ -2055,13 +2187,13 @@
             const rawKeyword = document.getElementById('filter-keyword')?.value || '';
             const queryNorm = normalizeStr(rawKeyword);
             const status = document.getElementById('filter-status')?.value || 'ALL';
-          
+         
             const minDist = parseInt(document.getElementById('filter-dist-min')?.value || 0);
             const maxDist = parseInt(document.getElementById('filter-dist-max')?.value || 200);
-          
+         
             const minElev = parseInt(document.getElementById('filter-elev-min')?.value || 0);
             const maxElev = parseInt(document.getElementById('filter-elev-max')?.value || 15000);
-          
+         
             const minMonths = parseInt(document.getElementById('filter-horizon-min')?.value || 0);
             const maxMonths = parseInt(document.getElementById('filter-horizon-max')?.value || 24);
 
@@ -2072,7 +2204,7 @@
                 if (onlyShowFavorites && !favorites.includes(favKey)) return false;
 
                 const matchKw = !queryNorm || r.searchNorm.includes(queryNorm);
-             
+            
                 let matchStat = true;
                 if (status !== 'ALL') {
                     if (status === 'Opening Soon') {
@@ -2083,7 +2215,7 @@
                         matchStat = (r.status === status);
                     }
                 }
-           
+          
                 let matchDate = true;
                 if (r.raceDate) {
                     const rDate = new Date(r.raceDate);
@@ -2098,7 +2230,7 @@
 
             const countElem = document.getElementById('filtered-count');
             if (countElem) countElem.innerText = filteredRaces.length;
-     
+    
             renderListView();
             updateMapMarkers();
             renderTimeline();
@@ -2215,7 +2347,7 @@
                             </div>
                             <h3 class="text-sm font-bold text-white leading-tight">${race.title}</h3>
                             <p class="text-xs text-gray-400 mt-0.5">Course : ${formattedDate}</p>
-                      
+                     
                             <div class="grid grid-cols-3 gap-1 py-1.5 my-1.5 border-y border-borderBg text-center text-xs">
                                 <div><span class="block text-gray-500 text-[10px]">Dist.</span><span class="font-bold text-white">${race.distance}k</span></div>
                                 <div><span class="block text-gray-500 text-[10px]">D+</span><span class="font-bold text-emerald-400">+${race.elevation}m</span></div>
@@ -2248,63 +2380,61 @@
         }
 
         function switchMainView(v) {
-    activeMainTab = v;
-    const mapV = document.getElementById('container-map-view');
-    const listV = document.getElementById('container-list-view');
-    const budgetV = document.getElementById('container-budget-view');
-    const alertsV = document.getElementById('container-alerts-view');
-    const linksV = document.getElementById('container-links-view');
-    const searchSection = document.getElementById('search-filter-section');
+            activeMainTab = v;
+            const mapV = document.getElementById('container-map-view');
+            const listV = document.getElementById('container-list-view');
+            const budgetV = document.getElementById('container-budget-view');
+            const alertsV = document.getElementById('container-alerts-view');
+            const linksV = document.getElementById('container-links-view');
+            const searchSection = document.getElementById('search-filter-section');
 
-    if (!mapV || !listV || !budgetV || !alertsV || !linksV) return;
+            if (!mapV || !listV || !budgetV || !alertsV || !linksV) return;
 
-    // Masquer l'ensemble des conteneurs
-    [mapV, listV, budgetV, alertsV, linksV].forEach(el => el.classList.add('hidden'));
+            [mapV, listV, budgetV, alertsV, linksV].forEach(el => el.classList.add('hidden'));
 
-    // Conserver systématiquement la section Recherche & Radar visible
-    if (searchSection) searchSection.classList.remove('hidden');
+            if (searchSection) searchSection.classList.remove('hidden');
 
-    const inactiveStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
-    const activeStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
+            const inactiveStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
+            const activeStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
 
-    const btnMap = document.getElementById('btn-view-map');
-    const btnSec = document.getElementById('btn-view-secondary');
-    const btnBudget = document.getElementById('btn-view-budget');
-    const btnLinks = document.getElementById('btn-view-links');
-    const btnAlerts = document.getElementById('btn-view-alerts');
+            const btnMap = document.getElementById('btn-view-map');
+            const btnSec = document.getElementById('btn-view-secondary');
+            const btnBudget = document.getElementById('btn-view-budget');
+            const btnLinks = document.getElementById('btn-view-links');
+            const btnAlerts = document.getElementById('btn-view-alerts');
 
-    [btnMap, btnSec, btnLinks, btnBudget, btnAlerts].forEach(btn => {
-        if (btn) btn.className = inactiveStyle;
-    });
+            [btnMap, btnSec, btnLinks, btnBudget, btnAlerts].forEach(btn => {
+                if (btn) btn.className = inactiveStyle;
+            });
 
-    if (onlyShowFavorites) {
-        if (btnBudget) btnBudget.classList.remove('hidden');
-        if (btnSec) btnSec.classList.add('hidden');
-    } else {
-        if (btnBudget) btnBudget.classList.add('hidden');
-        if (btnSec) btnSec.classList.remove('hidden');
-    }
+            if (onlyShowFavorites) {
+                if (btnBudget) btnBudget.classList.remove('hidden');
+                if (btnSec) btnSec.classList.add('hidden');
+            } else {
+                if (btnBudget) btnBudget.classList.add('hidden');
+                if (btnSec) btnSec.classList.remove('hidden');
+            }
 
-    // Afficher la vue sélectionnée et appliquer le style actif au bouton
-    if (v === 'map') {
-        mapV.classList.remove('hidden');
-        if (btnMap) btnMap.className = activeStyle;
-        if (leafletMap) setTimeout(() => leafletMap.invalidateSize(), 100);
-    } else if (v === 'secondary' && !onlyShowFavorites) {
-        listV.classList.remove('hidden');
-        if (btnSec) btnSec.className = activeStyle;
-    } else if (v === 'alerts') {
-        alertsV.classList.remove('hidden');
-        if (btnAlerts) btnAlerts.className = activeStyle;
-        renderUserAlertsList();
-    } else if (v === 'budget' && onlyShowFavorites) {
-        budgetV.classList.remove('hidden');
-        if (btnBudget) btnBudget.className = activeStyle;
-    } else if (v === 'links') {
-        linksV.classList.remove('hidden');
-        if (btnLinks) btnLinks.className = activeStyle;
-    }
-}
+            if (v === 'map') {
+                mapV.classList.remove('hidden');
+                if (btnMap) btnMap.className = activeStyle;
+                if (leafletMap) setTimeout(() => leafletMap.invalidateSize(), 100);
+            } else if (v === 'secondary' && !onlyShowFavorites) {
+                listV.classList.remove('hidden');
+                if (btnSec) btnSec.className = activeStyle;
+            } else if (v === 'alerts') {
+                alertsV.classList.remove('hidden');
+                if (btnAlerts) btnAlerts.className = activeStyle;
+                renderUserAlertsList();
+            } else if (v === 'budget' && onlyShowFavorites) {
+                budgetV.classList.remove('hidden');
+                if (btnBudget) btnBudget.className = activeStyle;
+            } else if (v === 'links') {
+                linksV.classList.remove('hidden');
+                if (btnLinks) btnLinks.className = activeStyle;
+            }
+        }
+
         document.addEventListener('click', (e) => {
             const sugg = document.getElementById('search-suggestions');
             const input = document.getElementById('filter-keyword');
