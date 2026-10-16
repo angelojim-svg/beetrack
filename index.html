@@ -257,38 +257,6 @@
         </div>
     </div>
 
-    <!-- MODAL DE CHOIX DE CONFLIT DE PROFIL -->
-    <div id="profile-conflict-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="glass-panel p-6 rounded-2xl border border-amber-500/40 max-w-md w-full space-y-4 shadow-2xl relative">
-            <div class="text-center space-y-2">
-                <div class="w-10 h-10 mx-auto rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-lg">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                </div>
-                <h3 class="text-base font-extrabold text-white">Données locales et Cloud différentes</h3>
-                <p class="text-xs text-gray-300 leading-relaxed">
-                    Vous possédez des courses prévues sur cet appareil ainsi que sur votre compte cloud. Que souhaitez-vous faire ?
-                </p>
-            </div>
-
-            <div class="space-y-2 pt-2 text-xs">
-                <button onclick="resolveProfileConflict('merge')" class="w-full text-left p-3 rounded-xl bg-darkBg hover:bg-cardBg border border-emerald-500/40 transition group">
-                    <div class="font-bold text-emerald-400 group-hover:underline">🔀 Fusionner les deux</div>
-                    <div class="text-[11px] text-gray-400 mt-0.5">Combine vos épreuves locales et cloud.</div>
-                </button>
-
-                <button onclick="resolveProfileConflict('overwrite')" class="w-full text-left p-3 rounded-xl bg-darkBg hover:bg-cardBg border border-borderBg transition group">
-                    <div class="font-bold text-amber-400 group-hover:underline">☁️ Remplacer par le Cloud</div>
-                    <div class="text-[11px] text-gray-400 mt-0.5">Charge uniquement le profil enregistré sur le cloud.</div>
-                </button>
-
-                <button onclick="resolveProfileConflict('keep_local')" class="w-full text-left p-3 rounded-xl bg-darkBg hover:bg-cardBg border border-borderBg transition group">
-                    <div class="font-bold text-blue-400 group-hover:underline">💻 Conserver le Local et écraser le Cloud</div>
-                    <div class="text-[11px] text-gray-400 mt-0.5">Conserve vos épreuves locales et les enregistre sur le cloud.</div>
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- MAIN CONTAINER -->
     <main class="flex-grow max-w-[1600px] w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4 space-y-3">
 
@@ -372,7 +340,6 @@
         <!-- MAP, DETAIL PANEL & CHRONOLOGY SECTION -->
         <section class="space-y-4">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <!-- BARRE D'ONGLETS DE VUE (CARTE, LISTE, MES ALERTES, BUDGET, LIENS & OUTILS) -->
                 <div class="flex items-center space-x-2 bg-darkBg p-1 rounded-xl border border-borderBg flex-wrap gap-y-1">
                     <button id="btn-view-map" onclick="resetMapAndSwitchView('map')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow">
                         <i class="fa-solid fa-map-location-dot mr-1"></i> Carte
@@ -393,19 +360,16 @@
                 </div>
             </div>
 
-            <!-- LAYOUT GRILLE DE HAUTEUR UNIFORMISÉE (520px) -->
+            <!-- LAYOUT GRILLE -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
              
-                <!-- ZONE PRINCIPALE (A GAUCHE / CENTRE) -->
                 <div id="main-view-column" class="lg:col-span-8 space-y-4 transition-all duration-300">
                     <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden h-[520px]">
                         <div id="map" class="w-full h-full rounded-xl z-10"></div>
                     </div>
 
-                    <!-- LISTE DES COURSES -->
                     <div id="container-list-view" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden h-[520px] overflow-y-auto"></div>
 
-                    <!-- GESTION DU BUDGET SAISON -->
                     <div id="container-budget-view" class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6 hidden h-[520px] overflow-y-auto">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-borderBg pb-3">
                             <div>
@@ -438,7 +402,6 @@
                         <div id="budget-categories-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
                     </div>
 
-                    <!-- ONGLET HISTORIQUE DES ALERTES -->
                     <div id="container-alerts-view" class="glass-panel p-6 rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-950/20 via-cardBg to-darkBg space-y-4 hidden h-[520px] overflow-y-auto">
                         <div class="flex justify-between items-center border-b border-borderBg pb-3">
                             <div class="flex items-center gap-2">
@@ -453,12 +416,9 @@
                             <span id="alerts-total-text" class="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-3 py-1 rounded-xl border border-amber-500/20">0 alerte(s)</span>
                         </div>
 
-                        <div id="alerts-list-container" class="space-y-2.5 pt-1">
-                            <!-- Rempli dynamiquement -->
-                        </div>
+                        <div id="alerts-list-container" class="space-y-2.5 pt-1"></div>
                     </div>
 
-                    <!-- ONGLET LIENS & OUTILS UTILES -->
                     <div id="container-links-view" class="glass-panel p-6 rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 via-cardBg to-darkBg space-y-4 hidden h-[520px] overflow-y-auto">
                         <div class="flex justify-between items-center border-b border-emerald-500/20 pb-3">
                             <h3 class="text-lg font-bold text-white flex items-center gap-2">
@@ -471,9 +431,7 @@
                     </div>
                 </div>
 
-                <!-- COLONNE LATÉRALE INTERACTIVE (SUIVI DE LA SAISON OU MES ALERTES) -->
                 <div id="middle-column" class="hidden lg:col-span-3 transition-all duration-300">
-                    <!-- CADRAN SUIVI DE LA SAISON -->
                     <div id="interactive-detail-card" class="glass-panel p-4 rounded-2xl border border-borderBg space-y-3 h-[520px] flex flex-col overflow-y-auto">
                         <div class="flex items-center justify-between border-b border-borderBg pb-2">
                             <h3 id="middle-panel-title" class="text-sm font-bold text-white flex items-center gap-2">
@@ -529,7 +487,6 @@
                         </div>
                     </div>
 
-                    <!-- CADRAN MES ALERTES AU CENTRE -->
                     <div id="middle-alerts-panel" class="glass-panel p-4 rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-950/20 via-cardBg to-darkBg space-y-3 h-[520px] flex flex-col overflow-y-auto hidden">
                         <div class="flex items-center justify-between border-b border-borderBg pb-2">
                             <h3 class="text-sm font-bold text-white flex items-center gap-2">
@@ -538,13 +495,10 @@
                             </h3>
                             <button onclick="closeInteractiveDetail()" class="text-gray-400 hover:text-white text-xs px-2 py-0.5 rounded bg-darkBg border border-borderBg">✕</button>
                         </div>
-                        <div id="middle-alerts-list-container" class="space-y-2 flex-1 pt-1">
-                            <!-- Rempli dynamiquement -->
-                        </div>
+                        <div id="middle-alerts-list-container" class="space-y-2 flex-1 pt-1"></div>
                     </div>
                 </div>
 
-                <!-- PANNEAU CHRONOLOGIE (A DROITE) -->
                 <div id="timeline-column" class="lg:col-span-4 transition-all duration-300">
                     <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-borderBg space-y-3 h-[520px] flex flex-col">
                         <div class="flex items-center justify-between border-b border-borderBg pb-2">
@@ -563,7 +517,6 @@
 
             </div>
 
-            <!-- COURBE CUMULÉE -->
             <div id="container-load-chart" class="glass-panel p-4 sm:p-6 rounded-2xl border border-borderBg space-y-3 hidden w-full">
                 <div class="flex justify-between items-center border-b border-borderBg pb-2">
                     <h4 class="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
@@ -630,19 +583,12 @@
             assurances: 0
         }));
 
-        /* ==================== HELPER COULEUR STATUT COURSE ==================== */
         function getRaceStatusColor(raceKey) {
             const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
-            if (meta.completed) {
-                return '#3b82f6';
-            }
-            if (meta.registered) {
-                return '#10b981';
-            }
+            if (meta.completed) return '#3b82f6';
+            if (meta.registered) return '#10b981';
             return '#f59e0b';
         }
-
-        /* ==================== SYSTEME DE GESTION DU PROFIL & AUTH ==================== */
 
         function openAuthModal() {
             document.getElementById('auth-modal').classList.remove('hidden');
@@ -657,7 +603,7 @@
             document.getElementById('alert-modal').classList.add('hidden');
         }
 
-        /* ==================== GESTION DES ALERTES E-MAIL & SUPABASE ==================== */
+        /* ==================== GESTION DES ALERTES E-MAIL MISES A JOUR ==================== */
         async function fetchUserAlerts() {
             if (!currentUser) {
                 userAlerts = [];
@@ -716,7 +662,8 @@
                     </div>
                 `;
             } else {
-                const alertType = raceStatus === 'TBD' ? 'tbd' : 'opening_soon';
+                // Définition propre des types d'alertes demandés
+                const alertType = raceStatus === 'TBD' ? 'tbd_confirmation' : 'opening_soon_confirmation';
 
                 const newAlertObj = {
                     id: 'temp_' + Date.now(),
@@ -749,6 +696,7 @@
                     console.error("Erreur d'enregistrement d'alerte en BDD :", e);
                 }
 
+                // Envoi du mail via Edge Function Supabase
                 try {
                     await window.dbClient.functions.invoke('send-race-alert', {
                         body: {
@@ -761,20 +709,21 @@
                     console.error("Erreur d'envoi du mail via Edge Function :", e);
                 }
 
+                // Affichage du message propre de confirmation
                 if (raceStatus === 'TBD') {
-                    titleElem.innerText = "Alerte de date activée 🔔";
+                    titleElem.innerText = "Alerte Date enregistrée 🔔";
                     bodyElem.innerHTML = `
-                        Alerte enregistrée ! Un e-mail de prise en compte vient d'être envoyé à <b class="text-blue-400">${currentUser.email}</b> : vous serez informé de la date de l'événement par mail et pourrez la consulter sur BeeTrack pour <b class="text-emerald-400">${title}</b>.
+                        Vous serez informé de la date de l'événement par mail et pourrez la consulter sur BeeTrack.
                     `;
                 } else {
-                    titleElem.innerText = "Alerte Ouverture Inscriptions 🔔";
+                    titleElem.innerText = "Alerte Ouverture Inscription enregistrée 🔔";
                     bodyElem.innerHTML = `
-                        Alerte enregistrée ! Un e-mail de prise en compte vient d'être envoyé à <b class="text-blue-400">${currentUser.email}</b> : vous serez informé de la date de l'ouverture des inscriptions par mail et pourrez la consulter sur BeeTrack pour <b class="text-emerald-400">${title}</b>.
+                        Vous serez informé de la date de l'ouverture des inscriptions par mail et pourrez la consulter sur BeeTrack.
                     `;
                 }
 
                 actionsElem.innerHTML = `
-                    <button onclick="closeAlertModal()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold py-2 rounded-xl transition text-xs">Parfait, merci !</button>
+                    <button onclick="closeAlertModal()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold py-2 rounded-xl transition text-xs">Compris</button>
                 `;
             }
 
@@ -808,9 +757,9 @@
                     const isFav = favorites.includes(raceKey);
                     const isSelected = (activeSelectedRaceKey === raceKey);
 
-                    const isTbd = alert.alert_type === 'tbd';
+                    const isTbd = alert.alert_type.includes('tbd');
                     let badgeColor = 'bg-amber-500/10 text-amber-300 border-amber-500/30';
-                    let label = 'Confirmation';
+                    let label = 'Alerte Date';
                     let icon = 'fa-calendar-day';
 
                     if (raceStatus === 'Open') {
@@ -819,7 +768,7 @@
                         icon = 'fa-circle-check';
                     } else if (!isTbd) {
                         badgeColor = 'bg-blue-500/10 text-blue-300 border-blue-500/30';
-                        label = 'Ouverture';
+                        label = 'Alerte Ouverture';
                         icon = 'fa-envelope-circle-check';
                     }
 
@@ -850,14 +799,12 @@
             if (middleContainer) middleContainer.innerHTML = generateHtml(true);
         }
 
-        /* ==================== ACTION AU CLIC SUR UNE ALERTE ==================== */
         function handleAlertClick(raceTitle) {
             const targetRace = racesData.find(r => r.title === raceTitle);
             if (!targetRace || !targetRace.raceDate) return;
 
             const raceKey = `${targetRace.title}_${targetRace.raceDate}`;
 
-            // Si la course est déjà sélectionnée au centre, fermer la vue détaillée
             if (activeSelectedRaceKey === raceKey && !document.getElementById('middle-column').classList.contains('hidden')) {
                 closeInteractiveDetail();
                 return;
@@ -865,10 +812,8 @@
 
             activeSelectedRaceKey = raceKey;
 
-            // Basculer la vue principale sur la carte
             switchMainView('map');
 
-            // Afficher le cadran "Mes Alertes" au milieu
             const middleCol = document.getElementById('middle-column');
             const mainCol = document.getElementById('main-view-column');
             const timelineCol = document.getElementById('timeline-column');
@@ -878,7 +823,6 @@
             if (detailCard) detailCard.classList.add('hidden');
             if (middleAlertsPanel) middleAlertsPanel.classList.remove('hidden');
 
-            // Réorganisation de la grille à 3 colonnes : Carte (col-5) | Mes Alertes (col-3) | Chronologie (col-4)
             if (mainCol) {
                 mainCol.classList.remove('lg:col-span-8');
                 mainCol.classList.add('lg:col-span-5');
@@ -893,10 +837,8 @@
                 timelineCol.classList.add('lg:col-span-4');
             }
 
-            // Mettre à jour l'affichage de la liste des alertes pour refléter la sélection active
             renderUserAlertsList();
 
-            // Repositionner la carte et ouvrir le popup d'information
             setTimeout(() => {
                 if (leafletMap) {
                     leafletMap.invalidateSize();
@@ -1111,15 +1053,6 @@
                     .maybeSingle();
 
                 if (data && !error) {
-                    const cloudHasFavorites = data.favorites && data.favorites.length > 0;
-                    const localHasFavorites = favorites.length > 0;
-
-                    if (cloudHasFavorites && localHasFavorites && JSON.stringify(data.favorites.sort()) !== JSON.stringify(favorites.sort())) {
-                        pendingCloudData = data;
-                        document.getElementById('profile-conflict-modal').classList.remove('hidden');
-                        return;
-                    }
-
                     applyCloudProfile(data);
                 } else {
                     await saveUserProfile();
@@ -1144,36 +1077,6 @@
             updateFavoritesUI();
             applyFilters();
         }
-
-        function resolveProfileConflict(action) {
-            document.getElementById('profile-conflict-modal').classList.add('hidden');
-            if (!pendingCloudData) return;
-
-            if (action === 'merge') {
-                favorites = Array.from(new Set([...favorites, ...(pendingCloudData.favorites || [])]));
-                Object.assign(raceMetaStates, pendingCloudData.meta || {});
-                Object.assign(raceGpxLinks, pendingCloudData.gpx || {});
-                Object.assign(raceStravaLinks, pendingCloudData.strava || {});
-                if (pendingCloudData.links && pendingCloudData.links.length > 0) customLinks = pendingCloudData.links;
-                Object.assign(categoryBudgets, pendingCloudData.budgets || {});
-                if (pendingCloudData.custom_budgets_list) customBudgetsList = pendingCloudData.custom_budgets_list;
-
-                saveUserProfile();
-            } else if (action === 'overwrite') {
-                applyCloudProfile(pendingCloudData);
-                return;
-            } else if (action === 'keep_local') {
-                saveUserProfile();
-            }
-
-            pendingCloudData = null;
-            renderBudgetGrid();
-            renderCustomLinks();
-            updateFavoritesUI();
-            applyFilters();
-        }
-
-        /* ==================== FONCTIONS DE L'APPLICATION ==================== */
 
         function normalizeStr(str) {
             if (!str) return '';
@@ -1548,7 +1451,6 @@
             });
         }
 
-        /* ==================== COURBE CUMULÉE AVEC COULEURS DYNAMIQUES ==================== */
         function renderLoadChart() {
             const chartContainer = document.getElementById('container-load-chart');
             if (!chartContainer) return;
@@ -2246,7 +2148,6 @@
             renderTimeline();
         }
 
-        /* ==================== MARQUEURS CARTE ET POPUPS ==================== */
         function updateMapMarkers() {
             if (!leafletMap) return;
 
@@ -2255,7 +2156,6 @@
             }
 
             if (typeof L.markerClusterGroup !== 'function') {
-                console.warn("MarkerCluster plugin non chargé, utilisation de marqueurs simples.");
                 return;
             }
 
