@@ -471,8 +471,8 @@
                     </div>
                 </div>
 
-                <!-- COLONNE LATÉRALE INTERACTIVE (CARTE / DETAILS DU SUIVI SAISON) -->
-                <div id="middle-column" class="hidden lg:col-span-4 transition-all duration-300">
+                <!-- COLONNE LATÉRALE INTERACTIVE (SUIVI DE LA SAISON) -->
+                <div id="middle-column" class="hidden lg:col-span-3 transition-all duration-300">
                     <div id="interactive-detail-card" class="glass-panel p-4 rounded-2xl border border-borderBg space-y-3 h-[520px] flex flex-col overflow-y-auto">
                         <div class="flex items-center justify-between border-b border-borderBg pb-2">
                             <h3 class="text-sm font-bold text-white flex items-center gap-2">
@@ -855,41 +855,78 @@
             if (!targetRace || !targetRace.raceDate) return;
 
             const raceKey = `${targetRace.title}_${targetRace.raceDate}`;
-            const mapContainer = document.getElementById('container-map-view');
-            const mainCol = document.getElementById('main-view-column');
-            const timelineCol = document.getElementById('timeline-column');
-            const middleCol = document.getElementById('middle-column');
 
-            switchMainView('alerts');
-
-            if (activeSelectedRaceKey === raceKey && !middleCol.classList.contains('hidden') && middleCol.contains(mapContainer)) {
+            if (activeSelectedRaceKey === raceKey) {
                 closeInteractiveDetail();
                 return;
             }
 
             activeSelectedRaceKey = raceKey;
 
-            // Insérer la carte dans la colonne latérale gauche (middle-column)
-            middleCol.classList.remove('hidden');
-            middleCol.classList.remove('lg:col-span-4', 'lg:col-span-3');
-            middleCol.classList.add('lg:col-span-7');
-           
-            if (mapContainer && middleCol) {
-                mapContainer.classList.remove('hidden');
-                middleCol.innerHTML = '';
-                middleCol.appendChild(mapContainer);
+            // Garder la carte affichée sur la vue principale
+            switchMainView('map');
+
+            // Mettre à jour les informations du panneau "Suivi de la Saison"
+            document.getElementById('detail-race-title').innerText = targetRace.title;
+            document.getElementById('detail-race-loc').innerText = targetRace.location;
+            document.getElementById('detail-race-price').innerText = targetRace.price > 0 ? `${targetRace.price} €` : 'N/C';
+
+            const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=Marseille&destination=${encodeURIComponent(targetRace.location)}`;
+            document.getElementById('detail-race-gmaps-container').innerHTML = `
+                <a href="${gmapsUrl}" target="_blank" class="w-full text-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold py-1 rounded-xl text-xs transition flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-route"></i> Trajet & temps (Google Maps) ↗
+                </a>
+            `;
+
+            const airbnbUrl = `https://www.airbnb.fr/s/${encodeURIComponent(targetRace.location)}/homes`;
+            const bookingUrl = `https://www.booking.com/searchresults.fr.html?ss=${encodeURIComponent(targetRace.location)}`;
+
+            document.getElementById('detail-race-lodging-container').innerHTML = `
+                <a href="${airbnbUrl}" target="_blank" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1">
+                    🏠 Airbnb ↗
+                </a>
+                <a href="${bookingUrl}" target="_blank" class="bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 font-semibold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1">
+                    🏨 Booking ↗
+                </a>
+            `;
+
+            const linkContainer = document.getElementById('detail-race-link-container');
+            if (targetRace.url) {
+                linkContainer.innerHTML = `
+                    <a href="${targetRace.url}" target="_blank" class="w-full text-center bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-semibold py-1.5 rounded-lg text-xs transition block">
+                        Page Inscription ↗
+                    </a>
+                `;
+            } else {
+                linkContainer.innerHTML = '';
             }
 
-            // Réduire la vue des alertes à droite
-            mainCol.classList.remove('lg:col-span-8');
-            mainCol.classList.add('lg:col-span-5');
+            renderGpxLinkDisplay();
+            renderStravaLinkDisplay();
 
+            const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
+            document.getElementById('check-reg-ok').checked = meta.registered;
+            document.getElementById('check-done').checked = meta.completed;
+
+            // Configurer les colonnes pour afficher la carte à gauche, le cadre de suivi au milieu et la chronologie à droite
+            const middleCol = document.getElementById('middle-column');
+            const mainCol = document.getElementById('main-view-column');
+            const timelineCol = document.getElementById('timeline-column');
+
+            if (mainCol) {
+                mainCol.classList.remove('lg:col-span-8');
+                mainCol.classList.add('lg:col-span-5');
+            }
+            if (middleCol) {
+                middleCol.classList.remove('hidden');
+                middleCol.classList.remove('lg:col-span-7');
+                middleCol.classList.add('lg:col-span-3');
+            }
             if (timelineCol) {
                 timelineCol.classList.remove('hidden');
                 timelineCol.classList.add('lg:col-span-4');
             }
 
-            // Zoomer et ouvrir le popup de la course sélectionnée
             setTimeout(() => {
                 if (leafletMap) {
                     leafletMap.invalidateSize();
@@ -915,10 +952,10 @@
 
             if (marker) {
                 const latLng = marker.getLatLng();
-                leafletMap.setView(latLng, 12, { animate: true });
-                setTimeout(() => marker.openPopup(), 250);
+                leafletMap.setView(latLng, 11, { animate: true });
+                setTimeout(() => marker.openPopup(), 200);
             } else if (lat && lng) {
-                leafletMap.setView([lat, lng], 12, { animate: true });
+                leafletMap.setView([lat, lng], 11, { animate: true });
             }
         }
 
@@ -927,22 +964,15 @@
             const middleCol = document.getElementById('middle-column');
             const mainCol = document.getElementById('main-view-column');
             const timelineCol = document.getElementById('timeline-column');
-            const mapContainer = document.getElementById('container-map-view');
-            const detailCard = document.getElementById('interactive-detail-card');
 
-            // Remettre la carte à sa place d'origine
-            if (mapContainer && mainCol && !mainCol.contains(mapContainer)) {
-                mainCol.insertBefore(mapContainer, mainCol.firstChild);
+            if (middleCol) {
+                middleCol.classList.add('hidden');
             }
 
-            middleCol.classList.add('hidden');
-            if (detailCard) {
-                middleCol.innerHTML = '';
-                middleCol.appendChild(detailCard);
+            if (mainCol) {
+                mainCol.classList.remove('lg:col-span-5');
+                mainCol.classList.add('lg:col-span-8');
             }
-
-            mainCol.classList.remove('lg:col-span-5');
-            mainCol.classList.add('lg:col-span-8');
 
             if (timelineCol) {
                 timelineCol.classList.remove('hidden');
@@ -953,6 +983,7 @@
                 if (leafletMap) {
                     leafletMap.invalidateSize();
                     leafletMap.setView([46.603354, 1.888334], 5);
+                    leafletMap.closePopup();
                 }
             }, 100);
         }
@@ -1955,7 +1986,6 @@
 
             activeSelectedRaceKey = raceKey;
 
-            // Afficher le cadre Suivi de la Saison au milieu
             if (detailCard && middleCol) {
                 middleCol.innerHTML = '';
                 middleCol.appendChild(detailCard);
