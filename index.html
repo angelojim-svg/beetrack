@@ -416,7 +416,7 @@
                                 <p class="text-xs text-gray-400">Aperçu global et répartition visuelle de tes dépenses.</p>
                             </div>
                             <div class="flex items-center gap-3">
-                                <button onclick="addNewCustomBudgetCategory()" class="text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-3 py-1.5 rounded-xl font-semibold transition flex items-center gap-1.5">
+                                <button onclick="addNewCustomBudgetCategory()" class="text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-3 py-1.5 rounded-xl transition font-semibold flex items-center gap-1.5">
                                     <i class="fa-solid fa-plus"></i> Ajouter poste
                                 </button>
                                 <span class="text-xs text-amber-400 font-mono font-bold bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
@@ -472,7 +472,62 @@
                 </div>
 
                 <!-- COLONNE LATÉRALE INTERACTIVE (CARTE / DETAILS DU SUIVI SAISON) -->
-                <div id="middle-column" class="hidden lg:col-span-7 transition-all duration-300"></div>
+                <div id="middle-column" class="hidden lg:col-span-4 transition-all duration-300">
+                    <div class="glass-panel p-4 rounded-2xl border border-borderBg space-y-3 h-[520px] flex flex-col overflow-y-auto">
+                        <div class="flex items-center justify-between border-b border-borderBg pb-2">
+                            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-person-running text-emerald-400"></i>
+                                Suivi de la Saison
+                            </h3>
+                            <button onclick="closeInteractiveDetail()" class="text-gray-400 hover:text-white text-xs px-2 py-0.5 rounded bg-darkBg border border-borderBg">✕</button>
+                        </div>
+
+                        <div class="space-y-3 flex-1 text-xs">
+                            <div class="space-y-1">
+                                <h4 id="detail-race-title" class="text-sm font-extrabold text-white">Nom de la course</h4>
+                                <div class="flex items-center gap-2 text-gray-400">
+                                    <span>📍 <span id="detail-race-loc">Lieu</span></span>
+                                    <span>•</span>
+                                    <span>💶 <span id="detail-race-price">0 €</span></span>
+                                </div>
+                            </div>
+
+                            <div class="space-y-2 bg-darkBg/80 p-3 rounded-xl border border-borderBg">
+                                <label class="flex items-center justify-between cursor-pointer p-2 rounded-lg bg-cardBg border border-borderBg hover:border-emerald-500/40 transition">
+                                    <span class="font-semibold text-gray-200">Inscription OK ?</span>
+                                    <input type="checkbox" id="check-reg-ok" onchange="toggleRaceStatusMeta('registered')" class="w-4 h-4 accent-emerald-500 cursor-pointer">
+                                </label>
+                                <label class="flex items-center justify-between cursor-pointer p-2 rounded-lg bg-cardBg border border-borderBg hover:border-blue-500/40 transition">
+                                    <span class="font-semibold text-gray-200">Course terminée ?</span>
+                                    <input type="checkbox" id="check-done" onchange="toggleRaceStatusMeta('completed')" class="w-4 h-4 accent-blue-500 cursor-pointer">
+                                </label>
+                            </div>
+
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center font-semibold text-gray-300">
+                                    <span>Trace GPX :</span>
+                                    <button onclick="editGpxLink()" class="text-[11px] text-emerald-400 hover:underline">Modifier</button>
+                                </div>
+                                <div id="gpx-link-display"></div>
+                            </div>
+
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center font-semibold text-gray-300">
+                                    <span>Lien Activité :</span>
+                                    <button onclick="editStravaActivityLink()" class="text-[11px] text-orange-400 hover:underline">Modifier</button>
+                                </div>
+                                <div id="strava-link-display"></div>
+                            </div>
+
+                            <div class="space-y-2 pt-2 border-t border-borderBg">
+                                <div id="detail-race-gmaps-container"></div>
+                                <div class="grid grid-cols-2 gap-2" id="detail-race-lodging-container"></div>
+                            </div>
+
+                            <div id="detail-race-link-container" class="pt-2"></div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- PANNEAU CHRONOLOGIE (A DROITE) -->
                 <div id="timeline-column" class="lg:col-span-4 transition-all duration-300">
@@ -800,31 +855,41 @@
             if (!targetRace || !targetRace.raceDate) return;
 
             const raceKey = `${targetRace.title}_${targetRace.raceDate}`;
-            const middleCol = document.getElementById('middle-column');
-            const mainCol = document.getElementById('main-view-column');
             const mapContainer = document.getElementById('container-map-view');
+            const mainCol = document.getElementById('main-view-column');
+            const timelineCol = document.getElementById('timeline-column');
+            const middleCol = document.getElementById('middle-column');
 
-            // Si on re-clique sur la même alerte active : fermer la carte et réinitialiser
-            if (activeSelectedRaceKey === raceKey && !middleCol.classList.contains('hidden')) {
+            // Basculer l'onglet principal sur "Mes alertes" pour que la vue principale reste les alertes
+            switchMainView('alerts');
+
+            // Si on re-clique sur la même alerte active : fermer la carte latérale
+            if (activeSelectedRaceKey === raceKey && !middleCol.classList.contains('hidden') && middleCol.contains(mapContainer)) {
                 closeInteractiveDetail();
                 return;
             }
 
             activeSelectedRaceKey = raceKey;
 
-            // Garder Mes Alertes affiché à DROITE (main-view-column devient lg:col-span-5)
-            // et afficher la CARTE PLUS LARGE à GAUCHE (middle-column prend lg:col-span-7)
-            mainCol.classList.remove('lg:col-span-8');
-            mainCol.classList.add('lg:col-span-5');
-
+            // Déplacer la carte dans le conteneur de gauche (middle-column) en mode large
             middleCol.classList.remove('hidden');
-            middleCol.classList.remove('lg:col-span-3');
+            middleCol.classList.remove('lg:col-span-4');
             middleCol.classList.add('lg:col-span-7');
-
+           
             if (mapContainer && middleCol) {
                 mapContainer.classList.remove('hidden');
                 middleCol.innerHTML = '';
                 middleCol.appendChild(mapContainer);
+            }
+
+            // Réduire la colonne principale (Mes alertes) à droite pour laisser toute la place à la carte à gauche et à la chronologie
+            mainCol.classList.remove('lg:col-span-8', 'lg:col-span-5');
+            mainCol.classList.add('lg:col-span-5');
+
+            // Conserver la chronologie visible à droite
+            if (timelineCol) {
+                timelineCol.classList.remove('hidden');
+                timelineCol.classList.add('lg:col-span-4');
             }
 
             setTimeout(() => {
@@ -844,18 +909,24 @@
             activeSelectedRaceKey = null;
             const middleCol = document.getElementById('middle-column');
             const mainCol = document.getElementById('main-view-column');
+            const timelineCol = document.getElementById('timeline-column');
             const mapContainer = document.getElementById('container-map-view');
 
+            // Remettre la carte dans son conteneur d'origine (main-view-column)
             if (mapContainer && mainCol && !mainCol.contains(mapContainer)) {
                 mainCol.insertBefore(mapContainer, mainCol.firstChild);
             }
 
             middleCol.classList.add('hidden');
-            middleCol.classList.remove('lg:col-span-7');
-            middleCol.classList.add('lg:col-span-3');
+            middleCol.innerHTML = ''; // Nettoyer pour réinitialiser le contenu du panneau latéral si besoin
 
             mainCol.classList.remove('lg:col-span-5');
             mainCol.classList.add('lg:col-span-8');
+
+            if (timelineCol) {
+                timelineCol.classList.remove('hidden');
+                timelineCol.classList.add('lg:col-span-4');
+            }
 
             setTimeout(() => {
                 if (leafletMap) {
@@ -1105,6 +1176,7 @@
         function resetMapAndSwitchView(v) {
             switchMainView(v);
             activeSelectedRaceKey = null;
+            closeInteractiveDetail();
             if (leafletMap) {
                 setTimeout(() => {
                     leafletMap.invalidateSize();
@@ -1130,6 +1202,7 @@
         function setFavoritesFilter(showOnlyFavs) {
             onlyShowFavorites = showOnlyFavs;
             activeSelectedRaceKey = null;
+            closeInteractiveDetail();
          
             const btnAll = document.getElementById('btn-toggle-all');
             const btnFav = document.getElementById('btn-toggle-fav');
@@ -1157,7 +1230,6 @@
                 if (searchSection) searchSection.classList.remove('hidden');
              
                 if (activeMainTab === 'budget') switchMainView('map');
-                closeInteractiveDetail();
             }
 
             applyFilters();
@@ -1856,18 +1928,30 @@
             }
 
             const middleCol = document.getElementById('middle-column');
+            const timelineCol = document.getElementById('timeline-column');
             const mainCol = document.getElementById('main-view-column');
 
-            if (activeSelectedRaceKey === raceKey) {
+            if (activeSelectedRaceKey === raceKey && !middleCol.classList.contains('hidden')) {
                 closeInteractiveDetail();
                 return;
             }
 
             activeSelectedRaceKey = raceKey;
 
-            mainCol.classList.remove('lg:col-span-8');
-            mainCol.classList.add('lg:col-span-5');
-            middleCol.classList.remove('hidden');
+            // Afficher le panneau de détail dans la colonne centrale (middle-column)
+            if (mainCol) mainCol.classList.remove('lg:col-span-8');
+            if (mainCol) mainCol.classList.add('lg:col-span-5');
+
+            if (middleCol) {
+                middleCol.classList.remove('hidden');
+                middleCol.classList.remove('lg:col-span-7');
+                middleCol.classList.add('lg:col-span-3');
+            }
+
+            if (timelineCol) {
+                timelineCol.classList.remove('lg:col-span-4');
+                timelineCol.classList.add('lg:col-span-4');
+            }
 
             document.getElementById('detail-race-title').innerText = title;
             document.getElementById('detail-race-loc').innerText = location;
@@ -1913,7 +1997,6 @@
             setTimeout(() => {
                 if (leafletMap) {
                     leafletMap.invalidateSize();
-                    leafletMap.setView([46.603354, 1.888334], 5);
                 }
                 const marker = markersMapRef[raceKey];
                 if (marker) {
