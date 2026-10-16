@@ -1,101 +1,2373 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeeTrack - Gestion de saison Trail & Route</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
+    <!-- Leaflet CSS & JS for Interactive Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-serve(async (req) => {
-  // Gestion de la vérification CORS si nécessaire
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' } })
-  }
+    <!-- CSS de MarkerCluster -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
 
-  try {
-    // Vérification de la présence d'un body
-    const bodyText = await req.text()
-    if (!bodyText) {
-      return new Response(JSON.stringify({ error: "Empty request body" }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      })
-    }
+    <!-- JS de MarkerCluster -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
-    const { user_email, race_title, alert_type, race_date, opening_date } = JSON.parse(bodyText)
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    if (!user_email || !race_title) {
-      return new Response(JSON.stringify({ error: "Missing required fields: user_email or race_title" }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      })
-    }
+    <!-- Chart.js pour les graphiques -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    let subject = ""
-    let htmlContent = ""
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 
-    // CAS 1 : Inscription alerte date (TBD)
-    if (alert_type === 'tbd_confirmation') {
-      subject = `BeeTrack - Confirmation d'alerte pour ${race_title}`
-      htmlContent = `
-        <p>Bonjour,</p>
-        <p>Votre demande d'alerte pour <strong>${race_title}</strong> a bien été prise en compte.</p>
-        <p>Vous serez informé de la date de l'événement par mail et pourrez la consulter sur BeeTrack.</p>
-        <p>À bientôt,<br>L'équipe BeeTrack</p>
-      `
-    } else if (alert_type === 'tbd_event_date_known') {
-      subject = `BeeTrack - La date de ${race_title} est connue !`
-      htmlContent = `
-        <p>Bonjour,</p>
-        <p>La date de l'épreuve <strong>${race_title}</strong> est fixée au <strong>${race_date || 'prochainement'}</strong>.</p>
-        <p>Vous pouvez dès à présent la consulter sur BeeTrack.</p>
-        <p>À bientôt,<br>L'équipe BeeTrack</p>
-      `
-    }
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    // CAS 2 : Inscription alerte ouverture inscription (Opening Soon)
-    else if (alert_type === 'opening_soon_confirmation') {
-      subject = `BeeTrack - Confirmation d'alerte ouverture pour ${race_title}`
-      htmlContent = `
-        <p>Bonjour,</p>
-        <p>Votre demande d'alerte pour <strong>${race_title}</strong> a bien été prise en compte.</p>
-        <p>Vous serez informé de la date de l'ouverture des inscriptions par mail et pourrez la consulter sur BeeTrack.</p>
-        <p>À bientôt,<br>L'équipe BeeTrack</p>
-      `
-    } else if (alert_type === 'opening_soon_reminder_eve') {
-      subject = `BeeTrack - Rappel : Ouverture des inscriptions pour ${race_title} demain !`
-      htmlContent = `
-        <p>Bonjour,</p>
-        <p>Les inscriptions pour l'épreuve <strong>${race_title}</strong> ouvrent demain (${opening_date || ''}) !</p>
-        <p>Vous pouvez la consulter sur BeeTrack.</p>
-        <p>À bientôt,<br>L'équipe BeeTrack</p>
-      `
-    } else {
-      subject = `BeeTrack - Alerte ${race_title}`
-      htmlContent = `<p>Bonjour, mise à jour concernant ${race_title}. Consultez BeeTrack.</p>`
-    }
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        emerald: {
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                            900: '#064e3b',
+                        },
+                        darkBg: '#0b0f17',
+                        cardBg: '#131b2e',
+                        borderBg: '#1f293d',
+                        neonYellow: '#eab308'
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
 
-    // Appel à l'API Resend
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${RESEND_API_KEY}`
-      },
-      body: JSON.stringify({
-        from: 'BeeTrack <notifications@beetrack.app>',
-        to: [user_email],
-        subject: subject,
-        html: htmlContent
-      })
-    })
+    <style>
+        body {
+            background-color: #0b0f17;
+            color: #f3f4f6;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-image:
+                radial-gradient(circle at 15% 15%, rgba(16, 185, 129, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(234, 179, 8, 0.03) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
 
-    const resData = await res.json()
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0b0f17; }
+        ::-webkit-scrollbar-thumb { background: #1f293d; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #10b981; }
 
-    return new Response(JSON.stringify({ success: true, data: resData }), {
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-    })
+        .leaflet-popup-content-wrapper {
+            background-color: #131b2e !important;
+            color: #f3f4f6 !important;
+            border: 1px solid #1f293d;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            min-width: 260px !important;
+        }
+        .leaflet-popup-tip { background-color: #131b2e !important; }
+        .leaflet-container { background-color: #0b0f17 !important; font-family: inherit; }
 
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-    })
-  }
-})
+        .glass-panel {
+            background: rgba(19, 27, 46, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .range-slider-container {
+            position: relative;
+            height: 8px;
+            background: #1f293d;
+            border-radius: 4px;
+        }
+        .range-slider-track {
+            position: absolute;
+            height: 100%;
+            background: #10b981;
+            border-radius: 4px;
+        }
+        .range-slider-container input[type="range"] {
+            position: absolute;
+            width: 100%;
+            height: 8px;
+            top: 0;
+            background: none;
+            pointer-events: none;
+            -webkit-appearance: none;
+        }
+        .range-slider-container input[type="range"]::-webkit-slider-thumb {
+            height: 22px;
+            width: 22px;
+            border-radius: 50%;
+            background: #34d399;
+            border: 2px solid #0b0f17;
+            cursor: pointer;
+            pointer-events: auto;
+            -webkit-appearance: none;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- HEADER / NAVIGATION -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-borderBg shadow-lg">
+        <div class="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-2.5 lg:py-0 lg:h-16 flex flex-col lg:flex-row items-center justify-between gap-2">
+         
+            <div class="w-full lg:w-auto flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-darkBg font-black text-base shadow-md shadow-emerald-500/20">
+                        <i class="fa-solid font-bold fa-stopwatch"></i>
+                    </div>
+                    <div class="flex flex-col items-start gap-0.5">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-lg sm:text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-gray-200 to-amber-400 bg-clip-text text-transparent leading-none">BeeTrack</span>
+                            <span class="text-[10px] font-mono tracking-wider font-bold text-amber-400 uppercase bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">PILOTAGE SAISON</span>
+                        </div>
+                        <p class="text-xs text-white font-medium bg-blue-600/90 px-2 py-0.5 rounded inline-block shadow-sm">
+                            Planifie tes courses, pilote tes inscriptions et maîtrise le budget de ta saison.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BLOCS BUDGET, FAVORIS & PROFIL / AUTH -->
+            <div class="w-full lg:w-auto flex flex-wrap items-center justify-between lg:justify-end gap-3 text-xs">
+             
+                <div class="relative group z-40">
+                    <div class="flex items-center space-x-2 bg-darkBg/90 px-3 py-1.5 rounded-xl border border-borderBg cursor-pointer">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                        <span class="text-gray-300 text-xs font-medium">Budget Saison :</span>
+                        <span class="font-extrabold text-amber-400 text-xs sm:text-sm" id="stat-total-budget">0 €</span>
+                        <i class="fa-solid fa-chevron-down text-[10px] text-gray-400 ml-1"></i>
+                    </div>
+
+                    <div class="absolute top-10 left-0 sm:left-auto sm:right-0 w-64 glass-panel p-3 rounded-xl border border-borderBg hidden group-hover:block z-50 shadow-2xl space-y-1.5 text-xs">
+                        <div class="font-bold text-white border-b border-borderBg pb-1 flex justify-between">
+                            <span>Détail du Budget</span>
+                            <span class="text-amber-400" id="detail-total-budget">0 €</span>
+                        </div>
+                        <div class="flex justify-between text-gray-300"><span>🎟️ Dossards :</span><b id="detail-b-dossards">0 €</b></div>
+                        <div class="flex justify-between text-gray-300"><span>🎒 Matériel :</span><b id="detail-b-materiel">0 €</b></div>
+                        <div class="flex justify-between text-gray-300"><span>🚗 Transport :</span><b id="detail-b-transport">0 €</b></div>
+                        <div class="flex justify-between text-gray-300"><span>⛺ Hébergement :</span><b id="detail-b-hebergement">0 €</b></div>
+                        <div class="flex justify-between text-gray-300"><span>⚡ Nutrition :</span><b id="detail-b-nutrition">0 €</b></div>
+                        <div class="flex justify-between text-gray-300"><span>🩺 Médical :</span><b id="detail-b-medical">0 €</b></div>
+                        <div class="flex justify-between text-gray-300"><span>🧘 Coaching :</span><b id="detail-b-coaching">0 €</b></div>
+                        <div class="flex justify-between text-gray-300"><span>🛡️ Assurances :</span><b id="detail-b-assurances">0 €</b></div>
+                        <div id="dropdown-custom-budgets" class="border-t border-borderBg/50 pt-1 space-y-1"></div>
+                    </div>
+                </div>
+
+                <!-- SWITCH VISUEL MES COURSES PRÉVUES / TOUTES LES COURSES -->
+                <div class="flex items-center bg-darkBg p-1 rounded-xl border border-borderBg">
+                    <button id="btn-toggle-all" onclick="setFavoritesFilter(false)" class="px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition">
+                        Toutes les courses
+                    </button>
+                    <button id="btn-toggle-fav" onclick="setFavoritesFilter(true)" class="px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5">
+                        <span class="text-amber-400 font-bold">♥</span> Mes courses prévues (<span id="fav-count">0</span>)
+                    </button>
+                </div>
+
+                <!-- MODULE AUTHENTIFICATION & SAUVEGARDE PROFIL -->
+                <div id="auth-container" class="flex items-center bg-darkBg p-1 rounded-xl border border-borderBg">
+                    <div id="auth-logged-out" class="flex items-center space-x-2 px-2 py-0.5">
+                        <button onclick="openAuthModal()" class="text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1">
+                            <i class="fa-solid fa-user"></i> Sauvegarde / Connexion
+                        </button>
+                    </div>
+
+                    <div id="auth-logged-in" class="hidden flex items-center space-x-2 px-2 py-0.5">
+                        <span class="text-xs text-emerald-400 font-mono font-bold flex items-center gap-1">
+                            <i class="fa-solid fa-cloud-check text-emerald-400"></i> <span id="user-email-display" class="max-w-[100px] truncate">Profil</span>
+                        </span>
+                        <button onclick="handleSignOut()" class="text-[10px] text-gray-400 hover:text-red-400 bg-cardBg px-2 py-1 rounded border border-borderBg transition">
+                            Déconnexion
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <!-- MODAL AUTHENTIFICATION -->
+    <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel p-6 rounded-2xl border border-emerald-500/40 max-w-sm w-full space-y-4 shadow-2xl relative">
+            <button onclick="closeAuthModal()" class="absolute top-3 right-3 text-gray-400 hover:text-white text-xs bg-darkBg px-2 py-1 rounded border border-borderBg">✕</button>
+
+            <div class="text-center space-y-1">
+                <h3 class="text-lg font-extrabold text-white flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-user-shield text-emerald-400"></i>
+                    Sauvegarde / Connexion
+                </h3>
+                <p class="text-xs text-gray-400">Retrouvez vos courses prévues et votre tableau de bord sur tous vos appareils.</p>
+            </div>
+
+            <form onsubmit="handleAuthSubmit(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-gray-300 mb-1 font-semibold">Adresse Email</label>
+                    <input type="email" id="auth-email" required placeholder="votre@email.com" class="w-full bg-darkBg border border-borderBg rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
+                </div>
+                <div>
+                    <label class="block text-gray-300 mb-1 font-semibold">Mot de passe</label>
+                    <input type="password" id="auth-password" required placeholder="••••••••" class="w-full bg-darkBg border border-borderBg rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
+                </div>
+
+                <div id="auth-error" class="hidden p-2 rounded-lg bg-red-500/20 border border-red-500/40 text-red-300 text-[11px]"></div>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="submit" id="btn-login" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold py-2 rounded-xl transition">Se Connecter</button>
+                    <button type="button" onclick="handleSignUp()" class="flex-1 bg-darkBg hover:bg-cardBg text-emerald-400 border border-emerald-500/40 font-bold py-2 rounded-xl transition">Créer Compte</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL POPUP ALERTE EMAIL -->
+    <div id="alert-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel p-6 rounded-2xl border border-blue-500/40 max-w-md w-full space-y-4 shadow-2xl relative text-center">
+            <button onclick="closeAlertModal()" class="absolute top-3 right-3 text-gray-400 hover:text-white text-xs bg-darkBg px-2 py-1 rounded border border-borderBg">✕</button>
+
+            <div class="w-12 h-12 mx-auto rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400 text-xl">
+                <i id="alert-modal-icon" class="fa-solid fa-bell animate-bounce"></i>
+            </div>
+
+            <div class="space-y-2">
+                <h3 id="alert-modal-title" class="text-base font-extrabold text-white">Alerte Rappel Mail</h3>
+                <p id="alert-modal-body" class="text-xs text-gray-300 leading-relaxed"></p>
+            </div>
+
+            <div id="alert-modal-actions" class="pt-2"></div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-grow max-w-[1600px] w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4 space-y-3">
+
+        <!-- SEARCH & FILTER PANEL -->
+        <section id="search-filter-section" class="glass-panel p-4 sm:p-5 rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 via-cardBg to-darkBg space-y-4 shadow-xl">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-500/20 pb-2.5">
+                <h2 class="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-filter text-emerald-400 animate-pulse"></i>
+                    <span class="bg-gradient-to-r from-emerald-400 to-amber-300 bg-clip-text text-transparent">Recherche & Radar</span>
+                </h2>
+                <div class="flex items-center justify-between sm:justify-end space-x-3">
+                    <button id="btn-reset-filters" onclick="resetFilters()" class="text-xs text-gray-400 hover:text-emerald-400 underline transition">Réinitialiser</button>
+                    <span class="text-xs bg-darkBg px-2.5 py-1 rounded-lg border border-emerald-500/30 text-gray-300 font-mono">
+                        <span id="filtered-count" class="text-emerald-400 font-bold">0</span> épreuve(s)
+                    </span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                <div class="md:col-span-7 relative">
+                    <label class="block text-xs font-semibold uppercase text-emerald-400/80 mb-1">Recherche (Nom de course, ville...)</label>
+                    <div class="relative">
+                        <input type="text" id="filter-keyword" oninput="handleFastSearch(this.value)" onkeydown="handleSearchKeydown(event)" placeholder="Tapez 2 lettres ou appuyez sur Entrée..." class="w-full px-3 py-2 bg-darkBg border border-emerald-500/30 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-400">
+                        <i class="fa-solid fa-magnifying-glass absolute right-3 top-2.5 text-emerald-500/60 text-xs"></i>
+                    </div>
+
+                    <div id="search-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-cardBg border border-borderBg rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto divide-y divide-borderBg/50 text-xs">
+                    </div>
+                </div>
+
+                <div class="md:col-span-5">
+                    <label class="block text-xs font-semibold uppercase text-emerald-400/80 mb-1">Statut d'ouverture</label>
+                    <select id="filter-status" onchange="applyFilters()" class="w-full px-3 py-2 bg-darkBg border border-emerald-500/30 rounded-xl text-sm text-white font-medium cursor-pointer">
+                        <option value="ALL">Tous les statuts</option>
+                        <option value="Open">Ouvertes</option>
+                        <option value="Opening Soon">Prochaines (Bientôt)</option>
+                        <option value="TBD">Date à confirmer par l'organisateur</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2 border-t border-borderBg/50">
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs font-semibold">
+                        <span class="text-gray-400">Distance : <b id="slider-dist-min-val" class="text-emerald-400">0 km</b></span>
+                        <span class="text-gray-400">à <b id="slider-dist-max-val" class="text-emerald-400">200 km</b></span>
+                    </div>
+                    <div class="range-slider-container">
+                        <div id="track-dist" class="range-slider-track"></div>
+                        <input type="range" id="filter-dist-min" min="0" max="200" step="5" value="0" oninput="handleDualSlider('dist'); applyFilters();">
+                        <input type="range" id="filter-dist-max" min="0" max="200" step="5" value="200" oninput="handleDualSlider('dist'); applyFilters();">
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs font-semibold">
+                        <span class="text-gray-400">D+ : <b id="slider-elev-min-val" class="text-emerald-400">0 m</b></span>
+                        <span class="text-gray-400">à <b id="slider-elev-max-val" class="text-emerald-400">15 000 m</b></span>
+                    </div>
+                    <div class="range-slider-container">
+                        <div id="track-elev" class="range-slider-track"></div>
+                        <input type="range" id="filter-elev-min" min="0" max="15000" step="250" value="0" oninput="handleDualSlider('elev'); applyFilters();">
+                        <input type="range" id="filter-elev-max" min="0" max="15000" step="250" value="15000" oninput="handleDualSlider('elev'); applyFilters();">
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs font-semibold">
+                        <span class="text-gray-400">Échéance : <b id="slider-horizon-min-val" class="text-emerald-400">0 mois</b></span>
+                        <span class="text-gray-400">à <b id="slider-horizon-max-val" class="text-emerald-400">24 mois</b></span>
+                    </div>
+                    <div class="range-slider-container">
+                        <div id="track-horizon" class="range-slider-track"></div>
+                        <input type="range" id="filter-horizon-min" min="0" max="24" step="1" value="0" oninput="handleDualSlider('horizon'); applyFilters();">
+                        <input type="range" id="filter-horizon-max" min="0" max="24" step="1" value="24" oninput="handleDualSlider('horizon'); applyFilters();">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MAP, DETAIL PANEL & CHRONOLOGY SECTION -->
+        <section class="space-y-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div class="flex items-center space-x-2 bg-darkBg p-1 rounded-xl border border-borderBg flex-wrap gap-y-1">
+                    <button id="btn-view-map" onclick="resetMapAndSwitchView('map')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow">
+                        <i class="fa-solid fa-map-location-dot mr-1"></i> Carte
+                    </button>
+                    <button id="btn-view-secondary" onclick="switchMainView('secondary')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white">
+                        <i id="btn-secondary-icon" class="fa-solid fa-list-ul mr-1"></i> <span id="btn-secondary-text">Liste</span>
+                    </button>
+                    <button id="btn-view-alerts" onclick="switchMainView('alerts')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white flex items-center gap-1.5">
+                        <i class="fa-solid fa-bell text-amber-400"></i> Mes alertes
+                        <span id="alerts-count-badge" class="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold hidden">0</span>
+                    </button>
+                    <button id="btn-view-budget" onclick="switchMainView('budget')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white hidden">
+                        <i class="fa-solid fa-wallet mr-1"></i> Gestion du Budget
+                    </button>
+                    <button id="btn-view-links" onclick="switchMainView('links')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white">
+                        <i class="fa-solid fa-link mr-1"></i> Liens & Outils
+                    </button>
+                </div>
+            </div>
+
+            <!-- LAYOUT GRILLE -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+             
+                <div id="main-view-column" class="lg:col-span-8 space-y-4 transition-all duration-300">
+                    <div id="container-map-view" class="glass-panel p-2 rounded-2xl border border-borderBg relative overflow-hidden h-[520px]">
+                        <div id="map" class="w-full h-full rounded-xl z-10"></div>
+                    </div>
+
+                    <div id="container-list-view" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden h-[520px] overflow-y-auto"></div>
+
+                    <div id="container-budget-view" class="glass-panel p-6 rounded-2xl border border-borderBg space-y-6 hidden h-[520px] overflow-y-auto">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-borderBg pb-3">
+                            <div>
+                                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-wallet text-amber-400"></i>
+                                    Gestion de ton Budget Saison
+                                </h3>
+                                <p class="text-xs text-gray-400">Aperçu global et répartition visuelle de tes dépenses.</p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button onclick="addNewCustomBudgetCategory()" class="text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-3 py-1.5 rounded-xl transition font-semibold flex items-center gap-1.5">
+                                    <i class="fa-solid fa-plus"></i> Ajouter poste
+                                </button>
+                                <span class="text-xs text-amber-400 font-mono font-bold bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
+                                    Total : <span id="budget-view-total">0 €</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 bg-darkBg/60 p-4 rounded-2xl border border-borderBg items-center">
+                            <div class="md:col-span-5 flex justify-center items-center h-48 sm:h-56 relative">
+                                <canvas id="budgetPieChart"></canvas>
+                            </div>
+                            <div class="md:col-span-7 space-y-2">
+                                <h4 class="text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Analyse de la répartition</h4>
+                                <div id="budget-pie-legend" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
+                            </div>
+                        </div>
+
+                        <div id="budget-categories-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                    </div>
+
+                    <div id="container-alerts-view" class="glass-panel p-6 rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-950/20 via-cardBg to-darkBg space-y-4 hidden h-[520px] overflow-y-auto">
+                        <div class="flex justify-between items-center border-b border-borderBg pb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                                    <i class="fa-solid fa-bell"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-extrabold text-white">Mes Alertes E-mail</h3>
+                                    <p class="text-xs text-gray-400">Gère tes rappels d'ouverture d'inscription et de dates de course.</p>
+                                </div>
+                            </div>
+                            <span id="alerts-total-text" class="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-3 py-1 rounded-xl border border-amber-500/20">0 alerte(s)</span>
+                        </div>
+
+                        <div id="alerts-list-container" class="space-y-2.5 pt-1"></div>
+                    </div>
+
+                    <div id="container-links-view" class="glass-panel p-6 rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 via-cardBg to-darkBg space-y-4 hidden h-[520px] overflow-y-auto">
+                        <div class="flex justify-between items-center border-b border-emerald-500/20 pb-3">
+                            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-link text-emerald-400"></i>
+                                <span class="bg-gradient-to-r from-emerald-400 to-amber-300 bg-clip-text text-transparent">Liens & Outils Utiles</span>
+                            </h3>
+                            <button onclick="addNewCustomLink()" class="text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-3.5 py-1.5 rounded-xl transition font-semibold">+ Ajouter un outil</button>
+                        </div>
+                        <div id="custom-links-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-2"></div>
+                    </div>
+                </div>
+
+                <div id="middle-column" class="hidden lg:col-span-3 transition-all duration-300">
+                    <div id="interactive-detail-card" class="glass-panel p-4 rounded-2xl border border-borderBg space-y-3 h-[520px] flex flex-col overflow-y-auto">
+                        <div class="flex items-center justify-between border-b border-borderBg pb-2">
+                            <h3 id="middle-panel-title" class="text-sm font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-person-running text-emerald-400"></i>
+                                Suivi de la Saison
+                            </h3>
+                            <button onclick="closeInteractiveDetail()" class="text-gray-400 hover:text-white text-xs px-2 py-0.5 rounded bg-darkBg border border-borderBg">✕</button>
+                        </div>
+
+                        <div class="space-y-3 flex-1 text-xs">
+                            <div class="space-y-1">
+                                <h4 id="detail-race-title" class="text-sm font-extrabold text-white">Nom de la course</h4>
+                                <div class="flex items-center gap-2 text-gray-400">
+                                    <span>📍 <span id="detail-race-loc">Lieu</span></span>
+                                    <span>•</span>
+                                    <span>💶 <span id="detail-race-price">0 €</span></span>
+                                </div>
+                            </div>
+
+                            <div class="space-y-2 bg-darkBg/80 p-3 rounded-xl border border-borderBg">
+                                <label class="flex items-center justify-between cursor-pointer p-2 rounded-lg bg-cardBg border border-borderBg hover:border-emerald-500/40 transition">
+                                    <span class="font-semibold text-gray-200">Inscription OK ?</span>
+                                    <input type="checkbox" id="check-reg-ok" onchange="toggleRaceStatusMeta('registered')" class="w-4 h-4 accent-emerald-500 cursor-pointer">
+                                </label>
+                                <label class="flex items-center justify-between cursor-pointer p-2 rounded-lg bg-cardBg border border-borderBg hover:border-blue-500/40 transition">
+                                    <span class="font-semibold text-gray-200">Course terminée ?</span>
+                                    <input type="checkbox" id="check-done" onchange="toggleRaceStatusMeta('completed')" class="w-4 h-4 accent-blue-500 cursor-pointer">
+                                </label>
+                            </div>
+
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center font-semibold text-gray-300">
+                                    <span>Trace GPX :</span>
+                                    <button onclick="editGpxLink()" class="text-[11px] text-emerald-400 hover:underline">Modifier</button>
+                                </div>
+                                <div id="gpx-link-display"></div>
+                            </div>
+
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center font-semibold text-gray-300">
+                                    <span>Lien Activité :</span>
+                                    <button onclick="editStravaActivityLink()" class="text-[11px] text-orange-400 hover:underline">Modifier</button>
+                                </div>
+                                <div id="strava-link-display"></div>
+                            </div>
+
+                            <div class="space-y-2 pt-2 border-t border-borderBg">
+                                <div id="detail-race-gmaps-container"></div>
+                                <div class="grid grid-cols-2 gap-2" id="detail-race-lodging-container"></div>
+                            </div>
+
+                            <div id="detail-race-link-container" class="pt-2"></div>
+                        </div>
+                    </div>
+
+                    <div id="middle-alerts-panel" class="glass-panel p-4 rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-950/20 via-cardBg to-darkBg space-y-3 h-[520px] flex flex-col overflow-y-auto hidden">
+                        <div class="flex items-center justify-between border-b border-borderBg pb-2">
+                            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-bell text-amber-400"></i>
+                                Mes Alertes E-mail
+                            </h3>
+                            <button onclick="closeInteractiveDetail()" class="text-gray-400 hover:text-white text-xs px-2 py-0.5 rounded bg-darkBg border border-borderBg">✕</button>
+                        </div>
+                        <div id="middle-alerts-list-container" class="space-y-2 flex-1 pt-1"></div>
+                    </div>
+                </div>
+
+                <div id="timeline-column" class="lg:col-span-4 transition-all duration-300">
+                    <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-borderBg space-y-3 h-[520px] flex flex-col">
+                        <div class="flex items-center justify-between border-b border-borderBg pb-2">
+                            <h3 id="timeline-title" class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-timeline text-emerald-400"></i>
+                                Chronologie des épreuves
+                            </h3>
+                            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Planning</span>
+                        </div>
+
+                        <div id="timeline-container" class="space-y-3 flex-1 h-0 overflow-y-auto pr-1">
+                            <p class="text-xs text-gray-400 italic text-center py-6">Chargement des courses...</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div id="container-load-chart" class="glass-panel p-4 sm:p-6 rounded-2xl border border-borderBg space-y-3 hidden w-full">
+                <div class="flex justify-between items-center border-b border-borderBg pb-2">
+                    <h4 class="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-emerald-400"></i>
+                        Cumul Charge Saison (km + D+/10)
+                    </h4>
+                    <span class="text-[10px] font-mono text-amber-400 font-bold bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/20">Vue Courses Prévues</span>
+                </div>
+                <div class="h-56 sm:h-64 relative w-full">
+                    <canvas id="loadChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- SCRIPT JAVASCRIPT PRINCIPAL -->
+    <script>
+        const SUPABASE_URL = 'https://rjfykmedcxgasduebvbn.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqZnlrbWVkY3hnYXNkdWVidmJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNDI3NjEsImV4cCI6MjEwNjgxODc2MX0.4N9LkjjLno-z_o7NEGQjGdJDFXpzvBzRfzs-vRwv1GA';
+
+        window.dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentUser = null;
+        let pendingCloudData = null;
+        let userAlerts = [];
+
+        let racesData = [];
+        let filteredRaces = [];
+        let favorites = JSON.parse(localStorage.getItem('pacepulse_favs') || '[]');
+        let raceMetaStates = JSON.parse(localStorage.getItem('pacepulse_meta') || '{}');
+        let raceGpxLinks = JSON.parse(localStorage.getItem('pacepulse_gpx') || '{}');
+        let raceStravaLinks = JSON.parse(localStorage.getItem('pacepulse_strava') || '{}');
+     
+        let customLinks = JSON.parse(localStorage.getItem('pacepulse_links') || JSON.stringify([
+            { name: 'Strava', url: 'https://www.strava.com', icon: 'fa-brands fa-strava text-orange-500' },
+            { name: 'Garmin Connect', url: 'https://connect.garmin.com', icon: 'fa-solid fa-clock text-blue-400' },
+            { name: 'Nolio Training', url: 'https://www.nolio.io', icon: 'fa-solid fa-chart-line text-emerald-400' }
+        ]));
+
+        let customBudgetsList = JSON.parse(localStorage.getItem('pacepulse_custom_budgets_list') || JSON.stringify([]));
+
+        let onlyShowFavorites = false;
+        let activeMainTab = 'map';
+
+        let leafletMap = null;
+        let markerClusterGroup = null;
+        let markersMapRef = {};
+        let activeSelectedRaceKey = null;
+
+        let currentDisplayLimit = 50;
+        let searchDebounceTimeout = null;
+
+        let budgetPieChartInstance = null;
+        let loadChartInstance = null;
+
+        const categoryBudgets = JSON.parse(localStorage.getItem('pacepulse_budgets') || JSON.stringify({
+            materiel: 0,
+            transport: 0,
+            hebergement: 0,
+            nutrition: 0,
+            medical: 0,
+            coaching: 0,
+            assurances: 0
+        }));
+
+        function getRaceStatusColor(raceKey) {
+            const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
+            if (meta.completed) return '#3b82f6';
+            if (meta.registered) return '#10b981';
+            return '#f59e0b';
+        }
+
+        function openAuthModal() {
+            document.getElementById('auth-modal').classList.remove('hidden');
+            document.getElementById('auth-error').classList.add('hidden');
+        }
+
+        function closeAuthModal() {
+            document.getElementById('auth-modal').classList.add('hidden');
+        }
+
+        function closeAlertModal() {
+            document.getElementById('alert-modal').classList.add('hidden');
+        }
+
+        /* ==================== GESTION DES ALERTES E-MAIL MISES A JOUR ==================== */
+        async function fetchUserAlerts() {
+            if (!currentUser) {
+                userAlerts = [];
+                updateAlertsBadge();
+                return;
+            }
+
+            try {
+                const { data, error } = await window.dbClient
+                    .from('race_alerts')
+                    .select('*')
+                    .eq('user_id', currentUser.id);
+
+                if (!error && data) {
+                    userAlerts = data;
+                    updateAlertsBadge();
+                    renderUserAlertsList();
+                    applyFilters();
+                }
+            } catch (e) {
+                console.error("Erreur chargement alertes:", e);
+            }
+        }
+
+        function updateAlertsBadge() {
+            const badge = document.getElementById('alerts-count-badge');
+            if (!badge) return;
+          
+            if (userAlerts.length > 0) {
+                badge.innerText = userAlerts.length;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function hasAlertForRace(raceTitle) {
+            return userAlerts.some(a => a.race_title === raceTitle);
+        }
+
+        async function handleEmailAlertRequest(title, raceStatus, raceDateFormatted, raceId) {
+            const alertModal = document.getElementById('alert-modal');
+            const titleElem = document.getElementById('alert-modal-title');
+            const bodyElem = document.getElementById('alert-modal-body');
+            const actionsElem = document.getElementById('alert-modal-actions');
+
+            if (!currentUser) {
+                titleElem.innerText = "S'inscrire aux alertes BeeTrack";
+                bodyElem.innerHTML = `
+                    Afin d'être prévenu par e-mail pour <b class="text-emerald-400">${title}</b>, vous devez être connecté à votre profil BeeTrack.
+                `;
+                actionsElem.innerHTML = `
+                    <div class="flex gap-2">
+                        <button onclick="closeAlertModal(); openAuthModal();" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold py-2 rounded-xl transition text-xs">Se connecter / Créer un compte</button>
+                        <button onclick="closeAlertModal()" class="px-4 bg-darkBg hover:bg-cardBg text-gray-400 border border-borderBg py-2 rounded-xl transition text-xs">Annuler</button>
+                    </div>
+                `;
+            } else {
+                // Définition propre des types d'alertes demandés
+                const alertType = raceStatus === 'TBD' ? 'tbd_confirmation' : 'opening_soon_confirmation';
+
+                const newAlertObj = {
+                    id: 'temp_' + Date.now(),
+                    user_id: currentUser.id,
+                    user_email: currentUser.email,
+                    race_title: title,
+                    alert_type: alertType
+                };
+
+                if (!hasAlertForRace(title)) {
+                    userAlerts.push(newAlertObj);
+                    updateAlertsBadge();
+                    renderUserAlertsList();
+                    renderTimeline();
+                }
+
+                try {
+                    const { data, error } = await window.dbClient.from('race_alerts').insert({
+                        user_id: currentUser.id,
+                        user_email: currentUser.email,
+                        race_title: title,
+                        alert_type: alertType
+                    }).select();
+
+                    if (!error && data && data.length > 0) {
+                        const index = userAlerts.findIndex(a => a.id === newAlertObj.id);
+                        if (index !== -1) userAlerts[index] = data[0];
+                    }
+                } catch(e) {
+                    console.error("Erreur d'enregistrement d'alerte en BDD :", e);
+                }
+
+                // Envoi du mail via Edge Function Supabase
+                try {
+                    await window.dbClient.functions.invoke('send-race-alert', {
+                        body: {
+                            user_email: currentUser.email,
+                            race_title: title,
+                            alert_type: alertType
+                        }
+                    });
+                } catch(e) {
+                    console.error("Erreur d'envoi du mail via Edge Function :", e);
+                }
+
+                // Affichage du message propre de confirmation
+                if (raceStatus === 'TBD') {
+                    titleElem.innerText = "Alerte Date enregistrée 🔔";
+                    bodyElem.innerHTML = `
+                        Vous serez informé de la date de l'événement par mail et pourrez la consulter sur BeeTrack.
+                    `;
+                } else {
+                    titleElem.innerText = "Alerte Ouverture Inscription enregistrée 🔔";
+                    bodyElem.innerHTML = `
+                        Vous serez informé de la date de l'ouverture des inscriptions par mail et pourrez la consulter sur BeeTrack.
+                    `;
+                }
+
+                actionsElem.innerHTML = `
+                    <button onclick="closeAlertModal()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-darkBg font-bold py-2 rounded-xl transition text-xs">Compris</button>
+                `;
+            }
+
+            alertModal.classList.remove('hidden');
+        }
+
+        function renderUserAlertsList() {
+            const container = document.getElementById('alerts-list-container');
+            const middleContainer = document.getElementById('middle-alerts-list-container');
+            const totalElem = document.getElementById('alerts-total-text');
+           
+            if (totalElem) totalElem.innerText = `${userAlerts.length} alerte(s)`;
+
+            const generateHtml = (isMiddlePanel = false) => {
+                if (userAlerts.length === 0) {
+                    return `
+                        <div class="text-center py-12 space-y-2">
+                            <div class="w-10 h-10 mx-auto rounded-full bg-darkBg border border-borderBg flex items-center justify-center text-gray-500">
+                                <i class="fa-solid fa-bell-slash text-sm"></i>
+                            </div>
+                            <p class="text-xs text-gray-400">Aucune alerte configurée.</p>
+                        </div>
+                    `;
+                }
+
+                return userAlerts.map(alert => {
+                    const matchedRace = racesData.find(r => r.title === alert.race_title);
+                    const raceStatus = matchedRace ? matchedRace.status : '';
+                    const raceDate = matchedRace ? matchedRace.raceDate : '';
+                    const raceKey = `${alert.race_title}_${raceDate}`;
+                    const isFav = favorites.includes(raceKey);
+                    const isSelected = (activeSelectedRaceKey === raceKey);
+
+                    const isTbd = alert.alert_type.includes('tbd');
+                    let badgeColor = 'bg-amber-500/10 text-amber-300 border-amber-500/30';
+                    let label = 'Alerte Date';
+                    let icon = 'fa-calendar-day';
+
+                    if (raceStatus === 'Open') {
+                        badgeColor = 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30';
+                        label = 'Ouvertes';
+                        icon = 'fa-circle-check';
+                    } else if (!isTbd) {
+                        badgeColor = 'bg-blue-500/10 text-blue-300 border-blue-500/30';
+                        label = 'Alerte Ouverture';
+                        icon = 'fa-envelope-circle-check';
+                    }
+
+                    const activeRing = isSelected && isMiddlePanel ? 'border-amber-400 bg-amber-500/10' : 'border-borderBg bg-darkBg/90';
+
+                    return `
+                        <div onclick="handleAlertClick('${alert.race_title.replace(/'/g, "\\'")}')" class="group flex items-center justify-between p-2.5 ${activeRing} hover:bg-cardBg border hover:border-amber-500/40 rounded-xl transition duration-200 cursor-pointer">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <div class="w-7 h-7 rounded-lg bg-cardBg border border-borderBg flex items-center justify-center text-amber-400 shrink-0">
+                                    <i class="fa-solid ${icon} text-xs"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="text-xs font-bold text-white group-hover:text-amber-300 transition truncate">${alert.race_title}</h4>
+                                    <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded border ${badgeColor} inline-block mt-0.5">${label}</span>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-1.5 shrink-0" onclick="event.stopPropagation();">
+                                ${matchedRace && raceDate ? `<button onclick="toggleFavorite('${matchedRace.title.replace(/'/g, "\\'")}', '${raceDate}')" class="px-1.5 py-1 rounded-md text-[10px] font-bold border transition ${isFav ? 'bg-amber-500/25 text-amber-400 border-amber-500/40' : 'bg-darkBg text-gray-400 border-borderBg'}">♥</button>` : ''}
+                                <button onclick="deleteRaceAlert('${alert.id}')" class="p-1.5 text-gray-500 hover:text-red-400 rounded transition"><i class="fa-solid fa-xmark text-xs"></i></button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            };
+
+            if (container) container.innerHTML = generateHtml(false);
+            if (middleContainer) middleContainer.innerHTML = generateHtml(true);
+        }
+
+        function handleAlertClick(raceTitle) {
+            const targetRace = racesData.find(r => r.title === raceTitle);
+            if (!targetRace || !targetRace.raceDate) return;
+
+            const raceKey = `${targetRace.title}_${targetRace.raceDate}`;
+
+            if (activeSelectedRaceKey === raceKey && !document.getElementById('middle-column').classList.contains('hidden')) {
+                closeInteractiveDetail();
+                return;
+            }
+
+            activeSelectedRaceKey = raceKey;
+
+            switchMainView('map');
+
+            const middleCol = document.getElementById('middle-column');
+            const mainCol = document.getElementById('main-view-column');
+            const timelineCol = document.getElementById('timeline-column');
+            const detailCard = document.getElementById('interactive-detail-card');
+            const middleAlertsPanel = document.getElementById('middle-alerts-panel');
+
+            if (detailCard) detailCard.classList.add('hidden');
+            if (middleAlertsPanel) middleAlertsPanel.classList.remove('hidden');
+
+            if (mainCol) {
+                mainCol.classList.remove('lg:col-span-8');
+                mainCol.classList.add('lg:col-span-5');
+            }
+            if (middleCol) {
+                middleCol.classList.remove('hidden');
+                middleCol.classList.remove('lg:col-span-7');
+                middleCol.classList.add('lg:col-span-3');
+            }
+            if (timelineCol) {
+                timelineCol.classList.remove('hidden');
+                timelineCol.classList.add('lg:col-span-4');
+            }
+
+            renderUserAlertsList();
+
+            setTimeout(() => {
+                if (leafletMap) {
+                    leafletMap.invalidateSize();
+                }
+                zoomAndOpenRacePopup(raceKey, targetRace.lat, targetRace.lng);
+            }, 150);
+        }
+
+        function zoomAndOpenRacePopup(raceKey, lat, lng) {
+            if (!leafletMap) return;
+
+            const marker = markersMapRef[raceKey];
+
+            if (marker && markerClusterGroup) {
+                const parentCluster = markerClusterGroup.getVisibleParent(marker);
+                if (parentCluster && parentCluster !== marker) {
+                    markerClusterGroup.zoomToShowLayer(marker, () => {
+                        marker.openPopup();
+                    });
+                    return;
+                }
+            }
+
+            if (marker) {
+                const latLng = marker.getLatLng();
+                leafletMap.setView(latLng, 11, { animate: true });
+                setTimeout(() => marker.openPopup(), 200);
+            } else if (lat && lng) {
+                leafletMap.setView([lat, lng], 11, { animate: true });
+            }
+        }
+
+        function closeInteractiveDetail() {
+            activeSelectedRaceKey = null;
+
+            const middleCol = document.getElementById('middle-column');
+            const mainCol = document.getElementById('main-view-column');
+            const timelineCol = document.getElementById('timeline-column');
+            const detailCard = document.getElementById('interactive-detail-card');
+            const middleAlertsPanel = document.getElementById('middle-alerts-panel');
+
+            if (middleCol) middleCol.classList.add('hidden');
+            if (detailCard) detailCard.classList.remove('hidden');
+            if (middleAlertsPanel) middleAlertsPanel.classList.add('hidden');
+
+            if (mainCol) {
+                mainCol.classList.remove('lg:col-span-5');
+                mainCol.classList.add('lg:col-span-8');
+            }
+
+            if (timelineCol) {
+                timelineCol.classList.remove('hidden');
+                timelineCol.classList.add('lg:col-span-4');
+            }
+
+            renderUserAlertsList();
+
+            if (leafletMap) {
+                setTimeout(() => {
+                    leafletMap.invalidateSize();
+                    leafletMap.setView([46.603354, 1.888334], 5);
+                    leafletMap.closePopup();
+                }, 100);
+            }
+        }
+
+        async function deleteRaceAlert(alertId) {
+            try {
+                const { error } = await window.dbClient
+                    .from('race_alerts')
+                    .delete()
+                    .eq('id', alertId);
+
+                if (!error) {
+                    userAlerts = userAlerts.filter(a => a.id !== alertId);
+                    updateAlertsBadge();
+                    renderUserAlertsList();
+                    applyFilters();
+                }
+            } catch (e) {
+                console.error("Erreur lors de la suppression de l'alerte :", e);
+            }
+        }
+
+        async function initAuthListener() {
+            try {
+                const { data: { session } } = await window.dbClient.auth.getSession();
+                if (session) {
+                    await handleSessionChange(session, true);
+                }
+
+                window.dbClient.auth.onAuthStateChange(async (_event, session) => {
+                    await handleSessionChange(session, false);
+                });
+            } catch (err) {
+                console.warn("Auth initialization skipped/error:", err);
+            }
+        }
+
+        async function handleSessionChange(session, isInitialLogin = false) {
+            if (session && session.user) {
+                currentUser = session.user;
+                document.getElementById('auth-logged-out').classList.add('hidden');
+                document.getElementById('auth-logged-in').classList.remove('hidden');
+                document.getElementById('user-email-display').innerText = currentUser.email.split('@')[0];
+                await loadUserProfile();
+                await fetchUserAlerts();
+             
+                if (isInitialLogin) {
+                    setFavoritesFilter(true);
+                }
+            } else {
+                currentUser = null;
+                userAlerts = [];
+                updateAlertsBadge();
+                document.getElementById('auth-logged-in').classList.add('hidden');
+                document.getElementById('auth-logged-out').classList.remove('hidden');
+            }
+        }
+
+        async function handleAuthSubmit(e) {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const errorDiv = document.getElementById('auth-error');
+
+            errorDiv.classList.add('hidden');
+
+            const { data, error } = await window.dbClient.auth.signInWithPassword({ email, password });
+            if (error) {
+                errorDiv.innerText = "Erreur de connexion : " + error.message;
+                errorDiv.classList.remove('hidden');
+            } else {
+                closeAuthModal();
+                await fetchUserAlerts();
+            }
+        }
+
+        async function handleSignUp() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const errorDiv = document.getElementById('auth-error');
+
+            errorDiv.classList.add('hidden');
+
+            if (!email || !password) {
+                errorDiv.innerText = "Veuillez renseigner un email et un mot de passe.";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            const { data, error } = await window.dbClient.auth.signUp({ email, password });
+            if (error) {
+                errorDiv.innerText = "Erreur d'inscription : " + error.message;
+                errorDiv.classList.remove('hidden');
+            } else {
+                alert("Compte créé avec succès ! Vous êtes connecté sur vos courses prévues.");
+                closeAuthModal();
+
+                if (data.session && data.session.user) {
+                    currentUser = data.session.user;
+                    await saveUserProfile();
+                    await fetchUserAlerts();
+                    setFavoritesFilter(true);
+                }
+            }
+        }
+
+        async function handleSignOut() {
+            await window.dbClient.auth.signOut();
+            location.reload();
+        }
+
+        async function saveUserProfile() {
+            localStorage.setItem('pacepulse_favs', JSON.stringify(favorites));
+            localStorage.setItem('pacepulse_meta', JSON.stringify(raceMetaStates));
+            localStorage.setItem('pacepulse_gpx', JSON.stringify(raceGpxLinks));
+            localStorage.setItem('pacepulse_strava', JSON.stringify(raceStravaLinks));
+            localStorage.setItem('pacepulse_links', JSON.stringify(customLinks));
+            localStorage.setItem('pacepulse_budgets', JSON.stringify(categoryBudgets));
+            localStorage.setItem('pacepulse_custom_budgets_list', JSON.stringify(customBudgetsList));
+
+            if (currentUser && currentUser.id) {
+                try {
+                    const profilePayload = {
+                        id: currentUser.id,
+                        updated_at: new Date().toISOString(),
+                        favorites: favorites,
+                        meta: raceMetaStates,
+                        gpx: raceGpxLinks,
+                        strava: raceStravaLinks,
+                        links: customLinks,
+                        budgets: categoryBudgets,
+                        custom_budgets_list: customBudgetsList
+                    };
+
+                    await window.dbClient.from('profiles').upsert(profilePayload);
+                } catch (e) {
+                    console.error("Erreur de sauvegarde profil Supabase:", e);
+                }
+            }
+        }
+
+        async function loadUserProfile() {
+            if (!currentUser || !currentUser.id) return;
+
+            try {
+                const { data, error } = await window.dbClient
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .maybeSingle();
+
+                if (data && !error) {
+                    applyCloudProfile(data);
+                } else {
+                    await saveUserProfile();
+                }
+            } catch (e) {
+                console.error("Erreur lors du chargement du profil Supabase:", e);
+            }
+        }
+
+        function applyCloudProfile(data) {
+            if (data.favorites) favorites = data.favorites;
+            if (data.meta) raceMetaStates = data.meta;
+            if (data.gpx) raceGpxLinks = data.gpx;
+            if (data.strava) raceStravaLinks = data.strava;
+            if (data.links) customLinks = data.links;
+            if (data.budgets) Object.assign(categoryBudgets, data.budgets);
+            if (data.custom_budgets_list) customBudgetsList = data.custom_budgets_list;
+
+            saveUserProfile();
+            renderBudgetGrid();
+            renderCustomLinks();
+            updateFavoritesUI();
+            applyFilters();
+        }
+
+        function normalizeStr(str) {
+            if (!str) return '';
+            return str.toLowerCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                .replace(/['’\-_]/g, " ")
+                .replace(/ou/g, "o")
+                .replace(/[^a-z0-0\s]/g, "")
+                .replace(/\s+/g, " ")
+                .trim();
+        }
+
+        function initLeafletMap() {
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer) return;
+
+            leafletMap = L.map('map', {
+                center: [46.603354, 1.888334],
+                zoom: 5
+            });
+    
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(leafletMap);
+        }
+
+        function resetMapAndSwitchView(v) {
+            switchMainView(v);
+            activeSelectedRaceKey = null;
+            closeInteractiveDetail();
+            if (leafletMap) {
+                setTimeout(() => {
+                    leafletMap.invalidateSize();
+                    leafletMap.setView([46.603354, 1.888334], 5);
+                }, 100);
+            }
+        }
+
+        function toggleFavorite(title, raceDate) {
+            const key = `${title}_${raceDate}`;
+            const index = favorites.indexOf(key);
+            if (index > -1) {
+                favorites.splice(index, 1);
+            } else {
+                favorites.push(key);
+            }
+            saveUserProfile();
+            updateFavoritesUI();
+            applyFilters();
+            renderUserAlertsList();
+        }
+
+        function setFavoritesFilter(showOnlyFavs) {
+            onlyShowFavorites = showOnlyFavs;
+            activeSelectedRaceKey = null;
+            closeInteractiveDetail();
+         
+            const btnAll = document.getElementById('btn-toggle-all');
+            const btnFav = document.getElementById('btn-toggle-fav');
+            const btnBudget = document.getElementById('btn-view-budget');
+            const btnSec = document.getElementById('btn-view-secondary');
+            const btnReset = document.getElementById('btn-reset-filters');
+            const searchSection = document.getElementById('search-filter-section');
+
+            btnAll.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition";
+            btnFav.className = "px-3 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1.5";
+
+            if (showOnlyFavs) {
+                btnFav.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition flex items-center gap-1.5";
+                if (btnBudget) btnBudget.classList.remove('hidden');
+                if (btnSec) btnSec.classList.add('hidden');
+                if (btnReset) btnReset.classList.add('hidden');
+                if (searchSection) searchSection.classList.remove('hidden');
+
+                if (activeMainTab === 'secondary') switchMainView('map');
+            } else {
+                btnAll.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-darkBg shadow transition";
+                if (btnBudget) btnBudget.classList.add('hidden');
+                if (btnSec) btnSec.classList.remove('hidden');
+                if (btnReset) btnReset.classList.remove('hidden');
+                if (searchSection) searchSection.classList.remove('hidden');
+             
+                if (activeMainTab === 'budget') switchMainView('map');
+            }
+
+            applyFilters();
+        }
+
+        function editGpxLink() {
+            if (!activeSelectedRaceKey) return;
+            const current = raceGpxLinks[activeSelectedRaceKey] || '';
+            let url = prompt("Adresse web de la trace GPX (OpenRunner, Visorando, Komoot, Wikiloc...):", current);
+            if (url === null) return;
+         
+            url = url.trim();
+            if (url && !url.startsWith('http')) url = 'https://' + url;
+
+            if (url) {
+                raceGpxLinks[activeSelectedRaceKey] = url;
+            } else {
+                delete raceGpxLinks[activeSelectedRaceKey];
+            }
+
+            saveUserProfile();
+            renderGpxLinkDisplay();
+        }
+
+        function renderGpxLinkDisplay() {
+            const container = document.getElementById('gpx-link-display');
+            if (!container) return;
+
+            const url = activeSelectedRaceKey ? raceGpxLinks[activeSelectedRaceKey] : null;
+
+            if (url) {
+                container.innerHTML = `
+                    <a href="${url}" target="_blank" class="w-full text-center bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-semibold py-1 rounded-lg text-xs transition flex items-center justify-center gap-1">
+                        🗺️ Ouvrir la trace GPX ↗
+                    </a>
+                `;
+            } else {
+                container.innerHTML = `<p class="text-xs text-gray-500 italic">Aucune trace GPX enregistrée.</p>`;
+            }
+        }
+
+        function editStravaActivityLink() {
+            if (!activeSelectedRaceKey) return;
+            const current = raceStravaLinks[activeSelectedRaceKey] || '';
+            let url = prompt("Lien web de l'activité (ex: Strava, Nolio, Garmin Connect...):", current);
+            if (url === null) return;
+         
+            url = url.trim();
+            if (url && !url.startsWith('http')) url = 'https://' + url;
+
+            if (url) {
+                raceStravaLinks[activeSelectedRaceKey] = url;
+            } else {
+                delete raceStravaLinks[activeSelectedRaceKey];
+            }
+
+            saveUserProfile();
+            renderStravaLinkDisplay();
+        }
+
+        function renderStravaLinkDisplay() {
+            const container = document.getElementById('strava-link-display');
+            if (!container) return;
+
+            const url = activeSelectedRaceKey ? raceStravaLinks[activeSelectedRaceKey] : null;
+
+            if (url) {
+                container.innerHTML = `
+                    <a href="${url}" target="_blank" class="w-full text-center bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/40 font-semibold py-1 rounded-lg text-xs transition flex items-center justify-center gap-1">
+                        <i class="fa-brands fa-strava"></i> Ouvrir l'activité ↗
+                    </a>
+                `;
+            } else {
+                container.innerHTML = `<p class="text-xs text-gray-500 italic">Aucun lien d'activité enregistré.</p>`;
+            }
+        }
+
+        function updateBudgetCategoryFromView(catKey, val) {
+            categoryBudgets[catKey] = Math.max(0, Number(val) || 0);
+            saveUserProfile();
+            updateFavoritesUI();
+        }
+
+        function addNewCustomBudgetCategory() {
+            const name = prompt("Nom du nouveau poste de dépense (ex: Stage de trail, Massages...) :");
+            if (!name) return;
+            const key = 'custom_' + Date.now();
+         
+            customBudgetsList.push({ key: key, name: name });
+            categoryBudgets[key] = 0;
+            saveUserProfile();
+
+            renderBudgetGrid();
+            updateFavoritesUI();
+        }
+
+        function removeCustomBudgetCategory(key) {
+            customBudgetsList = customBudgetsList.filter(item => item.key !== key);
+            delete categoryBudgets[key];
+            saveUserProfile();
+
+            renderBudgetGrid();
+            updateFavoritesUI();
+        }
+
+        function renderBudgetGrid() {
+            const grid = document.getElementById('budget-categories-grid');
+            if (!grid) return;
+
+            const standardCategories = [
+                { key: 'dossards', name: '🎟️ Dossards (Courses Prévues)', desc: 'Calculé automatiquement depuis tes courses prévues.', isCalc: true },
+                { key: 'materiel', name: '🎒 Matériel' },
+                { key: 'transport', name: '🚗 Transport' },
+                { key: 'hebergement', name: '⛺ Hébergement' },
+                { key: 'nutrition', name: '⚡ Nutrition' },
+                { key: 'medical', name: '🩺 Médical & Santé' },
+                { key: 'coaching', name: '🧘 Coaching & Club' },
+                { key: 'assurances', name: '🛡️ Assurances & Secours' }
+            ];
+
+            let html = '';
+
+            standardCategories.forEach(cat => {
+                if (cat.isCalc) {
+                    html += `
+                        <div class="bg-darkBg/80 p-3 rounded-xl border border-borderBg space-y-1">
+                            <div class="flex justify-between items-center text-xs font-bold text-gray-300">
+                                <span>${cat.name}</span>
+                                <span class="text-amber-400 font-mono" id="budget-val-${cat.key}">0 €</span>
+                            </div>
+                            <p class="text-[10px] text-gray-400">${cat.desc}</p>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="bg-darkBg/80 p-3 rounded-xl border border-borderBg space-y-1">
+                            <div class="flex justify-between items-center text-xs font-bold text-gray-300">
+                                <span>${cat.name}</span>
+                                <span class="text-amber-400 font-mono" id="budget-val-${cat.key}">0 €</span>
+                            </div>
+                            <input type="number" min="0" placeholder="0 €" oninput="updateBudgetCategoryFromView('${cat.key}', this.value)" id="budget-input-${cat.key}" class="w-full bg-cardBg border border-borderBg rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-emerald-400">
+                        </div>
+                    `;
+                }
+            });
+
+            customBudgetsList.forEach(customCat => {
+                html += `
+                    <div class="bg-darkBg/80 p-3 rounded-xl border border-emerald-500/30 space-y-1 relative">
+                        <div class="flex justify-between items-center text-xs font-bold text-gray-300">
+                            <span class="flex items-center gap-1">📌 ${customCat.name}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-amber-400 font-mono" id="budget-val-${customCat.key}">0 €</span>
+                                <button onclick="removeCustomBudgetCategory('${customCat.key}')" class="text-gray-500 hover:text-red-400 text-xs px-1">✕</button>
+                            </div>
+                        </div>
+                        <input type="number" min="0" placeholder="0 €" oninput="updateBudgetCategoryFromView('${customCat.key}', this.value)" id="budget-input-${customCat.key}" class="w-full bg-cardBg border border-borderBg rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-emerald-400">
+                    </div>
+                `;
+            });
+
+            grid.innerHTML = html;
+        }
+
+        function updateFavoritesUI() {
+            const countElem = document.getElementById('fav-count');
+            if (countElem) countElem.innerText = favorites.length;
+
+            let totalDossards = 0;
+            favorites.forEach(favKey => {
+                const race = racesData.find(r => `${r.title}_${r.raceDate}` === favKey);
+                if (race && race.price > 0) {
+                    totalDossards += race.price;
+                }
+            });
+
+            let totalSaison = totalDossards;
+
+            if (document.getElementById('detail-b-dossards')) document.getElementById('detail-b-dossards').innerText = `${totalDossards} €`;
+            if (document.getElementById('budget-val-dossards')) document.getElementById('budget-val-dossards').innerText = `${totalDossards} €`;
+
+            const stdKeys = ['materiel', 'transport', 'hebergement', 'nutrition', 'medical', 'coaching', 'assurances'];
+            stdKeys.forEach(k => {
+                const val = Number(categoryBudgets[k]) || 0;
+                totalSaison += val;
+                if (document.getElementById(`detail-b-${k}`)) document.getElementById(`detail-b-${k}`).innerText = `${val} €`;
+                if (document.getElementById(`budget-val-${k}`)) document.getElementById(`budget-val-${k}`).innerText = `${val} €`;
+                if (document.getElementById(`budget-input-${k}`) && document.activeElement !== document.getElementById(`budget-input-${k}`)) {
+                    document.getElementById(`budget-input-${k}`).value = val || '';
+                }
+            });
+
+            const dropdownCustomWrapper = document.getElementById('dropdown-custom-budgets');
+            let dropdownCustomHtml = '';
+
+            customBudgetsList.forEach(customCat => {
+                const val = Number(categoryBudgets[customCat.key]) || 0;
+                totalSaison += val;
+
+                if (document.getElementById(`budget-val-${customCat.key}`)) {
+                    document.getElementById(`budget-val-${customCat.key}`).innerText = `${val} €`;
+                }
+                if (document.getElementById(`budget-input-${customCat.key}`) && document.activeElement !== document.getElementById(`budget-input-${customCat.key}`)) {
+                    document.getElementById(`budget-input-${customCat.key}`).value = val || '';
+                }
+
+                dropdownCustomHtml += `<div class="flex justify-between text-gray-300"><span>📌 ${customCat.name} :</span><b>${val} €</b></div>`;
+            });
+
+            if (dropdownCustomWrapper) dropdownCustomWrapper.innerHTML = dropdownCustomHtml;
+
+            document.getElementById('stat-total-budget').innerText = `${totalSaison} €`;
+            if (document.getElementById('detail-total-budget')) document.getElementById('detail-total-budget').innerText = `${totalSaison} €`;
+            if (document.getElementById('budget-view-total')) document.getElementById('budget-view-total').innerText = `${totalSaison} €`;
+
+            renderBudgetPieChart(totalDossards);
+        }
+
+        function renderBudgetPieChart(totalDossards) {
+            const canvas = document.getElementById('budgetPieChart');
+            if (!canvas) return;
+
+            const labels = ['Dossards', 'Matériel', 'Transport', 'Hébergement', 'Nutrition', 'Médical', 'Coaching', 'Assurances'];
+            const dataValues = [
+                totalDossards,
+                Number(categoryBudgets.materiel) || 0,
+                Number(categoryBudgets.transport) || 0,
+                Number(categoryBudgets.hebergement) || 0,
+                Number(categoryBudgets.nutrition) || 0,
+                Number(categoryBudgets.medical) || 0,
+                Number(categoryBudgets.coaching) || 0,
+                Number(categoryBudgets.assurances) || 0
+            ];
+
+            customBudgetsList.forEach(c => {
+                labels.push(c.name);
+                dataValues.push(Number(categoryBudgets[c.key]) || 0);
+            });
+
+            const backgroundColors = [
+                '#10b981', '#3b82f6', '#eab308', '#f97316',
+                '#ec4899', '#8b5cf6', '#06b6d4', '#64748b',
+                '#a855f7', '#14b8a6', '#f43f5e'
+            ];
+
+            const total = dataValues.reduce((a, b) => a + b, 0);
+
+            const legendContainer = document.getElementById('budget-pie-legend');
+            if (legendContainer) {
+                let legendHtml = '';
+                labels.forEach((lbl, idx) => {
+                    const val = dataValues[idx];
+                    if (val > 0 || total === 0) {
+                        legendHtml += `
+                            <div class="flex items-center justify-between bg-darkBg/90 px-2 py-1 rounded-lg border border-borderBg">
+                                <span class="flex items-center gap-1.5 text-gray-300 text-xs">
+                                    <span class="w-2.5 h-2.5 rounded-full inline-block" style="background:${backgroundColors[idx % backgroundColors.length]}"></span>
+                                    ${lbl}
+                                </span>
+                                <span class="font-bold text-white font-mono text-xs">${val} €</span>
+                            </div>
+                        `;
+                    }
+                });
+                legendContainer.innerHTML = legendHtml || '<p class="text-xs text-gray-500 italic">Aucune dépense saisie.</p>';
+            }
+
+            if (budgetPieChartInstance) {
+                budgetPieChartInstance.destroy();
+            }
+
+            budgetPieChartInstance = new Chart(canvas, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: total > 0 ? dataValues : [1],
+                        backgroundColor: total > 0 ? backgroundColors : ['#1f293d'],
+                        borderWidth: 2,
+                        borderColor: '#0b0f17'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        function renderLoadChart() {
+            const chartContainer = document.getElementById('container-load-chart');
+            if (!chartContainer) return;
+
+            if (!onlyShowFavorites) {
+                chartContainer.classList.add('hidden');
+                if (loadChartInstance) loadChartInstance.destroy();
+                return;
+            }
+
+            chartContainer.classList.remove('hidden');
+
+            const canvas = document.getElementById('loadChart');
+            if (!canvas) return;
+
+            const validFavRaces = filteredRaces
+                .filter(r => r.raceDate && !isNaN(new Date(r.raceDate).getTime()))
+                .sort((a, b) => new Date(a.raceDate) - new Date(b.raceDate));
+
+            if (validFavRaces.length === 0) {
+                if (loadChartInstance) loadChartInstance.destroy();
+                return;
+            }
+
+            const labels = [];
+            const cumulativeData = [];
+            const pointColors = [];
+            const racesDetailsMeta = [];
+            let currentCumul = 0;
+
+            validFavRaces.forEach(r => {
+                const raceKey = `${r.title}_${r.raceDate}`;
+                const dateLabel = formatDateFR(r.raceDate, r.status);
+                const raceCharge = r.distance + (r.elevation / 10);
+                currentCumul += raceCharge;
+
+                labels.push(dateLabel);
+                cumulativeData.push(Math.round(currentCumul));
+                pointColors.push(getRaceStatusColor(raceKey));
+
+                racesDetailsMeta.push({
+                    title: r.title,
+                    dist: r.distance,
+                    elev: r.elevation,
+                    raceCharge: Math.round(raceCharge),
+                    totalCumul: Math.round(currentCumul)
+                });
+            });
+
+            if (loadChartInstance) {
+                loadChartInstance.destroy();
+            }
+
+            loadChartInstance = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Charge cumulée',
+                        data: cumulativeData,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                        fill: true,
+                        tension: 0.25,
+                        pointBackgroundColor: pointColors,
+                        pointBorderColor: '#0b0f17',
+                        pointRadius: 6,
+                        pointHoverRadius: 9
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            enabled: true,
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(19, 27, 46, 0.95)',
+                            titleColor: '#34d399',
+                            bodyColor: '#ffffff',
+                            borderColor: '#10b981',
+                            borderWidth: 1,
+                            padding: 10,
+                            callbacks: {
+                                title: function(context) {
+                                    const index = context[0].dataIndex;
+                                    const meta = racesDetailsMeta[index];
+                                    return meta ? `🏃 ${meta.title}` : context[0].label;
+                                },
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    const meta = racesDetailsMeta[index];
+                                    if (!meta) return `Charge: ${context.raw}`;
+                                    return [
+                                        `📅 Date : ${context.label}`,
+                                        `📏 Course : ${meta.dist} km | D+ ${meta.elev}m (+${meta.raceCharge} pts)`,
+                                        `📊 Cumul Saison : ${meta.totalCumul} pts`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#9ca3af', font: { size: 11 } } },
+                        y: { ticks: { color: '#34d399', font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        function handleFastSearch(val) {
+            clearTimeout(searchDebounceTimeout);
+            renderSearchSuggestions(val);
+
+            searchDebounceTimeout = setTimeout(() => {
+                applyFilters();
+            }, 200);
+        }
+
+        function handleSearchKeydown(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const sugg = document.getElementById('search-suggestions');
+                if (sugg) sugg.classList.add('hidden');
+               
+                switchMainView('map');
+                applyFilters();
+            }
+        }
+
+        function renderSearchSuggestions(val) {
+            const container = document.getElementById('search-suggestions');
+            if (!container) return;
+
+            const queryNorm = normalizeStr(val);
+            if (queryNorm.length < 2) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            const matches = racesData.filter(r =>
+                r.searchNorm.includes(queryNorm)
+            ).slice(0, 8);
+
+            if (matches.length === 0) {
+                container.innerHTML = `<div class="p-3 text-gray-500 italic text-center">Aucune épreuve trouvée</div>`;
+            } else {
+                let html = '';
+                matches.forEach(m => {
+                    html += `
+                        <div onclick="selectSearchSuggestion('${m.title.replace(/'/g, "\\'")}')" class="p-2.5 hover:bg-emerald-500/10 hover:text-emerald-300 cursor-pointer transition flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-white">${m.title}</div>
+                                <div class="text-xs text-gray-400">📍 ${m.location} | 📏 ${m.distance}km</div>
+                            </div>
+                            <span class="text-xs bg-darkBg border border-borderBg px-2 py-0.5 rounded text-amber-400 font-mono">${m.raceDate ? formatDateFR(m.raceDate, m.status) : 'TBD'}</span>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            }
+            container.classList.remove('hidden');
+        }
+
+        function selectSearchSuggestion(title) {
+            const input = document.getElementById('filter-keyword');
+            if (input) input.value = title;
+            document.getElementById('search-suggestions').classList.add('hidden');
+            applyFilters();
+        }
+
+        function renderCustomLinks() {
+            const container = document.getElementById('custom-links-list');
+            if (!container) return;
+
+            if (customLinks.length === 0) {
+                container.innerHTML = '<p class="text-xs text-gray-500 italic col-span-full">Aucun lien enregistré.</p>';
+                return;
+            }
+
+            let html = '';
+            customLinks.forEach((link, i) => {
+                html += `
+                    <div class="flex justify-between items-center bg-darkBg/90 p-2.5 rounded-xl border border-emerald-500/20 hover:border-emerald-500/50 transition">
+                        <a href="${link.url}" target="_blank" class="flex items-center gap-2 text-gray-200 hover:text-emerald-400 font-medium truncate">
+                            <i class="${link.icon || 'fa-solid fa-globe text-gray-400'} text-xs"></i>
+                            <span class="truncate">${link.name}</span>
+                        </a>
+                        <button onclick="removeCustomLink(${i})" class="text-xs text-gray-500 hover:text-red-400 px-1">✕</button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function addNewCustomLink() {
+            const name = prompt("Nom du site / outil (Ex: Strava, Nolio...) :");
+            if (!name) return;
+            let url = prompt("Adresse web (URL) :");
+            if (!url) return;
+            if (!url.startsWith('http')) url = 'https://' + url;
+
+            customLinks.push({ name, url, icon: 'fa-solid fa-arrow-up-right-from-square text-emerald-400' });
+            saveUserProfile();
+            renderCustomLinks();
+        }
+
+        function removeCustomLink(index) {
+            customLinks.splice(index, 1);
+            saveUserProfile();
+            renderCustomLinks();
+        }
+
+        async function fetchRacesFromSupabase() {
+            try {
+                const { data: races, error } = await window.dbClient
+                    .from('races')
+                    .select('*')
+                    .limit(15000);
+
+                if (error) throw error;
+
+                if (races && races.length > 0) {
+                    racesData = races.map(r => {
+                        const title = r.title || '';
+                        const loc = r.location || 'France';
+                        const rDate = r.race_date || r.raceDate || null;
+                        const oDate = r.opening_date || r.openingDate || null;
+                        return {
+                            id: r.id,
+                            title: title,
+                            category: r.category || 'Trail',
+                            distance: Number(r.distance) || 0,
+                            elevation: Number(r.elevation) || 0,
+                            location: loc,
+                            region: r.region || 'France',
+                            lat: r.lat !== null ? parseFloat(r.lat) : null,
+                            lng: r.lng !== null ? parseFloat(r.lng) : null,
+                            price: parseFloat(r.price) || 0,
+                            openingDate: oDate,
+                            raceDate: rDate,
+                            status: r.status,
+                            url: r.organizer_url || r.url,
+                            searchNorm: normalizeStr(title + ' ' + loc)
+                        };
+                    });
+
+                    updateFavoritesUI();
+                    applyFilters();
+                    renderUserAlertsList();
+                } else {
+                    document.getElementById('timeline-container').innerHTML = `
+                        <div class="text-center py-6 space-y-2">
+                            <p class="text-xs text-amber-400">Aucune course enregistrée dans la base de données.</p>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                console.error("Erreur de connexion Supabase :", err.message || err);
+                document.getElementById('timeline-container').innerHTML = `
+                    <div class="text-center py-6 space-y-2">
+                        <p class="text-xs text-red-400 font-bold">Erreur de chargement des courses.</p>
+                        <button onclick="fetchRacesFromSupabase()" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-3 py-1 rounded-lg hover:bg-emerald-500/30">
+                            🔄 Réessayer
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function handleDualSlider(type) {
+            const minEl = document.getElementById(`filter-${type}-min`);
+            const maxEl = document.getElementById(`filter-${type}-max`);
+            const track = document.getElementById(`track-${type}`);
+
+            if (!minEl || !maxEl || !track) return;
+
+            let minVal = parseInt(minEl.value);
+            let maxVal = parseInt(maxEl.value);
+
+            if (minVal > maxVal) {
+                const temp = minVal;
+                minVal = maxVal;
+                maxVal = temp;
+                minEl.value = minVal;
+                maxEl.value = maxVal;
+            }
+
+            const maxLimit = parseInt(minEl.max);
+            const leftPercent = (minVal / maxLimit) * 100;
+            const rightPercent = 100 - ((maxVal / maxLimit) * 100);
+
+            track.style.left = `${leftPercent}%`;
+            track.style.right = `${rightPercent}%`;
+
+            let unit = ' km';
+            if (type === 'elev') unit = ' m';
+            if (type === 'horizon') unit = ' mois';
+
+            const minLabel = document.getElementById(`slider-${type}-min-val`);
+            const maxLabel = document.getElementById(`slider-${type}-max-val`);
+
+            if (minLabel) minLabel.innerText = minVal + unit;
+            if (maxLabel) maxLabel.innerText = maxVal + unit;
+        }
+
+        function updateSliderLabels() {
+            handleDualSlider('dist');
+            handleDualSlider('elev');
+            handleDualSlider('horizon');
+        }
+
+        function getCountdownBadge(openingDate) {
+            if (!openingDate) return null;
+            const now = new Date();
+            const openD = new Date(openingDate);
+            const diffTime = openD - now;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 0) {
+                return '<span class="bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-0.5 rounded text-xs font-bold animate-pulse">🚨 Ouvre !</span>';
+            } else if (diffDays > 0 && diffDays <= 30) {
+                return `<span class="bg-blue-500/20 text-blue-400 border border-blue-500/40 px-2 py-0.5 rounded text-xs font-bold">⏳ J-${diffDays}</span>`;
+            }
+            return null;
+        }
+
+        function renderOpeningStatus(raceStatus, openingDate = null) {
+            if (raceStatus === 'TBD') {
+                return '<span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded text-xs font-bold">À confirmer</span>';
+            } else if (raceStatus === 'Open') {
+                return '<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded text-xs font-bold">Ouverte</span>';
+            } else {
+                const countdown = getCountdownBadge(openingDate);
+                if (countdown) return countdown;
+                return '<span class="bg-blue-500/10 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded text-xs font-bold">Bientôt</span>';
+            }
+        }
+
+        function formatDateFR(dateStr, status = '') {
+            if (!dateStr) return 'Date non communiquée';
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+
+            if (status === 'TBD') {
+                return d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+            }
+
+            return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function highlightMapMarker(raceKey, highlight) {
+            const marker = markersMapRef[raceKey];
+            if (!marker) return;
+
+            const iconElem = marker.getElement();
+            if (iconElem) {
+                const innerDiv = iconElem.querySelector('div');
+                if (innerDiv) {
+                    if (highlight) {
+                        innerDiv.style.background = '#eab308';
+                        innerDiv.style.transform = 'scale(1.4)';
+                        innerDiv.style.zIndex = '1000';
+                        marker.openPopup();
+                    } else {
+                        innerDiv.style.background = marker.defaultColor || '#f59e0b';
+                        innerDiv.style.transform = 'scale(1)';
+                        innerDiv.style.zIndex = '1';
+                        marker.closePopup();
+                    }
+                }
+            }
+        }
+
+        function handleTimelineClick(title, raceDate, location, price, url) {
+            const raceKey = `${title}_${raceDate}`;
+
+            if (!onlyShowFavorites) {
+                switchMainView('map');
+             
+                if (activeSelectedRaceKey === raceKey) {
+                    activeSelectedRaceKey = null;
+                    if (leafletMap) {
+                        leafletMap.setView([46.603354, 1.888334], 5, { animate: true });
+                        leafletMap.closePopup();
+                    }
+                    return;
+                }
+
+                activeSelectedRaceKey = raceKey;
+                const targetRace = racesData.find(r => r.title === title && r.raceDate === raceDate);
+                const lat = targetRace ? targetRace.lat : null;
+                const lng = targetRace ? targetRace.lng : null;
+               
+                zoomAndOpenRacePopup(raceKey, lat, lng);
+                return;
+            }
+
+            const middleCol = document.getElementById('middle-column');
+            const timelineCol = document.getElementById('timeline-column');
+            const mainCol = document.getElementById('main-view-column');
+            const detailCard = document.getElementById('interactive-detail-card');
+            const middleAlertsPanel = document.getElementById('middle-alerts-panel');
+
+            if (activeSelectedRaceKey === raceKey && !middleCol.classList.contains('hidden') && middleCol.contains(detailCard)) {
+                closeInteractiveDetail();
+                return;
+            }
+
+            activeSelectedRaceKey = raceKey;
+
+            if (detailCard) detailCard.classList.remove('hidden');
+            if (middleAlertsPanel) middleAlertsPanel.classList.add('hidden');
+
+            if (mainCol) {
+                mainCol.classList.remove('lg:col-span-8');
+                mainCol.classList.add('lg:col-span-5');
+            }
+
+            if (middleCol) {
+                middleCol.classList.remove('hidden');
+                middleCol.classList.remove('lg:col-span-7');
+                middleCol.classList.add('lg:col-span-3');
+            }
+
+            if (timelineCol) {
+                timelineCol.classList.remove('hidden');
+                timelineCol.classList.add('lg:col-span-4');
+            }
+
+            const titleHeader = document.getElementById('middle-panel-title');
+            if (titleHeader) titleHeader.innerHTML = `<i class="fa-solid fa-person-running text-emerald-400"></i> Suivi de la Saison`;
+
+            document.getElementById('detail-race-title').innerText = title;
+            document.getElementById('detail-race-loc').innerText = location;
+            document.getElementById('detail-race-price').innerText = price > 0 ? `${price} €` : 'N/C';
+
+            const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=Marseille&destination=${encodeURIComponent(location)}`;
+            document.getElementById('detail-race-gmaps-container').innerHTML = `
+                <a href="${gmapsUrl}" target="_blank" class="w-full text-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold py-1 rounded-xl text-xs transition flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-route"></i> Trajet & temps (Google Maps) ↗
+                </a>
+            `;
+
+            const airbnbUrl = `https://www.airbnb.fr/s/${encodeURIComponent(location)}/homes`;
+            const bookingUrl = `https://www.booking.com/searchresults.fr.html?ss=${encodeURIComponent(location)}`;
+
+            document.getElementById('detail-race-lodging-container').innerHTML = `
+                <a href="${airbnbUrl}" target="_blank" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1">
+                    🏠 Airbnb ↗
+                </a>
+                <a href="${bookingUrl}" target="_blank" class="bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 font-semibold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1">
+                    🏨 Booking ↗
+                </a>
+            `;
+
+            const linkContainer = document.getElementById('detail-race-link-container');
+            if (url) {
+                linkContainer.innerHTML = `
+                    <a href="${url}" target="_blank" class="w-full text-center bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-semibold py-1.5 rounded-lg text-xs transition block">
+                        Page Inscription ↗
+                    </a>
+                `;
+            } else {
+                linkContainer.innerHTML = '';
+            }
+
+            renderGpxLinkDisplay();
+            renderStravaLinkDisplay();
+
+            const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
+            document.getElementById('check-reg-ok').checked = meta.registered;
+            document.getElementById('check-done').checked = meta.completed;
+
+            setTimeout(() => {
+                if (leafletMap) {
+                    leafletMap.invalidateSize();
+                }
+                const targetRace = racesData.find(r => r.title === title && r.raceDate === raceDate);
+                const lat = targetRace ? targetRace.lat : null;
+                const lng = targetRace ? targetRace.lng : null;
+                zoomAndOpenRacePopup(raceKey, lat, lng);
+            }, 100);
+        }
+
+        function toggleRaceStatusMeta(type) {
+            if (!activeSelectedRaceKey) return;
+            if (!raceMetaStates[activeSelectedRaceKey]) {
+                raceMetaStates[activeSelectedRaceKey] = { registered: false, completed: false };
+            }
+
+            if (type === 'registered') {
+                raceMetaStates[activeSelectedRaceKey].registered = document.getElementById('check-reg-ok').checked;
+            } else if (type === 'completed') {
+                raceMetaStates[activeSelectedRaceKey].completed = document.getElementById('check-done').checked;
+            }
+
+            saveUserProfile();
+            applyFilters();
+        }
+
+        function renderTimeline() {
+            const container = document.getElementById('timeline-container');
+            const titleElement = document.getElementById('timeline-title');
+
+            if (titleElement) {
+                if (onlyShowFavorites) {
+                    titleElement.innerHTML = `<i class="fa-solid fa-timeline text-emerald-400"></i> Chronologie de tes courses prévues`;
+                } else {
+                    titleElement.innerHTML = `<i class="fa-solid fa-timeline text-emerald-400"></i> Chronologie des épreuves`;
+                }
+            }
+
+            if (!container) return;
+
+            const validRaces = filteredRaces
+                .filter(r => r.raceDate && !isNaN(new Date(r.raceDate).getTime()))
+                .sort((a, b) => new Date(a.raceDate) - new Date(b.raceDate));
+
+            if (validRaces.length === 0) {
+                container.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-6">Aucune course datée à afficher avec ces filtres.</p>';
+                renderLoadChart();
+                return;
+            }
+
+            const racesToDisplay = onlyShowFavorites ? validRaces : validRaces.slice(0, 50);
+
+            let html = '<div class="relative border-l-2 border-emerald-500/30 ml-3 space-y-3 my-1">';
+
+            racesToDisplay.forEach((race, idx) => {
+                const raceKey = `${race.title}_${race.raceDate}`;
+                const dateObj = new Date(race.raceDate);
+                const formattedDate = formatDateFR(race.raceDate, race.status);
+                const isFav = favorites.includes(raceKey);
+                const displayPrice = race.price > 0 ? `${race.price} €` : 'N/C';
+                const statusBadge = renderOpeningStatus(race.status, race.openingDate);
+
+                const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
+             
+                let cardBgClass = 'bg-darkBg/90 border-borderBg';
+                let statusPinColor = '#f59e0b';
+
+                if (meta.completed) {
+                    cardBgClass = 'bg-blue-900/80 border-blue-400 shadow-lg shadow-blue-950/50';
+                    statusPinColor = '#3b82f6';
+                } else if (meta.registered) {
+                    cardBgClass = 'bg-emerald-900/80 border-emerald-400 shadow-lg shadow-emerald-950/50';
+                    statusPinColor = '#10b981';
+                }
+
+                let gapHtml = '';
+                if (idx > 0) {
+                    const prevDate = new Date(racesToDisplay[idx - 1].raceDate);
+                    const diffTime = Math.abs(dateObj - prevDate);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const diffWeeks = (diffDays / 7).toFixed(1);
+
+                    gapHtml = `
+                        <div class="my-1 -ml-2.5 flex items-center space-x-2">
+                            <div class="w-3.5 h-0.5 bg-borderBg"></div>
+                            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-darkBg text-amber-400 border border-amber-500/30 font-bold">
+                                ⏱️ +${diffDays}j (${diffWeeks} sem.)
+                            </span>
+                        </div>
+                    `;
+                }
+
+                const linkBtn = (race.status === 'Open' && race.url) ? `
+                    <a href="${race.url}" target="_blank" onclick="event.stopPropagation();" class="text-xs bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-lg transition inline-flex items-center font-semibold">
+                        S'inscrire ↗
+                    </a>
+                ` : '';
+
+                const favBtn = `
+                    <button onclick="event.stopPropagation(); toggleFavorite('${race.title.replace(/'/g, "\\'")}', '${race.raceDate}')" class="text-xs font-bold transition px-1 py-0.5 rounded hover:bg-white/10 ${isFav ? 'text-amber-400' : 'text-gray-400 hover:text-amber-400'}">
+                        ♥
+                    </button>
+                `;
+
+                let followUpHtml = '';
+                const isAlerted = hasAlertForRace(race.title);
+
+                if (isAlerted) {
+                    followUpHtml = `
+                        <span class="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-semibold rounded-lg flex items-center gap-1 cursor-default">
+                            ✅ Alerte activée
+                        </span>
+                    `;
+                } else if (race.status === 'Open') {
+                    followUpHtml = `<span class="text-[10px] text-gray-400">Options de suivi</span>`;
+                } else if (race.status === 'TBD') {
+                    followUpHtml = `
+                        <button onclick="event.stopPropagation(); handleEmailAlertRequest('${race.title.replace(/'/g, "\\'")}', '${race.status}', '${formattedDate}')" class="text-[10px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-lg transition flex items-center gap-1 font-semibold">
+                            🔔 Alerte date TBD
+                        </button>
+                    `;
+                } else {
+                    followUpHtml = `
+                        <button onclick="event.stopPropagation(); handleEmailAlertRequest('${race.title.replace(/'/g, "\\'")}', '${race.status}', '${formattedDate}')" class="text-[10px] bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 px-2 py-0.5 rounded-lg transition flex items-center gap-1 font-semibold">
+                            🔔 Alerte ouverture
+                        </button>
+                    `;
+                }
+
+                html += `
+                    ${gapHtml}
+                    <div class="relative pl-4">
+                        <span class="absolute -left-[7px] top-1 w-3 h-3 rounded-full" style="background-color: ${statusPinColor}; box-shadow: 0 0 6px ${statusPinColor}88;"></span>
+                        <div onmouseenter="highlightMapMarker('${raceKey}', true)" onmouseleave="highlightMapMarker('${raceKey}', false)" onclick="handleTimelineClick('${race.title.replace(/'/g, "\\'")}', '${race.raceDate}', '${race.location}', ${race.price}, '${race.url || ''}')" class="${cardBgClass} p-2.5 rounded-xl border cursor-pointer transition hover:border-amber-400">
+                            <div class="flex justify-between items-start">
+                                <span class="text-xs font-bold text-emerald-400 font-mono">${formattedDate}</span>
+                                <div class="flex items-center gap-1">
+                                    ${statusBadge}
+                                    ${favBtn}
+                                </div>
+                            </div>
+                            <h4 class="text-xs font-bold text-white mt-0.5 leading-tight">${race.title}</h4>
+                            <div class="flex flex-wrap items-center gap-1.5 text-xs text-gray-300 mt-1">
+                                <span>📏 ${race.distance} km</span>
+                                <span>📈 +${race.elevation} m</span>
+                                <span>📍 ${race.location}</span>
+                                <span class="text-amber-400 font-bold">💶 ${displayPrice}</span>
+                            </div>
+                            <div class="mt-1.5 flex items-center justify-between pt-1 border-t border-white/10">
+                                ${followUpHtml}
+                                ${linkBtn}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            if (!onlyShowFavorites && validRaces.length > 50) {
+                html += `<div class="text-center py-2 text-xs text-gray-400 italic">Affichage des 50 premières épreuves sur ${validRaces.length}.</div>`;
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+
+            renderLoadChart();
+        }
+
+        function applyFilters() {
+            const rawKeyword = document.getElementById('filter-keyword')?.value || '';
+            const queryNorm = normalizeStr(rawKeyword);
+            const status = document.getElementById('filter-status')?.value || 'ALL';
+         
+            const minDist = parseInt(document.getElementById('filter-dist-min')?.value || 0);
+            const maxDist = parseInt(document.getElementById('filter-dist-max')?.value || 200);
+         
+            const minElev = parseInt(document.getElementById('filter-elev-min')?.value || 0);
+            const maxElev = parseInt(document.getElementById('filter-elev-max')?.value || 15000);
+         
+            const minMonths = parseInt(document.getElementById('filter-horizon-min')?.value || 0);
+            const maxMonths = parseInt(document.getElementById('filter-horizon-max')?.value || 24);
+
+            const now = new Date();
+
+            filteredRaces = racesData.filter(r => {
+                const favKey = `${r.title}_${r.raceDate}`;
+                if (onlyShowFavorites && !favorites.includes(favKey)) return false;
+
+                const matchKw = !queryNorm || r.searchNorm.includes(queryNorm);
+            
+                let matchStat = true;
+                if (status !== 'ALL') {
+                    if (status === 'Opening Soon') {
+                        matchStat = (r.status === 'Opening Soon' || r.status === 'Upcoming');
+                    } else if (status === 'TBD') {
+                        matchStat = (r.status === 'TBD');
+                    } else {
+                        matchStat = (r.status === status);
+                    }
+                }
+          
+                let matchDate = true;
+                if (r.raceDate) {
+                    const rDate = new Date(r.raceDate);
+                    if (!isNaN(rDate.getTime())) {
+                        const diffMonths = (rDate.getFullYear() - now.getFullYear()) * 12 + (rDate.getMonth() - now.getMonth());
+                        matchDate = diffMonths >= minMonths && diffMonths <= maxMonths;
+                    }
+                }
+
+                return matchKw && matchStat && matchDate && r.distance >= minDist && r.distance <= maxDist && r.elevation >= minElev && r.elevation <= maxElev;
+            });
+
+            const countElem = document.getElementById('filtered-count');
+            if (countElem) countElem.innerText = filteredRaces.length;
+    
+            renderListView();
+            updateMapMarkers();
+            renderTimeline();
+        }
+
+        function updateMapMarkers() {
+            if (!leafletMap) return;
+
+            if (markerClusterGroup) {
+                leafletMap.removeLayer(markerClusterGroup);
+            }
+
+            if (typeof L.markerClusterGroup !== 'function') {
+                return;
+            }
+
+            markerClusterGroup = L.markerClusterGroup({
+                chunkedLoading: true,
+                maxClusterRadius: 35
+            });
+
+            markersMapRef = {};
+            const groupedRaces = {};
+
+            filteredRaces.forEach(race => {
+                const lat = parseFloat(race.lat);
+                const lng = parseFloat(race.lng);
+                if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
+
+                const geoKey = `${lat.toFixed(3)}_${lng.toFixed(3)}`;
+                if (!groupedRaces[geoKey]) groupedRaces[geoKey] = [];
+                groupedRaces[geoKey].push({ ...race, lat, lng });
+            });
+
+            Object.values(groupedRaces).forEach(racesAtLocation => {
+                const mainRace = racesAtLocation[0];
+                const rKeyMain = `${mainRace.title}_${mainRace.raceDate}`;
+                let color = getRaceStatusColor(rKeyMain);
+
+                const customIcon = L.divIcon({
+                    className: 'custom-pin',
+                    html: `<div style="background:${color}; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 0 5px rgba(0,0,0,0.5); transition: all 0.2s ease;"></div>`,
+                    iconSize: [12, 12],
+                    iconAnchor: [6, 6]
+                });
+
+                const marker = L.marker([mainRace.lat, mainRace.lng], { icon: customIcon });
+                marker.defaultColor = color;
+
+                racesAtLocation.forEach(r => {
+                    const rKey = `${r.title}_${r.raceDate}`;
+                    markersMapRef[rKey] = marker;
+                });
+
+                let popupHtml = `<div style="max-height: 220px; overflow-y: auto; padding: 2px; color: #f3f4f6; font-size: 11px;">`;
+                racesAtLocation.forEach((r, idx) => {
+                    const formattedDate = formatDateFR(r.raceDate, r.status);
+                    const isFav = favorites.includes(`${r.title}_${r.raceDate}`);
+                    const displayPrice = r.price > 0 ? `${r.price} €` : 'N/C';
+
+                    const popupRegisterLink = (r.status === 'Open' && r.url) ? `
+                        <a href="${r.url}" target="_blank" style="color: #34d399; text-decoration: underline; font-weight: bold; font-size: 10px; display:inline-block; margin-top:3px;">
+                            S'inscrire ↗
+                        </a>
+                    ` : '';
+
+                    popupHtml += `
+                        <div style="padding-bottom: 6px; margin-bottom: 6px; ${idx < racesAtLocation.length - 1 ? 'border-bottom: 1px solid rgba(255,255,255,0.1);' : ''}">
+                            <div style="display: flex; justify-between; align-items: center; gap: 8px;">
+                                <strong style="color: #fff; font-size: 12px; font-weight: 700;">${r.title}</strong>
+                                <button onclick="toggleFavorite('${r.title.replace(/'/g, "\\'")}', '${r.raceDate}')" style="background:none; border:none; color: ${isFav ? '#f59e0b' : '#9ca3af'}; cursor:pointer; font-size: 13px;">♥</button>
+                            </div>
+                            <div style="color: #9ca3af; font-size: 10px; margin-top: 2px;">📅 ${formattedDate}</div>
+                            <div style="color: #34d399; font-size: 10px; margin-top: 2px; font-weight: 600;">📏 ${r.distance} km | 📈 +${r.elevation} m | 💶 ${displayPrice}</div>
+                            ${popupRegisterLink}
+                        </div>
+                    `;
+                });
+                popupHtml += `</div>`;
+
+                marker.bindPopup(popupHtml, { maxWidth: 300 });
+                markerClusterGroup.addLayer(marker);
+            });
+
+            leafletMap.addLayer(markerClusterGroup);
+        }
+
+        function renderListView() {
+            const container = document.getElementById('container-list-view');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const racesToRender = filteredRaces.slice(0, currentDisplayLimit);
+
+            racesToRender.forEach(race => {
+                const formattedDate = formatDateFR(race.raceDate, race.status);
+                const displayPrice = race.price > 0 ? `${race.price} €` : 'N/C';
+                const isFav = favorites.includes(`${race.title}_${race.raceDate}`);
+                const statusBadge = renderOpeningStatus(race.status, race.openingDate);
+
+                const linkBtn = (race.status === 'Open' && race.url) ? `
+                    <a href="${race.url}" target="_blank" class="flex-1 text-center bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold py-1.5 rounded-xl text-xs transition flex items-center justify-center">
+                        S'inscrire ↗
+                    </a>
+                ` : '';
+
+                const favBtn = `
+                    <button onclick="toggleFavorite('${race.title.replace(/'/g, "\\'")}', '${race.raceDate}')" class="px-2.5 py-1.5 rounded-xl text-xs font-bold border transition flex items-center justify-center ${isFav ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'bg-darkBg text-gray-400 border-borderBg hover:text-amber-400'}">
+                        ♥
+                    </button>
+                `;
+
+                const card = `
+                    <div class="glass-panel p-3 rounded-2xl border border-borderBg flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center text-xs font-mono text-gray-400 mb-1">
+                                <span>${race.category}</span>
+                                ${statusBadge}
+                            </div>
+                            <h3 class="text-sm font-bold text-white leading-tight">${race.title}</h3>
+                            <p class="text-xs text-gray-400 mt-0.5">Course : ${formattedDate}</p>
+                     
+                            <div class="grid grid-cols-3 gap-1 py-1.5 my-1.5 border-y border-borderBg text-center text-xs">
+                                <div><span class="block text-gray-500 text-[10px]">Dist.</span><span class="font-bold text-white">${race.distance}k</span></div>
+                                <div><span class="block text-gray-500 text-[10px]">D+</span><span class="font-bold text-emerald-400">+${race.elevation}m</span></div>
+                                <div><span class="block text-gray-500 text-[10px]">Prix</span><span class="font-bold text-amber-400">${displayPrice}</span></div>
+                            </div>
+                        </div>
+                        <div class="flex gap-1.5 mt-1">
+                            ${linkBtn}
+                            ${favBtn}
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', card);
+            });
+        }
+
+        function resetFilters() {
+            if (document.getElementById('filter-keyword')) document.getElementById('filter-keyword').value = '';
+            if (document.getElementById('filter-status')) document.getElementById('filter-status').value = 'ALL';
+            if (document.getElementById('filter-dist-min')) document.getElementById('filter-dist-min').value = 0;
+            if (document.getElementById('filter-dist-max')) document.getElementById('filter-dist-max').value = 200;
+            if (document.getElementById('filter-elev-min')) document.getElementById('filter-elev-min').value = 0;
+            if (document.getElementById('filter-elev-max')) document.getElementById('filter-elev-max').value = 15000;
+            if (document.getElementById('filter-horizon-min')) document.getElementById('filter-horizon-min').value = 0;
+            if (document.getElementById('filter-horizon-max')) document.getElementById('filter-horizon-max').value = 24;
+            const sugg = document.getElementById('search-suggestions');
+            if (sugg) sugg.classList.add('hidden');
+            updateSliderLabels();
+            applyFilters();
+        }
+
+        function switchMainView(v) {
+            activeMainTab = v;
+            const mapV = document.getElementById('container-map-view');
+            const listV = document.getElementById('container-list-view');
+            const budgetV = document.getElementById('container-budget-view');
+            const alertsV = document.getElementById('container-alerts-view');
+            const linksV = document.getElementById('container-links-view');
+            const searchSection = document.getElementById('search-filter-section');
+
+            if (!mapV || !listV || !budgetV || !alertsV || !linksV) return;
+
+            [mapV, listV, budgetV, alertsV, linksV].forEach(el => el.classList.add('hidden'));
+
+            if (searchSection) searchSection.classList.remove('hidden');
+
+            const inactiveStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-400 hover:text-white";
+            const activeStyle = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-500 text-darkBg shadow";
+
+            const btnMap = document.getElementById('btn-view-map');
+            const btnSec = document.getElementById('btn-view-secondary');
+            const btnBudget = document.getElementById('btn-view-budget');
+            const btnLinks = document.getElementById('btn-view-links');
+            const btnAlerts = document.getElementById('btn-view-alerts');
+
+            [btnMap, btnSec, btnLinks, btnBudget, btnAlerts].forEach(btn => {
+                if (btn) btn.className = inactiveStyle;
+            });
+
+            if (onlyShowFavorites) {
+                if (btnBudget) btnBudget.classList.remove('hidden');
+                if (btnSec) btnSec.classList.add('hidden');
+            } else {
+                if (btnBudget) btnBudget.classList.add('hidden');
+                if (btnSec) btnSec.classList.remove('hidden');
+            }
+
+            if (v === 'map') {
+                mapV.classList.remove('hidden');
+                if (btnMap) btnMap.className = activeStyle;
+                if (leafletMap) setTimeout(() => leafletMap.invalidateSize(), 100);
+            } else if (v === 'secondary' && !onlyShowFavorites) {
+                listV.classList.remove('hidden');
+                if (btnSec) btnSec.className = activeStyle;
+            } else if (v === 'alerts') {
+                alertsV.classList.remove('hidden');
+                if (btnAlerts) btnAlerts.className = activeStyle;
+                renderUserAlertsList();
+            } else if (v === 'budget' && onlyShowFavorites) {
+                budgetV.classList.remove('hidden');
+                if (btnBudget) btnBudget.className = activeStyle;
+            } else if (v === 'links') {
+                linksV.classList.remove('hidden');
+                if (btnLinks) btnLinks.className = activeStyle;
+            }
+        }
+
+        document.addEventListener('click', (e) => {
+            const sugg = document.getElementById('search-suggestions');
+            const input = document.getElementById('filter-keyword');
+            if (sugg && input && !sugg.contains(e.target) && e.target !== input) {
+                sugg.classList.add('hidden');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initLeafletMap();
+            updateSliderLabels();
+            renderBudgetGrid();
+            renderCustomLinks();
+            fetchRacesFromSupabase();
+            initAuthListener();
+        });
+    </script>
+</body>
+</html>
