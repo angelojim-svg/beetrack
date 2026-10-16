@@ -857,7 +857,6 @@
 
             const raceKey = `${targetRace.title}_${targetRace.raceDate}`;
 
-            // Si on reclique sur la course déjà sélectionnée, on retourne aux alertes (fermeture du mode détail)
             if (activeSelectedRaceKey === raceKey) {
                 closeInteractiveDetail();
                 return;
@@ -865,10 +864,8 @@
 
             activeSelectedRaceKey = raceKey;
 
-            // Basculer la vue principale sur la carte
             switchMainView('map');
 
-            // Afficher le panneau central "Mes Alertes" à la place de "Suivi de la Saison"
             const detailCard = document.getElementById('interactive-detail-card');
             const middleAlertsPanel = document.getElementById('middle-alerts-panel');
             if (detailCard) detailCard.classList.add('hidden');
@@ -876,7 +873,6 @@
 
             renderUserAlertsList();
 
-            // Adapter les colonnes : Carte (col-5) | Mes Alertes (col-3) | Chronologie (col-4)
             const middleCol = document.getElementById('middle-column');
             const mainCol = document.getElementById('main-view-column');
             const timelineCol = document.getElementById('timeline-column');
@@ -895,7 +891,6 @@
                 timelineCol.classList.add('lg:col-span-4');
             }
 
-            // Centrer la carte et ouvrir le popup
             setTimeout(() => {
                 if (leafletMap) {
                     leafletMap.invalidateSize();
@@ -929,7 +924,9 @@
         }
 
         function closeInteractiveDetail() {
-            const wasFromAlerts = !document.getElementById('middle-alerts-panel').classList.contains('hidden');
+            const wasFromAlerts = document.getElementById('middle-alerts-panel') &&
+                                  !document.getElementById('middle-alerts-panel').classList.contains('hidden');
+           
             activeSelectedRaceKey = null;
 
             const middleCol = document.getElementById('middle-column');
