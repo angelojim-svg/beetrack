@@ -473,7 +473,7 @@
 
                 <!-- COLONNE LATÉRALE INTERACTIVE (CARTE / DETAILS DU SUIVI SAISON) -->
                 <div id="middle-column" class="hidden lg:col-span-4 transition-all duration-300">
-                    <div class="glass-panel p-4 rounded-2xl border border-borderBg space-y-3 h-[520px] flex flex-col overflow-y-auto">
+                    <div id="interactive-detail-card" class="glass-panel p-4 rounded-2xl border border-borderBg space-y-3 h-[520px] flex flex-col overflow-y-auto">
                         <div class="flex items-center justify-between border-b border-borderBg pb-2">
                             <h3 class="text-sm font-bold text-white flex items-center gap-2">
                                 <i class="fa-solid fa-person-running text-emerald-400"></i>
@@ -860,10 +860,8 @@
             const timelineCol = document.getElementById('timeline-column');
             const middleCol = document.getElementById('middle-column');
 
-            // Basculer l'onglet principal sur "Mes alertes" pour que la vue principale reste les alertes
             switchMainView('alerts');
 
-            // Si on re-clique sur la même alerte active : fermer la carte latérale
             if (activeSelectedRaceKey === raceKey && !middleCol.classList.contains('hidden') && middleCol.contains(mapContainer)) {
                 closeInteractiveDetail();
                 return;
@@ -871,9 +869,9 @@
 
             activeSelectedRaceKey = raceKey;
 
-            // Déplacer la carte dans le conteneur de gauche (middle-column) en mode large
+            // Insérer la carte dans la colonne latérale gauche (middle-column)
             middleCol.classList.remove('hidden');
-            middleCol.classList.remove('lg:col-span-4');
+            middleCol.classList.remove('lg:col-span-4', 'lg:col-span-3');
             middleCol.classList.add('lg:col-span-7');
            
             if (mapContainer && middleCol) {
@@ -882,27 +880,46 @@
                 middleCol.appendChild(mapContainer);
             }
 
-            // Réduire la colonne principale (Mes alertes) à droite pour laisser toute la place à la carte à gauche et à la chronologie
-            mainCol.classList.remove('lg:col-span-8', 'lg:col-span-5');
+            // Réduire la vue des alertes à droite
+            mainCol.classList.remove('lg:col-span-8');
             mainCol.classList.add('lg:col-span-5');
 
-            // Conserver la chronologie visible à droite
             if (timelineCol) {
                 timelineCol.classList.remove('hidden');
                 timelineCol.classList.add('lg:col-span-4');
             }
 
+            // Zoomer et ouvrir le popup de la course sélectionnée
             setTimeout(() => {
                 if (leafletMap) {
                     leafletMap.invalidateSize();
                 }
-                const marker = markersMapRef[raceKey];
-                if (marker && leafletMap) {
-                    const latLng = marker.getLatLng();
-                    leafletMap.setView(latLng, 12, { animate: true });
-                    setTimeout(() => marker.openPopup(), 300);
-                }
+                zoomAndOpenRacePopup(raceKey, targetRace.lat, targetRace.lng);
             }, 150);
+        }
+
+        function zoomAndOpenRacePopup(raceKey, lat, lng) {
+            if (!leafletMap) return;
+
+            const marker = markersMapRef[raceKey];
+
+            if (marker && markerClusterGroup) {
+                const parentCluster = markerClusterGroup.getVisibleParent(marker);
+                if (parentCluster && parentCluster !== marker) {
+                    markerClusterGroup.zoomToShowLayer(marker, () => {
+                        marker.openPopup();
+                    });
+                    return;
+                }
+            }
+
+            if (marker) {
+                const latLng = marker.getLatLng();
+                leafletMap.setView(latLng, 12, { animate: true });
+                setTimeout(() => marker.openPopup(), 250);
+            } else if (lat && lng) {
+                leafletMap.setView([lat, lng], 12, { animate: true });
+            }
         }
 
         function closeInteractiveDetail() {
@@ -911,14 +928,18 @@
             const mainCol = document.getElementById('main-view-column');
             const timelineCol = document.getElementById('timeline-column');
             const mapContainer = document.getElementById('container-map-view');
+            const detailCard = document.getElementById('interactive-detail-card');
 
-            // Remettre la carte dans son conteneur d'origine (main-view-column)
+            // Remettre la carte à sa place d'origine
             if (mapContainer && mainCol && !mainCol.contains(mapContainer)) {
                 mainCol.insertBefore(mapContainer, mainCol.firstChild);
             }
 
             middleCol.classList.add('hidden');
-            middleCol.innerHTML = ''; // Nettoyer pour réinitialiser le contenu du panneau latéral si besoin
+            if (detailCard) {
+                middleCol.innerHTML = '';
+                middleCol.appendChild(detailCard);
+            }
 
             mainCol.classList.remove('lg:col-span-5');
             mainCol.classList.add('lg:col-span-8');
@@ -1914,33 +1935,36 @@
                 }
 
                 activeSelectedRaceKey = raceKey;
-                const marker = markersMapRef[raceKey];
-                if (marker && leafletMap) {
-                    const latLng = marker.getLatLng();
-                    leafletMap.setView(latLng, 13, { animate: true });
-                    setTimeout(() => {
-                        marker.openPopup();
-                    }, 300);
-                } else {
-                    highlightMapMarker(raceKey, true);
-                }
+                const targetRace = racesData.find(r => r.title === title && r.raceDate === raceDate);
+                const lat = targetRace ? targetRace.lat : null;
+                const lng = targetRace ? targetRace.lng : null;
+               
+                zoomAndOpenRacePopup(raceKey, lat, lng);
                 return;
             }
 
             const middleCol = document.getElementById('middle-column');
             const timelineCol = document.getElementById('timeline-column');
             const mainCol = document.getElementById('main-view-column');
+            const detailCard = document.getElementById('interactive-detail-card');
 
-            if (activeSelectedRaceKey === raceKey && !middleCol.classList.contains('hidden')) {
+            if (activeSelectedRaceKey === raceKey && !middleCol.classList.contains('hidden') && middleCol.contains(detailCard)) {
                 closeInteractiveDetail();
                 return;
             }
 
             activeSelectedRaceKey = raceKey;
 
-            // Afficher le panneau de détail dans la colonne centrale (middle-column)
-            if (mainCol) mainCol.classList.remove('lg:col-span-8');
-            if (mainCol) mainCol.classList.add('lg:col-span-5');
+            // Afficher le cadre Suivi de la Saison au milieu
+            if (detailCard && middleCol) {
+                middleCol.innerHTML = '';
+                middleCol.appendChild(detailCard);
+            }
+
+            if (mainCol) {
+                mainCol.classList.remove('lg:col-span-8');
+                mainCol.classList.add('lg:col-span-5');
+            }
 
             if (middleCol) {
                 middleCol.classList.remove('hidden');
@@ -1949,7 +1973,7 @@
             }
 
             if (timelineCol) {
-                timelineCol.classList.remove('lg:col-span-4');
+                timelineCol.classList.remove('hidden');
                 timelineCol.classList.add('lg:col-span-4');
             }
 
@@ -1998,10 +2022,10 @@
                 if (leafletMap) {
                     leafletMap.invalidateSize();
                 }
-                const marker = markersMapRef[raceKey];
-                if (marker) {
-                    marker.openPopup();
-                }
+                const targetRace = racesData.find(r => r.title === title && r.raceDate === raceDate);
+                const lat = targetRace ? targetRace.lat : null;
+                const lng = targetRace ? targetRace.lng : null;
+                zoomAndOpenRacePopup(raceKey, lat, lng);
             }, 100);
         }
 
@@ -2087,7 +2111,6 @@
                     `;
                 }
 
-                // Lien d'inscription uniquement si la course est Ouverte (Open)
                 const linkBtn = (race.status === 'Open' && race.url) ? `
                     <a href="${race.url}" target="_blank" onclick="event.stopPropagation();" class="text-xs bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-lg transition inline-flex items-center font-semibold">
                         S'inscrire ↗
@@ -2273,7 +2296,6 @@
                     const isFav = favorites.includes(`${r.title}_${r.raceDate}`);
                     const displayPrice = r.price > 0 ? `${r.price} €` : 'N/C';
 
-                    // Lien d'inscription sur le popup uniquement si statut Open
                     const popupRegisterLink = (r.status === 'Open' && r.url) ? `
                         <a href="${r.url}" target="_blank" style="color: #34d399; text-decoration: underline; font-weight: bold; font-size: 10px; display:inline-block; margin-top:3px;">
                             S'inscrire ↗
@@ -2282,7 +2304,7 @@
 
                     popupHtml += `
                         <div style="padding-bottom: 6px; margin-bottom: 6px; ${idx < racesAtLocation.length - 1 ? 'border-bottom: 1px solid rgba(255,255,255,0.1);' : ''}">
-                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                            <div style="display: flex; justify-between; align-items: center; gap: 8px;">
                                 <strong style="color: #fff; font-size: 12px; font-weight: 700;">${r.title}</strong>
                                 <button onclick="toggleFavorite('${r.title.replace(/'/g, "\\'")}', '${r.raceDate}')" style="background:none; border:none; color: ${isFav ? '#f59e0b' : '#9ca3af'}; cursor:pointer; font-size: 13px;">♥</button>
                             </div>
