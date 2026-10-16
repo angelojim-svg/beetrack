@@ -868,86 +868,71 @@
 
         // Fonction pour gérer le clic sur une alerte de l'historique
         function handleAlertClick(raceTitle) {
-            const targetRace = racesData.find(r => r.title === raceTitle);
-            if (!targetRace || !targetRace.raceDate) return;
+    const targetRace = racesData.find(r => r.title === raceTitle);
+    if (!targetRace || !targetRace.raceDate) return;
 
-            const raceKey = `${targetRace.title}_${targetRace.raceDate}`;
+    const raceKey = `${targetRace.title}_${targetRace.raceDate}`;
+    const middleCol = document.getElementById('middle-column');
+    const mainCol = document.getElementById('main-view-column');
 
-            // Si on clique à nouveau sur la même course active, on referme le panneau et réinitialise la map
-            if (activeSelectedRaceKey === raceKey && activeMainTab === 'map') {
-                closeInteractiveDetail();
-                activeSelectedRaceKey = null;
-                if (leafletMap) {
-                    leafletMap.setView([46.603354, 1.888334], 5, { animate: true });
-                    leafletMap.closePopup();
-                }
-                return;
-            }
+    // Si on reclique sur la même alerte déjà active : on ferme la carte latérale
+    if (activeSelectedRaceKey === raceKey && !middleCol.classList.contains('hidden')) {
+        closeInteractiveDetail();
+        return;
+    }
 
-            // Basculer vers l'onglet Carte pour voir le zoom latéral
-            switchMainView('map');
-            activeSelectedRaceKey = raceKey;
+    activeSelectedRaceKey = raceKey;
 
-            const middleCol = document.getElementById('middle-column');
-            const mainCol = document.getElementById('main-view-column');
+    // Ajuster le layout pour garder Mes Alertes à droite et afficher la carte dans l'encadré latéral
+    mainCol.classList.remove('lg:col-span-8');
+    mainCol.classList.add('lg:col-span-5');
+    middleCol.classList.remove('hidden');
 
-            mainCol.classList.remove('lg:col-span-8');
-            mainCol.classList.add('lg:col-span-5');
-            middleCol.classList.remove('hidden');
+    // Placer le conteneur de carte dans l'encadré de gauche/milieu
+    const mapContainer = document.getElementById('container-map-view');
+    if (mapContainer && middleCol) {
+        mapContainer.classList.remove('hidden');
+        middleCol.innerHTML = '';
+        middleCol.appendChild(mapContainer);
+    }
 
-            document.getElementById('detail-race-title').innerText = targetRace.title;
-            document.getElementById('detail-race-loc').innerText = targetRace.location;
-            document.getElementById('detail-race-price').innerText = targetRace.price > 0 ? `${targetRace.price} €` : 'N/C';
-
-            const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=Marseille&destination=${encodeURIComponent(targetRace.location)}`;
-            document.getElementById('detail-race-gmaps-container').innerHTML = `
-                <a href="${gmapsUrl}" target="_blank" class="w-full text-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold py-1 rounded-xl text-xs transition flex items-center justify-center gap-1">
-                    <i class="fa-solid fa-route"></i> Trajet & temps (Google Maps) ↗
-                </a>
-            `;
-
-            const airbnbUrl = `https://www.airbnb.fr/s/${encodeURIComponent(targetRace.location)}/homes`;
-            const bookingUrl = `https://www.booking.com/searchresults.fr.html?ss=${encodeURIComponent(targetRace.location)}`;
-
-            document.getElementById('detail-race-lodging-container').innerHTML = `
-                <a href="${airbnbUrl}" target="_blank" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1">
-                    🏠 Airbnb ↗
-                </a>
-                <a href="${bookingUrl}" target="_blank" class="bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 font-semibold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1">
-                    🏨 Booking ↗
-                </a>
-            `;
-
-            const linkContainer = document.getElementById('detail-race-link-container');
-            if (targetRace.url) {
-                linkContainer.innerHTML = `
-                    <a href="${targetRace.url}" target="_blank" class="w-full text-center bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-semibold py-1.5 rounded-lg text-xs transition block">
-                        Page Inscription ↗
-                    </a>
-                `;
-            } else {
-                linkContainer.innerHTML = '';
-            }
-
-            renderGpxLinkDisplay();
-            renderStravaLinkDisplay();
-
-            const meta = raceMetaStates[raceKey] || { registered: false, completed: false };
-            document.getElementById('check-reg-ok').checked = meta.registered;
-            document.getElementById('check-done').checked = meta.completed;
-
-            setTimeout(() => {
-                if (leafletMap) {
-                    leafletMap.invalidateSize();
-                }
-                const marker = markersMapRef[raceKey];
-                if (marker && leafletMap) {
-                    const latLng = marker.getLatLng();
-                    leafletMap.setView(latLng, 13, { animate: true });
-                    setTimeout(() => marker.openPopup(), 300);
-                }
-            }, 100);
+    // Effectuer le zoom sur la course sélectionnée
+    setTimeout(() => {
+        if (leafletMap) {
+            leafletMap.invalidateSize();
         }
+        const marker = markersMapRef[raceKey];
+        if (marker && leafletMap) {
+            const latLng = marker.getLatLng();
+            leafletMap.setView(latLng, 12, { animate: true });
+            setTimeout(() => marker.openPopup(), 300);
+        }
+    }, 150);
+}
+
+// Réinitialiser le positionnement de la carte lors de la fermeture du panneau latéral
+function closeInteractiveDetail() {
+    activeSelectedRaceKey = null;
+    const middleCol = document.getElementById('middle-column');
+    const mainCol = document.getElementById('main-view-column');
+    const mapContainer = document.getElementById('container-map-view');
+
+    // Replacer le conteneur de carte dans sa colonne d'origine si nécessaire
+    if (mapContainer && mainCol && !mainCol.contains(mapContainer)) {
+        mainCol.insertBefore(mapContainer, mainCol.firstChild);
+    }
+
+    middleCol.classList.add('hidden');
+    mainCol.classList.remove('lg:col-span-5');
+    mainCol.classList.add('lg:col-span-8');
+
+    setTimeout(() => {
+        if (leafletMap) {
+            leafletMap.invalidateSize();
+            leafletMap.setView([46.603354, 1.888334], 5);
+        }
+    }, 100);
+}
 
         async function deleteRaceAlert(alertId) {
             try {
